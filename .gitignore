@@ -1,0 +1,10 @@
+__pycache__
+.coverage
+.env
+.pytest_cache
+htmlcov
+staticfiles
+*.sqlite3
+venv
+migrations
+.vscode
