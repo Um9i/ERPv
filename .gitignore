@@ -6,5 +6,4 @@ htmlcov
 staticfiles
 *.sqlite3
 venv
-migrations
 .vscode
