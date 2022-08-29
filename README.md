@@ -19,12 +19,6 @@ ERPv is a business management tool which currently includes management of the fo
 * Procurement
 * Sales
 
-A demo instance can be found [HERE](https://erpv.herokuapp.com/)
-
-```Username: TestUser```
-
-```Password: yolopal1!```
-
 # Development Setup
 
 ## Requirements
