@@ -23,7 +23,7 @@ ERPv is a business management tool which currently includes management of the fo
 
 ## Requirements
 
-* [Python ≥ 3.8](https://www.python.org/)
+* [Python ≥ 3.10](https://www.python.org/)
 
 ## Process
 
