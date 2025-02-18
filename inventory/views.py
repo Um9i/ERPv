@@ -6,3 +6,4 @@ from .serializers import InventorySerializer
 class InventoryViewSet(viewsets.ModelViewSet):
     queryset = Inventory.objects.all()
     serializer_class = InventorySerializer
+    http_method_names = ['get']
