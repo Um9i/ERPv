@@ -14,13 +14,20 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from rest_framework import routers
+from inventory.views import InventoryViewSet
 
 admin.site.site_title = "ERPv 0.0.1"
 admin.site.site_header = "ERPv"
 admin.site.site_url = None
 admin.site.index_title = ""
 
+router = routers.DefaultRouter()
+router.register(r"inventory", InventoryViewSet)
+
 urlpatterns = [
+    path('api/', include(router.urls)),
+    path('api-auth/', include('rest_framework.urls')),
     path("", admin.site.urls),
 ]

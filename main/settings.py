@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
     "django_admin_inline_paginator",
+    'rest_framework',
     "inventory.apps.InventoryConfig",
     "procurement.apps.ProcurementConfig",
     "production.apps.ProductionConfig",
@@ -59,6 +60,14 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "main.urls"
+
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ]
+}
 
 TEMPLATES = [
     {
