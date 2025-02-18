@@ -6,7 +6,7 @@ from inventory.models import Inventory, InventoryAdjust, InventoryLedger
 class TestInventory:
     def test_inventory_model_exists(self, product):
         inventory = Inventory.objects.get(pk=product.pk)
-        assert inventory.product.name == "product 1"
+        assert inventory.product.name == "product"
 
     def test_inventory_adjustment_alters_inventory_quantity(self, product):
         InventoryAdjust.objects.create(product=product, quantity=1, complete=True)
