@@ -3,7 +3,7 @@ Django==5.0.3
 django-admin-inline-paginator==0.4.0
 django-filter==25.1
 djangorestframework==3.15.2
-gunicorn==21.2.0
+gunicorn==23.0.0
 Markdown==3.7
 psycopg2-binary==2.9.9
 pytest-cov==5.0.0
