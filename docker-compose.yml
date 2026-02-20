@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:latest
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: erpv
+      POSTGRES_USER: erp_user
+      POSTGRES_PASSWORD: erp_password
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+  web:
+    build: .
+    command: gunicorn main.wsgi:application --bind 0.0.0.0:8000 --workers 3
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgres://erp_user:erp_password@db:5432/erpv?sslmode=disable
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DJANGO_SETTINGS_MODULE=main.settings
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
