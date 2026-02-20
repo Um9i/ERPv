@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Suppliers</h1>
+<p><a href="{% url 'procurement:supplier-create' %}">New Supplier</a></p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Phone</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for supplier in suppliers %}
+        <tr>
+            <td><a href="{% url 'procurement:supplier-detail' supplier.id %}">{{ supplier.name }}</a></td>
+            <td>{{ supplier.phone }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -11,6 +11,19 @@ class TestSupplier:
     def test_supplier_contact_creation(self, supplier_contact):
         assert supplier_contact.name == "Test Contact"
 
+    def test_supplier_detail_context(self, client, supplier, supplier_product):
+        from django.urls import reverse
+
+        url = reverse("procurement:supplier-detail", args=[supplier.pk])
+        response = client.get(url)
+        assert response.status_code == 200
+        # context should include a list containing the product we added
+        products = response.context.get("supplier_products")
+        assert products is not None
+        assert supplier_product in products
+        # also verify purchase_orders context exists (even if empty at this point)
+        assert "purchase_orders" in response.context
+
 @pytest.mark.django_db
 class TestSupplierProduct:
     def test_supplier_product_creation(self, supplier_product):

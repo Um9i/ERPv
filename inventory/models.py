@@ -80,8 +80,9 @@ class InventoryAdjust(models.Model):
         Product, on_delete=models.CASCADE, related_name="inventory_adjustment"
     )
     quantity = models.BigIntegerField()
-    complete = models.BooleanField(default=False)
-    closed = models.BooleanField(default=False)
+    # keep the field for backwards compatibility but default to True and
+    # hide it from user input; adjustments are always applied immediately
+    complete = models.BooleanField(default=True)
 
     def __str__(self):
         return self.product.name
@@ -92,18 +93,18 @@ class InventoryAdjust(models.Model):
         verbose_name = "inventory adjustment"
 
     def clean(self):
-        if self.complete == True and self.closed == False:
-            product = Inventory.objects.select_for_update().get(product=self.product)
-            if product.quantity + self.quantity < 0:
-                raise ValidationError(
-                    _("Not enough resources to complete transaction.")
-                )
+        # validate against inventory before applying change
+        product = Inventory.objects.select_for_update().get(product=self.product)
+        if product.quantity + self.quantity < 0:
+            raise ValidationError(
+                _("Not enough resources to complete transaction.")
+            )
 
     @transaction.atomic
     def save(self, *args, **kwargs):
-        # run validation and then perform atomic update using F()
+        # only apply quantity changes when creating new records
         self.full_clean()
-        if self.complete == True and self.closed == False:
+        if self.pk is None and self.complete:
             product_qs = Inventory.objects.select_for_update().filter(product=self.product)
             product_qs.update(quantity=F('quantity') + self.quantity)
             InventoryLedger.objects.create(
@@ -112,5 +113,4 @@ class InventoryAdjust(models.Model):
                 action="Inventory Adjustment",
                 transaction_id=self.product.pk,
             )
-            self.closed = True
         super().save(*args, **kwargs)

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ inventory.product.name }}</h1>
+<small><a href="{% url 'inventory:product-update' inventory.product.pk %}">Edit Name</a></small>
+<table class="table">
+    <tr>
+        <th>Quantity</th>
+        <td>{{ inventory.quantity }}</td>
+    </tr>
+    <tr>
+        <th>Last Updated</th>
+        <td>{{ inventory.last_updated }}</td>
+    </tr>
+</table>
+{% endblock %}

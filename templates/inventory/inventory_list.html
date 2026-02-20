@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Inventory</h1>
+<p><a href="{% url 'inventory:product-create' %}">New Product</a></p>
+{% if inventories %}
+<table class="table">
+    <thead>
+    <tr>
+        <th>Product</th>
+        <th>Quantity</th>
+        <th>Actions</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for inventory in inventories %}
+    <tr>
+        <td><a href="{% url 'inventory:inventory-detail' inventory.pk %}">{{ inventory.product.name }}</a></td>
+        <td>{{ inventory.quantity }}</td>
+        <td><a href="{% url 'inventory:inventory-adjust' inventory.pk %}">Adjust</a> - <a href="{% url 'inventory:product-delete' inventory.product.pk %}">Delete</a></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No inventories available.</p>
+{% endif %}
+{% endblock %}

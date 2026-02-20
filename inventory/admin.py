@@ -57,14 +57,14 @@ class InventoryAdjustInline(TabularInlinePaginated):
     model = InventoryAdjust
     extra = 0
     autocomplete_fields = ["product"]
-    readonly_fields = ["closed"]
+    # 'complete' and 'closed' not shown in inline
     per_page = 5
 
 
 @admin.register(InventoryAdjust)
 class InventoryAdjustAdmin(admin.ModelAdmin):
     autocomplete_fields = ["product"]
-    readonly_fields = ["closed"]
+    # complete is always true, no need for readonly_fields here
     list_display = ["product", "quantity"]
     search_fields = ["product"]
 

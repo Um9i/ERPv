@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-5">
+    <h1>{{ supplier.name }}</h1>
+<p>Phone: {{ supplier.phone }}</p>
+<p>Email: {{ supplier.email }}</p>
+<p>Address: {{ supplier.address }}</p>
+<p><a href="{% url 'procurement:supplier-update' supplier.id %}">Edit Supplier</a></p>
+</div>
+<h2>Purchase Orders</h2>
+<a href="{% url 'procurement:purchase-order-create' %}?supplier={{ supplier.id }}">Create Purchase Order</a>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Order Number</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Total Amount</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for order in purchase_orders %}
+        <tr>
+            <td>{{ order.order_number }}</td>
+            <td>{{ order.date }}</td>
+            <td>{{ order.status }}</td>
+            <td>{{ order.total_amount }}</td>
+            <td><a href="{% url 'procurement:purchase-order-detail' order.id %}">View</a></td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5">No purchase orders found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<h2>Supplied Products</h2>
+<p><a href="{% url 'procurement:supplier-product-create' %}?supplier={{ supplier.id }}">Add Supplier Products</a></p>
+{% if supplier_products %}
+<table class="table">
+    <thead>
+        <tr>
+            <th>Product</th>
+            <th>Cost</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for supplier_product in supplier_products %}
+        <tr>
+            <td>{{ supplier_product.product.name }}</td>
+            <td>{{ supplier_product.cost }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="2">No supplier products found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

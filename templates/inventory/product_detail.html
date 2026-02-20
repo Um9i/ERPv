@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ product.name }}</h1>
+<p><a href="{% url 'inventory:product-update' product.pk %}">Edit</a> - <a href="{% url 'inventory:product-delete' product.pk %}">Delete</a></p>
+{% endblock %}

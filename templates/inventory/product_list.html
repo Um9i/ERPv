@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Inventory</h1>
+<p><a href="{% url 'inventory:product-create' %}">New Product</a></p>
+{% if products %}
+<ul>
+    {% for product in products %}
+    <li>{{ product.name }} - <a href="{% url 'inventory:product-detail' product.pk %}">View</a> - <a href="{% url 'inventory:product-update' product.pk %}">Edit</a> - <a href="{% url 'inventory:product-delete' product.pk %}">Delete</a></li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No products available.</p>
+{% endif %}
+{% endblock %}

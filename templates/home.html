@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="text-center">
+    <div class="alert alert-info" role="alert">
+        This is a demo of ERPv, an open-source ERP system built with Django. The project is in early development, so
+        expect
+        things to be broken and missing. If you're interested in contributing, check out the <a
+            href="https://github.com/your-repo/erpv">GitHub repository</a>.
+    </div>
+    <div class="py-5">
+        <h1>Welcome to ERPv</h1>
+        <p class="lead">ERPv is an open-source ERP system built with Django. It aims to provide a comprehensive solution
+            for
+            managing business processes, including inventory, sales, purchasing, and more.</p>
+        <p>Explore the features and contribute to the project on GitHub!</p>
+        <a href="{% url 'login' %}" class="btn btn-primary">Login</a></p>
+    </div>
+</div>
+{% endblock %}
