@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Delete Customer Product</h1>
+<p>Are you sure you want to delete {{ customer_product.product.name }} for {{ customer_product.customer.name }}?</p>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Yes, delete</button>
+    <a href="{% url 'sales:customer-detail' customer_product.customer.id %}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

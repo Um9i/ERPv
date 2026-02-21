@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-5">
+    <h1>{{ customer.name }}</h1>
+    <p>Phone: {{ customer.phone }}</p>
+    <p>Email: {{ customer.email }}</p>
+    <p>Address: {{ customer.address }}</p>
+    <p>
+    <a href="{% url 'sales:customer-update' customer.id %}" class="btn btn-secondary">Edit Customer</a>
+    <a href="{% url 'sales:customer-delete' customer.id %}" class="btn btn-danger">Delete Customer</a>
+    </p>
+</div>
+<h2>Sales Orders</h2>
+<a href="{% url 'sales:sales-order-create' %}?customer={{ customer.id }}" class="btn btn-success">Create Sales Order</a>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Order Number</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Total Amount</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for order in sales_orders %}
+        <tr>
+            <td>{{ order.order_number }}</td>
+            <td>{{ order.date }}</td>
+            <td>{{ order.status }}</td>
+            <td>{{ order.total_amount }}</td>
+            <td><a href="{% url 'sales:sales-order-detail' order.id %}" class="btn btn-sm btn-primary">View</a></td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5">No sales orders found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% if sales_orders %}
+<a class="btn btn-link" href="{% url 'sales:customer-salesorders' customer.id %}">See all</a>
+{% endif %}
+{% if sales_orders.has_other_pages %}
+<nav>
+    <ul class="pagination">
+        {% if sales_orders.has_previous %}
+        <li class="page-item"><a class="page-link"
+                href="?order_page={{ sales_orders.previous_page_number }}">Previous</a></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">Page {{ sales_orders.number }} of {{
+                sales_orders.paginator.num_pages }}</span></li>
+        {% if sales_orders.has_next %}
+        <li class="page-item"><a class="page-link" href="?order_page={{ sales_orders.next_page_number }}">Next</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+<h2 class="mt-5">Customer Products</h2>
+<p><a href="{% url 'sales:customer-product-create' %}?customer={{ customer.id }}" class="btn btn-success">Add Customer Products</a></p>
+{% if customer_products %}
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Product</th>
+            <th>Price</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for customer_product in customer_products %}
+        <tr>
+            <td>{{ customer_product.product.name }}</td>
+            <td>{{ customer_product.price }}</td>
+            <td>
+                <a href="{% url 'sales:customer-product-update' customer_product.id %}" class="btn btn-sm btn-secondary">Edit</a>
+                <a href="{% url 'sales:customer-product-delete' customer_product.id %}" class="btn btn-sm btn-danger">Delete</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="2">No customer products found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% if customer_products.has_other_pages %}
+<nav>
+    <ul class="pagination">
+        {% if customer_products.has_previous %}
+        <li class="page-item"><a class="page-link"
+                href="?cp_page={{ customer_products.previous_page_number }}">Previous</a></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">Page {{ customer_products.number }} of {{
+                customer_products.paginator.num_pages }}</span></li>
+        {% if customer_products.has_next %}
+        <li class="page-item"><a class="page-link" href="?cp_page={{ customer_products.next_page_number }}">Next</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+<a class="btn btn-link" href="{% url 'sales:customer-products' customer.id %}">See all</a>
+{% endif %}
+{% endblock %}

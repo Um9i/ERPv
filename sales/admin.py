@@ -88,7 +88,7 @@ class SalesOrderLineInline(admin.TabularInline):
     model = SalesOrderLine
     extra = 0
     autocomplete_fields = ["product"]
-    readonly_fields = ["closed", "value"]
+    readonly_fields = ["closed", "value", "quantity_shipped"]
 
 
 @admin.register(Customer)

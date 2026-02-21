@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+{% if user.is_authenticated %}
+<h1>Sales Dashboard</h1>
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body py-4">
+                <h5 class="card-title">Sales Order Management</h5>
+                <p class="card-text">Create and manage sales orders, track their status, and ensure timely fulfillment.</p>
+                <ul>
+                    <li><a href="{% url 'sales:sales-order-list' %}">View Sales Orders</a></li>
+                    <li><a href="{% url 'sales:sales-order-create' %}">Create Sales Order</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body py-4">
+                <h5 class="card-title">Shipping</h5>
+                <p class="card-text">Ship orders, update inventory, and track customer shipments.</p>
+                <ul>
+                    <li><a href="{% url 'sales:sales-order-ship-list' %}">Shipping Orders</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body py-4">
+                <h5 class="card-title">Customer Management</h5>
+                <p class="card-text">View and manage your customers, their contact information, and the products they purchase.</p>
+                <ul>
+                    <li><a href="{% url 'sales:customer-list' %}">View Customers</a></li>
+                    <li><a href="{% url 'sales:customer-create' %}">Create Customer</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

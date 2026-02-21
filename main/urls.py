@@ -30,4 +30,5 @@ urlpatterns = [
     path("dashboard/", TemplateView.as_view(template_name="dashboard.html"), name="dashboard"),
     path("inventory/", include("inventory.urls", namespace="inventory")),
     path("procurement/", include("procurement.urls", namespace="procurement")),
+    path("sales/", include("sales.urls", namespace="sales")),
 ]

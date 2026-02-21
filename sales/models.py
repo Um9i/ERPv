@@ -2,6 +2,8 @@ from django.db import models, transaction
 from django.db.models import F, Sum
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
+from decimal import Decimal, ROUND_HALF_UP
 from inventory.models import Product, Inventory, InventoryLedger
 
 
@@ -64,13 +66,51 @@ class SalesOrder(models.Model):
     customer = models.ForeignKey(
         Customer, on_delete=models.CASCADE, related_name="customer_sales_orders"
     )
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["-pk"]
         verbose_name_plural = "Sales Orders"
 
     def __str__(self):
-        return f"{self.pk}"
+        # padded number similar to purchase order for nicer display
+        return f"SO{self.pk:05d}"
+
+    # convenience properties used in templates
+    @property
+    def order_number(self):
+        return str(self)
+
+    @property
+    def date(self):
+        return self.created_at
+
+    @property
+    def status(self):
+        if self.sales_order_lines.filter(complete=False).exists():
+            return "Open"
+        return "Closed"
+
+    @property
+    def total_amount(self):
+        total = (
+            self.sales_order_lines.aggregate(
+                total=Sum(F("product__price") * F("quantity"))
+            ).get("total")
+        )
+        if total is None:
+            return Decimal("0.00")
+        return Decimal(total).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    @property
+    def remaining_total(self):
+        total = Decimal("0.00")
+        for line in self.sales_order_lines.all():
+            rt = line.remaining_total
+            if rt is not None:
+                total += rt
+        return total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 class SalesLedger(models.Model):
@@ -101,6 +141,7 @@ class SalesOrderLine(models.Model):
         CustomerProduct, on_delete=models.CASCADE, related_name="product_sales_orders"
     )
     quantity = models.PositiveBigIntegerField()
+    quantity_shipped = models.PositiveBigIntegerField(default=0)
     complete = models.BooleanField(default=False)
     closed = models.BooleanField(default=False)
     value = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
@@ -122,6 +163,9 @@ class SalesOrderLine(models.Model):
     def save(self, *args, **kwargs):
         # run validation first
         self.full_clean()
+        # only adjust inventory when the entire line is being closed for the
+        # first time; partial shipments are handled by the view logic which
+        # manually updates stock/ledgers and increments ``quantity_shipped``.
         if self.complete == True and self.closed == False:
             product_qs = Inventory.objects.select_for_update().filter(
                 product=self.product.product
@@ -150,3 +194,32 @@ class SalesOrderLine(models.Model):
 
     def __str__(self):
         return self.product.product.name
+
+    # computed helpers mirroring procurement's order line
+    @property
+    def unit_price(self):
+        return self.product.price
+
+    @property
+    def total_price(self):
+        if self.value is not None:
+            return self.value
+        if self.unit_price is None:
+            return None
+        return self.unit_price * self.quantity
+
+    @property
+    def shipped_total(self):
+        if self.unit_price is None:
+            return None
+        return self.unit_price * self.quantity_shipped
+
+    @property
+    def remaining(self):
+        return max(self.quantity - self.quantity_shipped, 0)
+
+    @property
+    def remaining_total(self):
+        if self.unit_price is None:
+            return None
+        return self.unit_price * self.remaining

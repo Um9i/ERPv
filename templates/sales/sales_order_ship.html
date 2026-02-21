@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Sales Order Shipping - {{ sales_order.order_number }}</h1>
+<p><strong>Customer:</strong> {{ sales_order.customer.name }}</p>
+<p><strong>Order Number:</strong> {{ sales_order.order_number }}</p>
+<p><strong>Created At:</strong> {{ sales_order.created_at }}</p>
+<p><strong>Updated At:</strong> {{ sales_order.updated_at }}</p>
+<p><strong>Status:</strong> {{ sales_order.status }}</p>
+<h3>Order Lines</h3>
+<form method="post">
+    {% csrf_token %}
+    {% if errors %}
+    <div class="alert alert-danger">
+        <ul>
+        {% for err in errors %}
+            <li>{{ err }}</li>
+        {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Shipped</th>
+                <th>Quantity Shipped</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for line in sales_order.sales_order_lines.all %}
+            <tr>
+                <td>{{ line.product.product.name }}</td>
+                <td>{{ line.quantity }}</td>
+                <td>{{ line.quantity_shipped }}</td>
+                <td><input type="number" name="shipped_{{ line.id }}" min="0" max="{{ line.remaining }}" value="0">
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7">No lines.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <button type="submit" class="btn btn-success" name="ship">Ship</button>
+    <button type="submit" class="btn btn-danger" name="ship_all" value="1"
+        onclick="return confirm('Are you sure you want to ship ALL remaining quantities?');">
+        Ship All
+    </button>
+</form>
+{% endblock %}

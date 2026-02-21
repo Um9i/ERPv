@@ -129,9 +129,9 @@ class TestSupplierProduct:
         url = reverse("procurement:purchase-order-receive", args=[po.pk])
         resp = client.get(url)
         assert resp.status_code == 200
-        # page should include header for already received quantity
+        # page should include header for the received quantity column
         content = resp.content.decode()
-        assert "Already Received" in content
+        assert "Quantity Received" in content
         # receive-all button should have confirmation JS
         assert "receive_all" in content
         assert "confirm('Are you sure you want to receive ALL remaining quantities?')" in content
@@ -142,7 +142,7 @@ class TestSupplierProduct:
         data = {f"received_{purchase_order_line.id}": purchase_order_line.quantity}
         resp2 = client.post(url, data)
         assert resp2.status_code == 302
-        assert resp2.url == reverse("procurement:purchase-order-detail", args=[po.pk])
+        assert resp2.url == reverse("procurement:purchase-order-receiving-list")
         purchase_order_line.refresh_from_db()
         assert purchase_order_line.complete is True
         assert purchase_order_line.quantity_received == purchase_order_line.quantity

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% block content %}
+<h1>Create Sales Order</h1>
+<form method="post" id="so-form">
+    {% csrf_token %}
+    {{ form|crispy }}
+
+    <h3>Order Lines</h3>
+    {{ lines_formset.management_form }}
+    <div id="lines-container">
+    {% for line_form in lines_formset %}
+    <div class="card mb-3 p-3 line-form">
+        {{ line_form|crispy }}
+        {% if line_form.instance.pk %}
+        <hr>
+        {% endif %}
+    </div>
+    {% endfor %}
+    </div>
+
+    <button type="button" class="btn btn-secondary" id="add-line">Add another line</button>
+    <button type="submit" class="btn btn-success">Save</button>
+</form>
+
+<script>
+// simple formset helper: clone last form and update indexes
+(function() {
+    const addBtn = document.getElementById('add-line');
+    const container = document.getElementById('lines-container');
+    addBtn.addEventListener('click', function() {
+        const totalForms = document.getElementById('id_salesorderline_set-TOTAL_FORMS');
+        let formCount = parseInt(totalForms.value, 10);
+        const emptyForm = document.querySelector('#lines-container .line-form:last-child').cloneNode(true);
+        // adjust inputs in cloned form
+        emptyForm.querySelectorAll('input, select, textarea').forEach(function(el) {
+            if (el.name) {
+                el.name = el.name.replace(/-(\d+)-/, `-${formCount}-`);
+                el.id = 'id_' + el.name;
+                if (el.type !== 'hidden') el.value = '';
+            }
+        });
+        container.appendChild(emptyForm);
+        totalForms.value = formCount + 1;
+    });
+})();
+
+// when customer is chosen, restrict line product selects
+(function() {
+    const customerSelect = document.getElementById('id_customer');
+    async function updateProductOptions(customerId) {
+        if (!customerId) return;
+        const base = "{% url 'sales:customer-product-ids' 0 %}";
+        const url = base.replace(/\/customer\/\d+\//, "/customer/" + customerId + "/");
+        const resp = await fetch(url);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const allowed = new Set(data.product_ids.map(String));
+        document.querySelectorAll('#lines-container select').forEach(select => {
+            if (!select.name.endsWith('-product')) return;
+            Array.from(select.options).forEach(opt => {
+                if (opt.value === "" ) return;
+                opt.hidden = !allowed.has(opt.value);
+                if (opt.hidden && opt.selected) {
+                    select.value = "";
+                }
+            });
+        });
+    }
+    if (customerSelect) {
+        customerSelect.addEventListener('change', e => updateProductOptions(e.target.value));
+        if (customerSelect.value && customerSelect.value !== '0') {
+            updateProductOptions(customerSelect.value);
+        }
+    }
+})();
+</script>
+{% endblock %}

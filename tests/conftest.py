@@ -75,6 +75,12 @@ def sales_order(db, customer):
 
 @pytest.fixture
 def sales_order_line(db, sales_order, customer_product):
+    # ensure there is stock available for the product so shipping/closing
+    # operations pass validation.
+    inv, _ = Inventory.objects.update_or_create(
+        product=customer_product.product,
+        defaults={"quantity": 100},
+    )
     return SalesOrderLine.objects.create(sales_order=sales_order, product=customer_product, quantity=5, complete=False)
 
 
@@ -84,6 +90,8 @@ def sales_order_line_complete(db, sales_order_line):
     inventory_obj.quantity = 5
     inventory_obj.save()
     sol = SalesOrderLine.objects.get(pk=sales_order_line.pk)
+    # simulate order fully shipped/closed
+    sol.quantity_shipped = sol.quantity
     sol.complete = True
     sol.save()
     return sol
