@@ -35,6 +35,10 @@
             {% endfor %}
         </tbody>
     </table>
-    <button type="submit" class="btn btn-primary">Receive</button>
+    <button type="submit" class="btn btn-primary" name="receive">Receive</button>
+    <button type="submit" class="btn btn-secondary" name="receive_all" value="1"
+            onclick="return confirm('Are you sure you want to receive ALL remaining quantities?');">
+        Receive All
+    </button>
 </form>
 {% endblock %}

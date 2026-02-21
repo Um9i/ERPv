@@ -8,12 +8,14 @@ from .views import (
     SupplierDetailView,
     SupplierContactCreateView,
     SupplierProductCreateView,
-    PurchaseOrderCreateView,
-    PurchaseOrderDetailView,
     SupplierPurchaseOrderListView,
     SupplierProductListView,
+    SupplierProductIDsView,
+    PurchaseOrderCreateView,
+    PurchaseOrderDetailView,
     PurchaseOrderReceivingListView,
     PurchaseOrderReceiveView,
+    PurchaseOrderListView,
 )
 
 app_name = "procurement"
@@ -29,6 +31,8 @@ urlpatterns = [
     path("supplier-products/create/", SupplierProductCreateView.as_view(), name="supplier-product-create"),
     path("supplier/<int:pk>/purchase-orders/", SupplierPurchaseOrderListView.as_view(), name="supplier-purchaseorders"),
     path("supplier/<int:pk>/products/", SupplierProductListView.as_view(), name="supplier-products"),
+    path("supplier/<int:pk>/product-ids/", SupplierProductIDsView.as_view(), name="supplier-product-ids"),
+    path("purchase-orders/", PurchaseOrderListView.as_view(), name="purchase-order-list"),
     path("purchase-orders/create/", PurchaseOrderCreateView.as_view(), name="purchase-order-create"),
     path("purchase-orders/<int:pk>/", PurchaseOrderDetailView.as_view(), name="purchase-order-detail"),
     path("purchase-orders/receiving/", PurchaseOrderReceivingListView.as_view(), name="purchase-order-receiving-list"),

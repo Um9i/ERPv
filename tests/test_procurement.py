@@ -1,5 +1,5 @@
 import pytest
-from procurement.models import PurchaseLedger, PurchaseOrder
+from procurement.models import PurchaseLedger, PurchaseOrder, PurchaseOrderLine
 from inventory.models import Inventory, InventoryLedger
 
 
@@ -30,6 +30,42 @@ class TestSupplier:
         assert f"href=\"{reverse('procurement:supplier-purchaseorders', args=[supplier.pk])}\"" in content
         assert f"href=\"{reverse('procurement:supplier-products', args=[supplier.pk])}\"" in content
 
+    def test_supplier_list_pagination(self, client, supplier):
+        """Supplier list should paginate when many entries exist."""
+        from django.urls import reverse
+        from procurement.models import Supplier
+        # create enough extra suppliers to require more than one page
+        for i in range(12):
+            Supplier.objects.create(name=f"Pagi{i}")
+        url = reverse("procurement:supplier-list")
+        resp = client.get(url)
+        assert resp.status_code == 200
+        assert "Page 1 of" in resp.content.decode()
+        resp2 = client.get(url + "?page=2")
+        assert resp2.status_code == 200
+
+    def test_supplier_product_ids_api(self, client, supplier, supplier_product):
+        """API should return *supplier-product* ids for a given supplier."""
+        from django.urls import reverse
+        url = reverse("procurement:supplier-product-ids", args=[supplier.pk])
+        response = client.get(url)
+        assert response.status_code == 200
+        data = response.json()
+        assert "product_ids" in data
+        # the returned ids should be the PK of the SupplierProduct itself,
+        # since that's what the order line select uses as its option values.
+        assert int(supplier_product.pk) in data["product_ids"]
+        # pagination assertions for supplier list remain unchanged
+        from procurement.models import Supplier
+        for i in range(12):
+            Supplier.objects.create(name=f"Pagi{i}")
+        url = reverse("procurement:supplier-list")
+        resp = client.get(url)
+        assert resp.status_code == 200
+        assert "Page 1 of" in resp.content.decode()
+        resp2 = client.get(url + "?page=2")
+        assert resp2.status_code == 200
+
 @pytest.mark.django_db
 class TestSupplierProduct:
     def test_supplier_product_creation(self, supplier_product):
@@ -55,8 +91,13 @@ class TestSupplierProduct:
         # page should include header for already received quantity
         content = resp.content.decode()
         assert "Already Received" in content
+        # receive-all button should have confirmation JS
+        assert "receive_all" in content
+        assert "confirm('Are you sure you want to receive ALL remaining quantities?')" in content
         # since nothing has been received yet max should equal ordered
         assert f"max=\"{purchase_order_line.quantity}\"" in content
+        # we don't need any JS on the receive page; it simply lists
+        # the lines and presents inputs for received quantities.
         data = {f"received_{purchase_order_line.id}": purchase_order_line.quantity}
         resp2 = client.post(url, data)
         assert resp2.status_code == 302
@@ -76,7 +117,7 @@ class TestSupplierProduct:
         assert ledger.quantity == purchase_order_line.quantity
 
     def test_receive_view_partial_quantity(self, client, purchase_order_line):
-        """Receiving less than ordered still updates inventory and closes line."""
+        """Receiving less than ordered still updates inventory and keeps line open."""
         from django.urls import reverse
         from inventory.models import Inventory, InventoryLedger
 
@@ -104,10 +145,71 @@ class TestSupplierProduct:
         ).order_by("pk").last()
         assert ledger.quantity == partial
 
+    def test_receiving_list_pagination(self, client, supplier, supplier_product):
+        """The receiving list view should paginate when many orders exist."""
+        from django.urls import reverse
+        # create 12 purchase orders with incomplete lines
+        for _ in range(12):
+            po = PurchaseOrder.objects.create(supplier=supplier)
+            PurchaseOrderLine.objects.create(purchase_order=po, product=supplier_product, quantity=2)
+        url = reverse("procurement:purchase-order-receiving-list")
+        resp = client.get(url)
+        assert resp.status_code == 200
+        assert "Page 1 of" in resp.content.decode()
+        resp2 = client.get(url + "?page=2")
+        assert resp2.status_code == 200
+
+    def test_receive_all_button(self, client, supplier, supplier_product):
+        """Clicking receive-all should mark every line as received."""
+        from django.urls import reverse
+        from inventory.models import Inventory, InventoryLedger
+
+        po = PurchaseOrder.objects.create(supplier=supplier)
+        # two lines with different quantities
+        line1 = PurchaseOrderLine.objects.create(
+            purchase_order=po, product=supplier_product, quantity=3
+        )
+        line2 = PurchaseOrderLine.objects.create(
+            purchase_order=po, product=supplier_product, quantity=5
+        )
+        url = reverse("procurement:purchase-order-receive", args=[po.pk])
+        resp = client.post(url, {"receive_all": "1"})
+        assert resp.status_code == 302
+        line1.refresh_from_db()
+        line2.refresh_from_db()
+        assert line1.quantity_received == 3
+        assert line2.quantity_received == 5
+        assert line1.complete
+        assert line2.complete
+        # inventory increments by the sum
+        inv = Inventory.objects.get(product=supplier_product.product)
+        assert inv.quantity == 8
+        ledger = InventoryLedger.objects.filter(
+            product=supplier_product.product
+        ).order_by("pk").last()
+        assert ledger.quantity == 5 or ledger.quantity == 3
+        # page should reflect zero remaining on success GET
+        getresp = client.get(url)
+        assert "max=\"0\"" in getresp.content.decode()
+
 @pytest.mark.django_db
 class TestPurchaseOrder:
     def test_purchase_order_creation(self, purchase_order):
         assert purchase_order.supplier.name == "Test Supplier"
+
+    def test_purchase_order_list_pagination(self, client, purchase_order):
+        """List view should paginate when many orders exist."""
+        from django.urls import reverse
+        from procurement.models import PurchaseOrder
+        # create extra orders to force multiple pages
+        for i in range(12):
+            PurchaseOrder.objects.create(supplier=purchase_order.supplier)
+        url = reverse("procurement:purchase-order-list")
+        resp = client.get(url)
+        assert resp.status_code == 200
+        assert "Page 1 of" in resp.content.decode()
+        resp2 = client.get(url + "?page=2")
+        assert resp2.status_code == 200
 
     def test_purchase_order_properties(self, purchase_order, purchase_order_line):
         # Ensure computed fields work
@@ -209,6 +311,39 @@ class TestPurchaseOrder:
         assert first.quantity == 3
         assert second.product == supplier_product
         assert second.quantity == 4
+
+    def test_create_view_rejects_mismatched_product(self, client, supplier, supplier_product, product):
+        """POSTing a supplier-product that doesn't belong to the chosen
+        supplier should result in form errors and not create a PO."""
+        from procurement.models import Supplier, SupplierProduct
+        from django.urls import reverse
+
+        # create a second supplier and a product relationship pointing at it
+        other_supplier = Supplier.objects.create(name="OtherSup")
+        other_sp = SupplierProduct.objects.create(
+            supplier=other_supplier,
+            product=product,
+            cost=7.00,
+        )
+        url = reverse("procurement:purchase-order-create") + f"?supplier={supplier.pk}"
+        prefix = "purchase_order_lines"
+        data = {
+            "supplier": supplier.pk,
+            f"{prefix}-TOTAL_FORMS": "1",
+            f"{prefix}-INITIAL_FORMS": "0",
+            f"{prefix}-MIN_NUM_FORMS": "0",
+            f"{prefix}-MAX_NUM_FORMS": "1000",
+            # deliberately supply the other supplier's product id
+            f"{prefix}-0-product": other_sp.pk,
+            f"{prefix}-0-quantity": "5",
+        }
+        response = client.post(url, data)
+        # should re-render with errors rather than redirect
+        assert response.status_code == 200
+        fs = response.context["lines_formset"]
+        assert not fs.is_valid()
+        # no purchase order should have been created
+        assert not PurchaseOrder.objects.filter(supplier=supplier).exists()
 
 @pytest.mark.django_db
 class TestPurchaseOrderLine:

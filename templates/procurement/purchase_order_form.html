@@ -43,5 +43,41 @@
         totalForms.value = formCount + 1;
     });
 })();
+
+// when supplier is chosen, restrict line product selects
+(function() {
+    const supplierSelect = document.getElementById('id_supplier');
+    async function updateProductOptions(supplierId) {
+        if (!supplierId) return;
+        // build absolute URL using Django reverse template, replace placeholder 0
+        const base = "{% url 'procurement:supplier-product-ids' 0 %}";
+        // replace the entire /supplier/0/ segment so it works regardless of
+        // what follows in the path
+        const url = base.replace(/\/supplier\/\d+\//, "/supplier/" + supplierId + "/");
+        const resp = await fetch(url);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        // endpoint now returns *supplier-product* IDs, matching the values in the
+        // select options; convert to strings for comparison below
+        const allowed = new Set(data.product_ids.map(String));
+        document.querySelectorAll('#lines-container select').forEach(select => {
+            if (!select.name.endsWith('-product')) return;
+            Array.from(select.options).forEach(opt => {
+                if (opt.value === "" ) return; // keep blank
+                opt.hidden = !allowed.has(opt.value);
+                if (opt.hidden && opt.selected) {
+                    select.value = "";
+                }
+            });
+        });
+    }
+    if (supplierSelect) {
+        supplierSelect.addEventListener('change', e => updateProductOptions(e.target.value));
+        // trigger on load in case initial value present (ignore blank/0)
+        if (supplierSelect.value && supplierSelect.value !== '0') {
+            updateProductOptions(supplierSelect.value);
+        }
+    }
+})();
 </script>
 {% endblock %}

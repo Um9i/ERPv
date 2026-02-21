@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Suppliers</h1>
-<p><a href="{% url 'procurement:supplier-create' %}">New Supplier</a></p>
+<p><a class="btn btn-primary" href="{% url 'procurement:supplier-create' %}">Create Supplier</a></p>
 <table class="table table-striped">
     <thead>
         <tr>
@@ -18,4 +18,17 @@
         {% endfor %}
     </tbody>
 </table>
+{% if suppliers.has_other_pages %}
+<nav>
+  <ul class="pagination">
+    {% if suppliers.has_previous %}
+    <li class="page-item"><a class="page-link" href="?page={{ suppliers.previous_page_number }}">Previous</a></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">Page {{ suppliers.number }} of {{ suppliers.paginator.num_pages }}</span></li>
+    {% if suppliers.has_next %}
+    <li class="page-item"><a class="page-link" href="?page={{ suppliers.next_page_number }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
 {% endblock %}

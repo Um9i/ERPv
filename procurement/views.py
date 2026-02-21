@@ -44,6 +44,15 @@ class SupplierListView(ListView):
     template_name = "procurement/supplier_list.html"
     context_object_name = "suppliers"
 
+    def get_context_data(self, **kwargs):
+        from django.core.paginator import Paginator
+        context = super().get_context_data(**kwargs)
+        supplier_list = Supplier.objects.all().order_by("name")
+        page_num = self.request.GET.get("page")
+        paginator = Paginator(supplier_list, 20)
+        context["suppliers"] = paginator.get_page(page_num)
+        return context
+
 
 class SupplierDetailView(DetailView):
     model = Supplier
@@ -124,6 +133,27 @@ class SupplierProductListView(ListView):
         return SupplierProduct.objects.filter(supplier_id=supplier_id)
 
 
+class SupplierProductIDsView(DetailView):
+    """Return JSON list of *supplier‑product* IDs for a supplier.
+
+    This matches the values used in the purchase order line form, which
+    reference the SupplierProduct primary key rather than the underlying
+    Product. The javascript code relies on these IDs when showing/hiding
+    options.
+    """
+    model = Supplier
+
+    def get(self, request, *args, **kwargs):
+        supplier = self.get_object()
+        ids = list(
+            SupplierProduct.objects.filter(supplier=supplier)
+            .values_list("id", flat=True)
+        )
+        from django.http import JsonResponse
+
+        return JsonResponse({"product_ids": ids})
+
+
 class PurchaseOrderCreateView(CreateView):
     model = PurchaseOrder
     template_name = "procurement/purchase_order_form.html"
@@ -200,6 +230,26 @@ class PurchaseOrderCreateView(CreateView):
         )
 
 
+class PurchaseOrderListView(ListView):
+    model = PurchaseOrder
+    template_name = "procurement/purchase_order_list.html"
+    context_object_name = "purchase_orders"
+
+    def get_queryset(self):
+        return PurchaseOrder.objects.all().order_by("-created_at")
+
+    def get_context_data(self, **kwargs):
+        # mirror supplier list pagination behaviour
+        from django.core.paginator import Paginator
+
+        context = super().get_context_data(**kwargs)
+        qs = self.get_queryset()
+        page = self.request.GET.get("page")
+        paginator = Paginator(qs, 15)
+        context["purchase_orders"] = paginator.get_page(page)
+        return context
+
+
 class PurchaseOrderDetailView(DetailView):
     model = PurchaseOrder
     template_name = "procurement/purchase_order_detail.html"
@@ -223,7 +273,16 @@ class PurchaseOrderReceivingListView(ListView):
         # show only purchase orders that have unreceived lines
         return PurchaseOrder.objects.filter(
             purchase_order_lines__complete=False
-        ).distinct()
+        ).distinct().order_by("-created_at")
+
+    def get_context_data(self, **kwargs):
+        from django.core.paginator import Paginator
+        context = super().get_context_data(**kwargs)
+        qs = self.get_queryset()
+        page = self.request.GET.get("page")
+        paginator = Paginator(qs, 10)
+        context["purchase_orders"] = paginator.get_page(page)
+        return context
 
 
 class PurchaseOrderReceiveView(DetailView):
@@ -234,14 +293,20 @@ class PurchaseOrderReceiveView(DetailView):
     def post(self, request, *args, **kwargs):
         # process received quantities and mark lines complete
         self.object = self.get_object()
+        # if receive-all button was clicked, treat each line as if the
+        # remaining amount were entered
+        receive_all = "receive_all" in request.POST
         for line in self.object.purchase_order_lines.filter(complete=False):
-            key = f"received_{line.id}"
-            if key not in request.POST:
-                continue
-            try:
-                qty = int(request.POST[key])
-            except ValueError:
-                continue
+            if receive_all:
+                qty = line.remaining
+            else:
+                key = f"received_{line.id}"
+                if key not in request.POST:
+                    continue
+                try:
+                    qty = int(request.POST[key])
+                except ValueError:
+                    continue
             # any positive quantity should be treated as received;
             if qty > 0:
                 # update inventory and ledgers manually (qty may be less
