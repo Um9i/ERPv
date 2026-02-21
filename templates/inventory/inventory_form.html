@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% load crispy_forms_tags %}
 {% block content %}
 <h1>{% if inventory %}Edit{% else %}Create{% endif %} Inventory</h1>
 <form method="post">
     {% csrf_token %}
-    {{ form.as_p }}
+    {{ form|crispy }}
     <button type="submit" class="btn btn-primary">{% if inventory %}Update{% else %}Create{% endif %}</button>
 </form>
 {% endblock %}

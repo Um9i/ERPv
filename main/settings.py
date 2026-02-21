@@ -41,6 +41,9 @@ INSTALLED_APPS = [
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
     "django_admin_inline_paginator",
+    # crispy forms support
+    "crispy_forms",
+    "crispy_bootstrap5",
     "inventory.apps.InventoryConfig",
     "procurement.apps.ProcurementConfig",
     "production.apps.ProductionConfig",
@@ -138,5 +141,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LOGIN_REDIRECT_URL = "/dashboard"
 LOGOUT_REDIRECT_URL = "/"
+
+# crispy forms configuration
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 REGISTRATION_OPEN = True

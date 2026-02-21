@@ -1,16 +1,17 @@
 {% extends "base.html" %}
+{% load crispy_forms_tags %}
 {% block content %}
 <h1>Create Purchase Order</h1>
 <form method="post" id="po-form">
     {% csrf_token %}
-    {{ form.as_p }}
+    {{ form|crispy }}
 
     <h3>Order Lines</h3>
     {{ lines_formset.management_form }}
     <div id="lines-container">
     {% for line_form in lines_formset %}
     <div class="card mb-3 p-3 line-form">
-        {{ line_form.as_p }}
+        {{ line_form|crispy }}
         {% if line_form.instance.pk %}
         <hr>
         {% endif %}
