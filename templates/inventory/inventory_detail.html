@@ -1,8 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>{{ inventory.product.name }}</h1>
-<small><a href="{% url 'inventory:product-update' inventory.product.pk %}">Edit Name</a></small>
-<table class="table table-bordered table-striped">
+<div class="mb-2">
+    <a class="btn btn-sm btn-secondary" href="{% url 'inventory:product-update' inventory.product.pk %}">Edit Name</a>
+    <a class="btn btn-sm btn-warning ms-2" href="{% url 'inventory:inventory-adjust' inventory.pk %}">Adjust Quantity</a>
+</div>
+<table class="table table-bordered">
     <tr>
         <th>Quantity</th>
         <td>{{ inventory.quantity }}</td>
@@ -12,4 +15,37 @@
         <td>{{ inventory.last_updated }}</td>
     </tr>
 </table>
+
+<h3>Inventory Ledger</h3>
+{% if ledger %}
+<table class="table table-striped">
+    <thead><tr><th>Date</th><th>Quantity</th><th>Action</th><th>Txn</th></tr></thead>
+    <tbody>
+    {% for entry in ledger %}
+    <tr>
+        <td>{{ entry.date }}</td>
+        <td>{{ entry.quantity }}</td>
+        <td>{{ entry.action }}</td>
+        <td>{{ entry.transaction_id }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% if ledger.has_other_pages %}
+<nav>
+  <ul class="pagination">
+    {% if ledger.has_previous %}
+    <li class="page-item"><a class="page-link" href="?page={{ ledger.previous_page_number }}">Previous</a></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">Page {{ ledger.number }} of {{ ledger.paginator.num_pages }}</span></li>
+    {% if ledger.has_next %}
+    <li class="page-item"><a class="page-link" href="?page={{ ledger.next_page_number }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% else %}
+<p>No ledger entries.</p>
+{% endif %}
+
 {% endblock %}

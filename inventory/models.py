@@ -29,6 +29,7 @@ class Inventory(models.Model):
         Product, on_delete=models.CASCADE, related_name="product_inventory"
     )
     quantity = models.PositiveBigIntegerField(default=0)
+    last_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
         return f"{self.product}"
@@ -106,7 +107,9 @@ class InventoryAdjust(models.Model):
         self.full_clean()
         if self.pk is None and self.complete:
             product_qs = Inventory.objects.select_for_update().filter(product=self.product)
-            product_qs.update(quantity=F('quantity') + self.quantity)
+            # also update last_updated timestamp
+            from django.utils import timezone
+            product_qs.update(quantity=F('quantity') + self.quantity, last_updated=timezone.now())
             InventoryLedger.objects.create(
                 product=self.product,
                 quantity=self.quantity,

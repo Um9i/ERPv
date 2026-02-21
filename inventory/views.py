@@ -36,7 +36,22 @@ class InventoryListView(ListView):
     context_object_name = "inventories"
 
     def get_queryset(self):
-        return Inventory.objects.all().select_related("product")
+        qs = Inventory.objects.all().select_related("product")
+        q = self.request.GET.get("q", "").strip()
+        if q:
+            qs = qs.filter(product__name__icontains=q)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        from django.core.paginator import Paginator
+
+        context = super().get_context_data(**kwargs)
+        inv_list = self.get_queryset()
+        page = self.request.GET.get("page")
+        paginator = Paginator(inv_list, 20)
+        context["inventories"] = paginator.get_page(page)
+        context["q"] = self.request.GET.get("q", "")
+        return context
 
 
 class InventoryDetailView(DetailView):
@@ -46,6 +61,17 @@ class InventoryDetailView(DetailView):
 
     def get_queryset(self):
         return Inventory.objects.all().select_related("product")
+
+    def get_context_data(self, **kwargs):
+        from django.core.paginator import Paginator
+
+        context = super().get_context_data(**kwargs)
+        inv = self.object
+        ledger_list = inv.product.inventory_ledger.all().order_by("-date")
+        page = self.request.GET.get("page")
+        paginator = Paginator(ledger_list, 10)
+        context["ledger"] = paginator.get_page(page)
+        return context
 
 
 class InventoryAdjustCreateView(CreateView):

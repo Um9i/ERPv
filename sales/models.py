@@ -171,7 +171,8 @@ class SalesOrderLine(models.Model):
                 product=self.product.product
             )
             # decrement atomically
-            product_qs.update(quantity=F('quantity') - self.quantity)
+            from django.utils import timezone
+            product_qs.update(quantity=F('quantity') - self.quantity, last_updated=timezone.now())
             try:
                 self.value = self.product.price * self.quantity
             except Exception:

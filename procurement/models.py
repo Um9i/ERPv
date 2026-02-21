@@ -207,7 +207,8 @@ class PurchaseOrderLine(models.Model):
             product_qs = Inventory.objects.select_for_update().filter(
                 product=self.product.product
             )
-            product_qs.update(quantity=F('quantity') + self.quantity)
+            from django.utils import timezone
+            product_qs.update(quantity=F('quantity') + self.quantity, last_updated=timezone.now())
             # record monetary value
             try:
                 self.value = self.product.cost * self.quantity

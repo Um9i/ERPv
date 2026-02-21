@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+{% if user.is_authenticated %}
+<h1>Inventory Dashboard</h1>
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body py-4">
+                <h5 class="card-title">Product Management</h5>
+                <p class="card-text">Add or remove products tracked in inventory.</p>
+                <ul>
+                    <li><a href="{% url 'inventory:product-create' %}">Create Product</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body py-4">
+                <h5 class="card-title">Inventory Levels</h5>
+                <p class="card-text">View current stock levels and make manual adjustments.</p>
+                <ul>
+                    <li><a href="{% url 'inventory:inventory-list' %}">View Inventory</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

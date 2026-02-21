@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import TemplateView
 from .views import (
     ProductCreateView,
     ProductUpdateView,
@@ -11,6 +12,7 @@ from .views import (
 app_name = "inventory"
 
 urlpatterns = [
+    path("", TemplateView.as_view(template_name="inventory/inventory_dashboard.html"), name="inventory-dashboard"),
     path("products/create/", ProductCreateView.as_view(), name="product-create"),
     path(
         "products/<int:pk>/update/", ProductUpdateView.as_view(), name="product-update"

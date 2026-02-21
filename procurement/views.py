@@ -400,9 +400,10 @@ class PurchaseOrderReceiveView(DetailView):
                 from inventory.models import Inventory, InventoryLedger
                 from procurement.models import PurchaseLedger
 
+                from django.utils import timezone
                 Inventory.objects.filter(
                     product=line.product.product
-                ).update(quantity=F("quantity") + qty)
+                ).update(quantity=F("quantity") + qty, last_updated=timezone.now())
                 InventoryLedger.objects.create(
                     product=line.product.product,
                     quantity=qty,

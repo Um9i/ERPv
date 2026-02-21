@@ -1,7 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Inventory</h1>
-<p><a href="{% url 'inventory:product-create' %}">New Product</a></p>
+<form method="get" class="mb-3">
+    <div class="input-group">
+        <input type="text" name="q" class="form-control" placeholder="Search products" value="{{ request.GET.q }}">
+        <button class="btn btn-outline-secondary" type="submit">Search</button>
+    </div>
+</form>
 {% if inventories %}
 <table class="table table-striped">
     <thead>
@@ -16,11 +21,24 @@
     <tr>
         <td><a href="{% url 'inventory:inventory-detail' inventory.pk %}">{{ inventory.product.name }}</a></td>
         <td>{{ inventory.quantity }}</td>
-        <td><a href="{% url 'inventory:inventory-adjust' inventory.pk %}">Adjust</a> - <a href="{% url 'inventory:product-delete' inventory.product.pk %}">Delete</a></td>
+        <td><a href="{% url 'inventory:inventory-adjust' inventory.pk %}" class="btn btn-warning btn-sm">Adjust</a><a href="{% url 'inventory:product-delete' inventory.product.pk %}" class="btn btn-danger btn-sm ms-2">Delete</a></td>
     </tr>
     {% endfor %}
     </tbody>
 </table>
+{% if inventories.has_other_pages %}
+<nav>
+  <ul class="pagination">
+    {% if inventories.has_previous %}
+    <li class="page-item"><a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}page={{ inventories.previous_page_number }}">Previous</a></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">Page {{ inventories.number }} of {{ inventories.paginator.num_pages }}</span></li>
+    {% if inventories.has_next %}
+    <li class="page-item"><a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}page={{ inventories.next_page_number }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
 {% else %}
 <p>No inventories available.</p>
 {% endif %}

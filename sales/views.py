@@ -357,7 +357,7 @@ class SalesOrderShipView(DetailView):
             # perform updates
             touched = True
             inv.quantity -= qty
-            inv.save(update_fields=["quantity"])
+            inv.save(update_fields=["quantity", "last_updated"])
             InventoryLedger.objects.create(
                 product=line.product.product,
                 quantity=-abs(qty),
