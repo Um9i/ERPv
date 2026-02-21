@@ -406,5 +406,7 @@ class SalesDashboardView(TemplateView):
         context = super().get_context_data(**kwargs)
         context["total_orders"] = SalesOrder.objects.count()
         context["shipped_orders"] = SalesOrderLine.objects.filter(quantity_shipped__gt=0).count()
+        # count of lines still awaiting shipment (not marked complete)
+        context["pending_shipping"] = SalesOrderLine.objects.filter(complete=False).count()
         context["total_customers"] = Customer.objects.count()
         return context

@@ -24,6 +24,18 @@ class DashboardView(TemplateView):
         context["open_sales_count"] = SalesOrderLine.objects.filter(complete=False).count()
         context["open_purchase_count"] = PurchaseOrderLine.objects.filter(complete=False).count()
         context["open_production_count"] = Production.objects.filter(closed=False).count()
+        # procurement dashboard metrics
+        from procurement.models import PurchaseOrder, Supplier
+        context["total_purchase_orders"] = PurchaseOrder.objects.count()
+        context["pending_receiving"] = PurchaseOrderLine.objects.filter(complete=False).count()
+        context["lines_received"] = PurchaseOrderLine.objects.filter(complete=True).count()
+        context["total_suppliers"] = Supplier.objects.count()
+        # sales dashboard metrics
+        from sales.models import SalesOrder, Customer
+        context["total_orders"] = SalesOrder.objects.count()
+        context["shipped_orders"] = SalesOrderLine.objects.filter(quantity_shipped__gt=0).count()
+        context["pending_shipping"] = SalesOrderLine.objects.filter(complete=False).count()
+        context["total_customers"] = Customer.objects.count()
         # total required shortage across inventory
         from inventory.models import Inventory
         # cannot aggregate property so compute in Python loop

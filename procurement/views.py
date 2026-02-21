@@ -208,6 +208,8 @@ class ProcurementDashboardView(TemplateView):
 
         context = super().get_context_data(**kwargs)
         context["total_purchase_orders"] = PurchaseOrder.objects.count()
+        # how many individual order lines have already been received
+        context["lines_received"] = PurchaseOrderLine.objects.filter(complete=True).count()
         context["pending_receiving"] = PurchaseOrderLine.objects.filter(complete=False).count()
         context["total_suppliers"] = Supplier.objects.count()
         return context

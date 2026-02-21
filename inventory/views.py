@@ -139,10 +139,13 @@ class InventoryDashboardView(TemplateView):
         context = super().get_context_data(**kwargs)
         context["total_products"] = Product.objects.count()
         context["total_inventory_items"] = Inventory.objects.count()
-        # fall back to 0 when there are no inventory rows
-        context["stock_value"] = (
+        # compute summed quantity for dashboard
+        context["total_quantity"] = (
             Inventory.objects.aggregate(total=Sum("quantity"))["total"] or 0
         )
+        # fall back to 0 when there are no inventory rows; currently mirrors
+        # total_quantity until we later support monetary valuation.
+        context["stock_value"] = context["total_quantity"]
         return context
 
     def form_valid(self, form):

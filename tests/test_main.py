@@ -13,14 +13,43 @@ class TestMainDashboard:
         content = resp.content.decode()
         # stats table should include the new counts (note label changed)
         assert 'Total Products' in content
-        assert 'Products' in content
+        assert 'Total Purchase Orders' in content
+        assert 'Pending Receiving' in content
+        assert 'Lines Received' in content
+        assert 'Total Suppliers' in content
+        assert 'Total Orders' in content
+        assert 'Shipped Orders' in content
+        assert 'Pending Shipping' in content
+        assert 'Total Customers' in content
         assert 'Open Sales Orders' in content
         assert 'Open Purchase Orders' in content
         assert 'Open Production Jobs' in content
-        # "Products we Produce" label was removed in redesign
+        # verify additional headers
+        assert 'Inventory' in content
+        assert 'Procurement' in content
+        assert 'Sales' in content
+        assert 'Production' in content
+        # verify context keys exist and values match queries
+        ctx = resp.context
+        from procurement.models import PurchaseOrder, PurchaseOrderLine, Supplier
+        from sales.models import SalesOrder, SalesOrderLine, Customer
+        assert ctx['total_purchase_orders'] == PurchaseOrder.objects.count()
+        assert ctx['pending_receiving'] == PurchaseOrderLine.objects.filter(complete=False).count()
+        assert ctx['lines_received'] == PurchaseOrderLine.objects.filter(complete=True).count()
+        assert ctx['total_suppliers'] == Supplier.objects.count()
+        assert ctx['total_orders'] == SalesOrder.objects.count()
+        assert ctx['shipped_orders'] == SalesOrderLine.objects.filter(quantity_shipped__gt=0).count()
+        assert ctx['pending_shipping'] == SalesOrderLine.objects.filter(complete=False).count()
+        assert ctx['total_customers'] == Customer.objects.count()
         # verify stylesheet link and sidebar class are present
         assert '<link rel="stylesheet" href="' in content
         assert 'sidemenu' in content
+        # ensure card titles are hyperlinked where applicable
+        assert 'href="' in content  # at least one link
+        from django.urls import reverse
+        # check generated URLs appear in the HTML
+        assert reverse('procurement:purchase-order-receiving-list') in content
+        assert reverse('sales:sales-order-ship-list') in content
 
     def test_required_list_excludes_with_open_job(self, client, product):
         """If a product already has an open production job, it does not show."""

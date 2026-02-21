@@ -50,6 +50,10 @@ class CustomerProduct(models.Model):
 
     class Meta:
         ordering = ["product__name"]
+        indexes = [
+            models.Index(fields=["customer"]),
+            models.Index(fields=["product"]),
+        ]
 
     def __str__(self):
         return f"{self.product.name}"
@@ -68,10 +72,15 @@ class SalesOrder(models.Model):
     )
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
+    total_amount_cached = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"), editable=False)
 
     class Meta:
         ordering = ["-pk"]
         verbose_name_plural = "Sales Orders"
+        indexes = [
+            models.Index(fields=["customer"]),
+            models.Index(fields=["created_at"]),
+        ]
 
     def __str__(self):
         # padded number similar to purchase order for nicer display
@@ -94,6 +103,8 @@ class SalesOrder(models.Model):
 
     @property
     def total_amount(self):
+        if self.total_amount_cached is not None and self.total_amount_cached != Decimal("0.00"):
+            return self.total_amount_cached
         total = (
             self.sales_order_lines.aggregate(
                 total=Sum(F("product__price") * F("quantity"))
@@ -111,6 +122,17 @@ class SalesOrder(models.Model):
             if rt is not None:
                 total += rt
         return total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    def update_cached_total(self):
+        total = (
+            self.sales_order_lines.aggregate(
+                total=Sum(F("product__price") * F("quantity"))
+            ).get("total")
+        )
+        if total is None:
+            total = Decimal("0.00")
+        self.total_amount_cached = Decimal(total).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        self.save(update_fields=["total_amount_cached"])
 
 
 class SalesLedger(models.Model):
@@ -131,7 +153,17 @@ class SalesLedger(models.Model):
     class Meta:
         ordering = ["-date"]
         verbose_name_plural = "Sales Ledger"
+        indexes = [
+            models.Index(fields=["product", "customer"]),
+            models.Index(fields=["date"]),
+        ]
 
+
+
+
+# signal helpers to maintain cached total on the sales order header
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
 
 class SalesOrderLine(models.Model):
     sales_order = models.ForeignKey(
@@ -148,6 +180,11 @@ class SalesOrderLine(models.Model):
 
     class Meta:
         ordering = ["product"]
+        indexes = [
+            models.Index(fields=["sales_order", "complete"]),
+            models.Index(fields=["product"]),
+            models.Index(fields=["closed"]),
+        ]
 
     def clean(self):
         if self.complete == True and self.closed == False:
@@ -224,3 +261,13 @@ class SalesOrderLine(models.Model):
         if self.unit_price is None:
             return None
         return self.unit_price * self.remaining
+
+
+# signal handlers for cached totals
+@receiver(post_save, sender=SalesOrderLine)
+@receiver(post_delete, sender=SalesOrderLine)
+def _update_so_cache(sender, instance, **kwargs):
+    try:
+        instance.sales_order.update_cached_total()
+    except Exception:
+        pass

@@ -78,11 +78,13 @@ class TestSupplier:
         assert resp.status_code == 200
         ctx = resp.context
         assert ctx["total_purchase_orders"] == PurchaseOrder.objects.count()
+        assert ctx["lines_received"] == PurchaseOrderLine.objects.filter(complete=True).count()
         assert ctx["pending_receiving"] == PurchaseOrderLine.objects.filter(complete=False).count()
         assert ctx["total_suppliers"] == Supplier.objects.count()
         content = resp.content.decode()
         assert "POs" in content or "Purchase Orders" in content
         assert "Pending Receiving" in content
+        assert "Lines Received" in content
         assert "Suppliers" in content
 
     def test_supplier_product_ids_api(self, client, supplier, supplier_product):

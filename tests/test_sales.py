@@ -72,10 +72,12 @@ class TestCustomer:
         ctx = resp.context
         assert ctx["total_orders"] == SalesOrder.objects.count()
         assert ctx["shipped_orders"] == SalesOrderLine.objects.filter(quantity_shipped__gt=0).count()
+        assert ctx["pending_shipping"] == SalesOrderLine.objects.filter(complete=False).count()
         assert ctx["total_customers"] == customer.__class__.objects.count()
         content = resp.content.decode()
         assert "Total Orders" in content
         assert "Shipped" in content
+        assert "Pending Shipping" in content
         assert "Customers" in content
 
 @pytest.mark.django_db

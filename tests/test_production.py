@@ -128,6 +128,23 @@ class TestProduction:
         assert ctx["active_jobs"] == Production.objects.filter(closed=False).count()
         assert ctx["completed_jobs"] == Production.objects.filter(complete=True).count()
 
+    def test_form_does_not_show_complete(self, client, product, bom):
+        """The create view should not render the complete checkbox."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="test")
+        client.force_login(user)
+        url = reverse("production:production-create")
+        resp = client.get(url)
+        assert resp.status_code == 200
+        html = resp.content.decode()
+        # form should contain product and quantity inputs
+        assert "name=\"product\"" in html
+        assert "name=\"quantity\"" in html
+        # and must not include the complete field
+        assert "name=\"complete\"" not in html
+
     def test_receiving_views(self, client, product, bom, bom_item):
         """Open jobs appear in the completion list and can be completed, even partially."""
         from django.urls import reverse

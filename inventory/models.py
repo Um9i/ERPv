@@ -4,6 +4,7 @@ from django.db import models, transaction
 from django.db.models.signals import post_save
 from django.db.models import F
 from django.dispatch import receiver
+from django.db.models.signals import post_save, post_delete
 from django.utils.translation import gettext_lazy as _
 
 
@@ -30,6 +31,8 @@ class Inventory(models.Model):
     )
     quantity = models.PositiveBigIntegerField(default=0)
     last_updated = models.DateTimeField(auto_now=True)
+    # cache of ``required`` property to avoid recalculating in queries
+    required_cached = models.BigIntegerField(default=0, editable=False)
 
     def __str__(self) -> str:
         return f"{self.product}"
@@ -37,6 +40,10 @@ class Inventory(models.Model):
     class Meta:
         ordering = ["product"]
         verbose_name_plural = "Inventory Items"
+        indexes = [
+            models.Index(fields=["product"]),
+            models.Index(fields=["last_updated"]),
+        ]
 
     @property
     def required(self) -> int:
@@ -54,6 +61,11 @@ class Inventory(models.Model):
         # compute shortage relative to current stock
         short = self.quantity - allocated - sales_orders
         return abs(short) if short < 0 else 0
+
+    def update_required_cached(self):
+        """Recompute and persist the cached required quantity."""
+        self.required_cached = self.required
+        self.save(update_fields=["required_cached"])
 
 
 @receiver(post_save, sender=Product)
@@ -74,6 +86,10 @@ class ProductionAllocated(models.Model):
     class Meta:
         ordering = ["-id"]
         verbose_name_plural = "Production Allocated"
+        indexes = [
+            models.Index(fields=["product"]),
+            models.Index(fields=["quantity"]),
+        ]
 
 
 class InventoryLedger(models.Model):
@@ -91,6 +107,10 @@ class InventoryLedger(models.Model):
     class Meta:
         ordering = ["-date"]
         verbose_name_plural = "Inventory Ledger"
+        indexes = [
+            models.Index(fields=["product", "date"]),
+            models.Index(fields=["transaction_id"]),
+        ]
 
 
 class InventoryAdjust(models.Model):
@@ -109,6 +129,10 @@ class InventoryAdjust(models.Model):
         ordering = ["-id"]
         verbose_name_plural = "Inventory Adjustment"
         verbose_name = "inventory adjustment"
+        indexes = [
+            models.Index(fields=["product"]),
+            models.Index(fields=["complete"]),
+        ]
 
     def clean(self):
         # validate against inventory before applying change
@@ -117,6 +141,8 @@ class InventoryAdjust(models.Model):
             raise ValidationError(
                 _("Not enough resources to complete transaction.")
             )
+        # no change to cached requirements here; the quantity check occurs
+        # under ``select_for_update`` which will be followed by an adjustment
 
     @transaction.atomic
     def save(self, *args, **kwargs):
@@ -133,4 +159,30 @@ class InventoryAdjust(models.Model):
                 action="Inventory Adjustment",
                 transaction_id=self.product.pk,
             )
+            # refresh cached required value for this inventory
+            inv = Inventory.objects.get(product=self.product)
+            inv.update_required_cached()
         super().save(*args, **kwargs)
+
+
+# signal handlers to keep the required_cached field in sync
+@receiver(post_save, sender=ProductionAllocated)
+@receiver(post_delete, sender=ProductionAllocated)
+def _update_required_from_allocation(sender, instance, **kwargs):
+    try:
+        inv = Inventory.objects.get(product=instance.product)
+        inv.update_required_cached()
+    except Inventory.DoesNotExist:
+        pass
+
+
+from sales.models import SalesOrderLine  # imported here to avoid circular import
+
+@receiver(post_save, sender=SalesOrderLine)
+@receiver(post_delete, sender=SalesOrderLine)
+def _update_required_from_sales(sender, instance, **kwargs):
+    try:
+        inv = Inventory.objects.get(product=instance.product.product)
+        inv.update_required_cached()
+    except Inventory.DoesNotExist:
+        pass

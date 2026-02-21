@@ -126,7 +126,9 @@ class BOMItemDeleteView(DeleteView):
 class ProductionCreateView(CreateView):
     model = Production
     template_name = "production/production_form.html"
-    fields = ["product", "quantity", "complete"]
+    # do not expose the `complete` checkbox when creating; jobs are always
+    # started in an open state.  the update view still allows toggling it.
+    fields = ["product", "quantity"]
     success_url = reverse_lazy("production:production-list")
 
     def get_form(self, form_class=None):

@@ -112,10 +112,11 @@ class TestInventory:
         assert "View Inventory" in content
         # summary cards should appear
         assert "Products" in content
-        assert "Inventory Items" in content
+        assert "Total Quantity" in content
         assert "Stock Value" in content
         # verify context values reflect database
         ctx = resp.context
         assert ctx["total_products"] == Product.objects.count()
         assert ctx["total_inventory_items"] == Inventory.objects.count()
-        assert ctx["stock_value"] == Inventory.objects.aggregate(total=Sum("quantity"))["total"] or 0
+        assert ctx["total_quantity"] == Inventory.objects.aggregate(total=Sum("quantity"))["total"] or 0
+        assert ctx["stock_value"] == ctx["total_quantity"]

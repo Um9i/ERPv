@@ -49,6 +49,10 @@ class SupplierProduct(models.Model):
 
     class Meta:
         ordering = ["product__name"]
+        indexes = [
+            models.Index(fields=["supplier"]),
+            models.Index(fields=["product"]),
+        ]
 
     def __str__(self) -> str:
         return self.product.name
@@ -69,10 +73,16 @@ class PurchaseOrder(models.Model):
     )
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
+    # cached aggregate of line amounts to speed up listing and reports
+    total_amount_cached = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"), editable=False)
 
     class Meta:
         ordering = ["-pk"]
         verbose_name_plural = "Purchase Orders"
+        indexes = [
+            models.Index(fields=["supplier"]),
+            models.Index(fields=["created_at"]),
+        ]
 
     def __str__(self):
         return f"PO{self.pk:05d}"  # nice padded number
@@ -94,11 +104,10 @@ class PurchaseOrder(models.Model):
 
     @property
     def total_amount(self):
-        # total should always be calculated from line quantities and current
-        # unit price rather than relying on the stored `value` field.  this
-        # avoids confusion when partial receipts or manual edits tweak the
-        # value column; the order header should simply reflect the sum of
-        # quantity×unit_price for every line.
+        # return cached value when possible; fall back to recalculation if
+        # the cache is zero (e.g., before first save) or missing.
+        if self.total_amount_cached is not None and self.total_amount_cached != Decimal("0.00"):
+            return self.total_amount_cached
         total = (
             self.purchase_order_lines.aggregate(
                 total=Sum(F("product__cost") * F("quantity"))
@@ -119,6 +128,18 @@ class PurchaseOrder(models.Model):
                 total += rt
         return total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
+    def update_cached_total(self):
+        """Recompute and store the aggregate amount for this order."""
+        total = (
+            self.purchase_order_lines.aggregate(
+                total=Sum(F("product__cost") * F("quantity"))
+            ).get("total")
+        )
+        if total is None:
+            total = Decimal("0.00")
+        self.total_amount_cached = Decimal(total).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        self.save(update_fields=["total_amount_cached"])
+
 
 class PurchaseLedger(models.Model):
     product = models.ForeignKey(
@@ -138,6 +159,10 @@ class PurchaseLedger(models.Model):
     class Meta:
         ordering = ["-date"]
         verbose_name_plural = "Purchase Ledger"
+        indexes = [
+            models.Index(fields=["product", "supplier"]),
+            models.Index(fields=["date"]),
+        ]
 
 
 class PurchaseOrderLine(models.Model):
@@ -157,6 +182,11 @@ class PurchaseOrderLine(models.Model):
 
     class Meta:
         ordering = ["product"]
+        indexes = [
+            models.Index(fields=["purchase_order", "complete"]),
+            models.Index(fields=["product"]),
+            models.Index(fields=["closed"]),
+        ]
 
     def __str__(self):
         return self.product.product.name
@@ -229,3 +259,16 @@ class PurchaseOrderLine(models.Model):
             )
             self.closed = True
         super().save(*args, **kwargs)
+
+
+# signals to keep order cache up-to-date
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+
+@receiver(post_save, sender=PurchaseOrderLine)
+@receiver(post_delete, sender=PurchaseOrderLine)
+def _update_po_cache(sender, instance, **kwargs):
+    try:
+        instance.purchase_order.update_cached_total()
+    except Exception:
+        pass

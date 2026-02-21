@@ -12,6 +12,9 @@ class BillOfMaterials(models.Model):
     class Meta:
         ordering = ["product"]
         verbose_name_plural = "Bill of Materials Configuration"
+        indexes = [
+            models.Index(fields=["product"]),
+        ]
 
     def __str__(self):
         return self.product.name
@@ -28,6 +31,10 @@ class BOMItem(models.Model):
 
     class Meta:
         ordering = ["product__name"]
+        indexes = [
+            models.Index(fields=["bom"]),
+            models.Index(fields=["product"]),
+        ]
 
     def __str__(self):
         return f"{self.product.name} x {self.quantity}"
@@ -82,6 +89,11 @@ class Production(models.Model):
         ordering = ["-pk"]
         verbose_name_plural = "Production Planning"
         verbose_name = "planned production"
+        indexes = [
+            models.Index(fields=["product"]),
+            models.Index(fields=["complete", "closed"]),
+            models.Index(fields=["bom_allocated"]),
+        ]
 
     def __str__(self):
         return self.product.name
