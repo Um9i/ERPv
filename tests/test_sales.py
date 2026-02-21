@@ -58,6 +58,26 @@ class TestCustomer:
         resp2 = client.get(url, {"q": ""})
         assert customer.name in resp2.content.decode()
 
+    def test_dashboard_metrics(self, client, customer, sales_order, sales_order_line):
+        """Dashboard should provide counts that match DB state."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+        from sales.models import SalesOrder, SalesOrderLine
+
+        user = User.objects.create_user(username="dashuser")
+        client.force_login(user)
+        url = reverse("sales:sales-dashboard")
+        resp = client.get(url)
+        assert resp.status_code == 200
+        ctx = resp.context
+        assert ctx["total_orders"] == SalesOrder.objects.count()
+        assert ctx["shipped_orders"] == SalesOrderLine.objects.filter(quantity_shipped__gt=0).count()
+        assert ctx["total_customers"] == customer.__class__.objects.count()
+        content = resp.content.decode()
+        assert "Total Orders" in content
+        assert "Shipped" in content
+        assert "Customers" in content
+
 @pytest.mark.django_db
 class TestCustomerProduct:
     def test_customer_product_creation(self, customer_product):
@@ -183,6 +203,8 @@ class TestSalesOrder:
         url = reverse("sales:sales-order-create") + f"?customer={customer.pk}"
         response = client.get(url)
         assert response.status_code == 200
+        # MANAGEMENT FORM should use sales_order_lines prefix so JS can add rows
+        assert 'id="id_sales_order_lines-TOTAL_FORMS"' in response.content.decode()
         form = response.context["form"]
         assert str(form.initial.get("customer")) == str(customer.pk)
         from django import forms

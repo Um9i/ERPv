@@ -1,0 +1,142 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
+html {
+    font-family: 'Inter', sans-serif;
+    font-optical-sizing: auto;
+}
+
+h1 {
+    font-size: 2.5rem;
+    font-weight: 500;
+    line-height: 2.75em;
+}
+
+/* Pastel theme base colors */
+:root {
+    --bs-body-bg: #fdfdfd;
+    --bs-body-color: #333;
+    --bs-primary: #5fa;
+    --bs-secondary: #a5f;
+    --bs-border-color: #ccc;
+}
+
+body {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+}
+
+/* Dark navbar / sidebar */
+.navbar.bg-dark {
+    background-color: #000000 !important; /* override Bootstrap's !important */
+}
+.sidemenu,
+.sidebar {
+    background-color: #101010 !important;
+}
+
+.navbar .nav-link,
+.sidemenu a {
+    color: #ecf0f1 !important;
+    font-weight: 500;
+}
+
+/* ensure links on dark bg remain light even with bootstrap theme rules */
+.navbar.bg-dark .nav-link,
+.sidemenu a {
+    color: #ecf0f1 !important;
+}
+
+.navbar .nav-link:hover,
+.sidemenu a:hover {
+    color: #fff !important;
+}
+
+/* Table styling */
+.table thead {
+    background-color: #e9f7fa;
+}
+
+.table-striped>tbody>tr:nth-of-type(odd) {
+    background-color: #f2f2f2;
+}
+
+/* Cards & panels */
+.card {
+    background-color: #fff;
+    border-color: var(--bs-border-color);
+}
+
+/* utility tweaks */
+.btn-primary {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+.btn-secondary {
+    background-color: var(--bs-secondary);
+    border-color: var(--bs-secondary);
+}
+
+/* modernized navbar and sidemenu */
+.navbar {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.navbar .nav-link {
+    padding: 0.75rem 1rem;
+    transition: background-color 0.2s ease;
+    border-radius: 0.25rem;
+}
+
+.navbar .nav-link.active,
+.navbar .nav-link:hover {
+    background-color: rgba(255,255,255,0.1) !important;
+}
+
+.sidemenu {
+    box-shadow: 2px 0 8px rgba(0,0,0,0.3);
+    border-right: 1px solid var(--bs-border-color);
+}
+
+.sidemenu ul.nav .nav-link {
+    padding: 0.5rem 1rem;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    border-radius: 0.25rem;
+}
+
+.sidemenu ul.nav .nav-link.active,
+.sidemenu ul.nav .nav-link:hover {
+    color: #fff !important;
+}
+
+/* responsive collapse icon for sidemenu */
+@media (max-width: 768px) {
+    .sidemenu {
+        position: fixed;
+        z-index: 1040;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    .sidemenu.show {
+        transform: translateX(0);
+    }
+}
+
+/* improved typography and spacing */
+.navbar .navbar-nav .nav-link {
+    font-weight: 600;
+    font-size: 1.05rem;
+}
+.sidemenu .nav-link {
+    font-weight: 500;
+    font-size: 1rem;
+}
+
+/* dashboard summary cards */
+.dashboard-summary .card-body i {
+    font-size: 3rem;
+}
+.dashboard-summary .card {
+    min-height: 180px;
+}

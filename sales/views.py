@@ -11,6 +11,7 @@ from django.views.generic import (
     CreateView,
     UpdateView,
     DeleteView,
+    TemplateView,
 )
 from django.urls import reverse_lazy
 from django.shortcuts import redirect
@@ -396,3 +397,14 @@ class SalesOrderShipView(DetailView):
 
     def get_success_url(self):
         return reverse_lazy("sales:sales-order-ship-list")
+
+
+class SalesDashboardView(TemplateView):
+    template_name = "sales/sales_dashboard.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["total_orders"] = SalesOrder.objects.count()
+        context["shipped_orders"] = SalesOrderLine.objects.filter(quantity_shipped__gt=0).count()
+        context["total_customers"] = Customer.objects.count()
+        return context

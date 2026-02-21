@@ -3,46 +3,66 @@
 {% if user.is_authenticated %}
 <h1>Dashboard</h1>
 <div class="row">
-    <div class="col-md-4">
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body py-4">
-                <h5 class="card-title">Inventory Management</h5>
-                <p class="card-text">Manage your inventory, track stock levels, and organize your products.</p>
-                <a href="{% url 'inventory:inventory-dashboard' %}" class="btn btn-primary">Go to Inventory</a>
-            </div>
-        </div>
+    <div class="col-md-8">
+        {% if required_list %}
+        <h3>Required Products</h3>
+        <table class="table mb-4">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Needed</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in required_list %}
+                <tr>
+                    <td><a href="{% url 'inventory:inventory-detail' item.inventory.product.pk %}">{{ item.inventory.product.name }}</a></td>
+                    <td>{{ item.inventory.required }}</td>
+                    <td>
+                        {% if item.pending_po %}
+                        <span class="badge bg-info">On order: {{ item.pending_po }}</span>
+                        {% endif %}
+                        {% if item.has_job %}
+                        <span class="badge bg-warning">In production ({{ item.pending_job }})</span>
+                        {% endif %}
+                        {% if item.can_purchase %}
+                        <a href="{% url 'procurement:purchase-order-create' %}?product={{ item.inventory.product.pk }}"
+                            class="btn btn-sm btn-outline-primary">Buy</a>
+                        {% endif %}
+                        {% if item.can_produce %}
+                        <a href="{% url 'production:production-create' %}?product={{ item.inventory.product.pk }}"
+                            class="btn btn-sm btn-outline-success">Make</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
     </div>
-    <!-- Add more cards for other features like Sales, Purchasing, etc. -->
     <div class="col-md-4">
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body py-4">
-                <h5 class="card-title">Sales Management</h5>
-                <p class="card-text">Track your sales, manage customers, and analyze your sales performance.</p>
-                <a href="{% url 'sales:sales-dashboard' %}" class="btn btn-primary">Go to Sales</a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body py-4">
-                <h5 class="card-title">Procurement Management</h5>
-                <p class="card-text">Manage your suppliers, track purchase orders, and optimize your procurement
-                    process.</p>
-                <a href="{% url 'procurement:procurement-dashboard' %}" class="btn btn-primary">Go to Procurement</a>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="row">
-    <div class="col-md-4">
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body py-4">
-                <h5 class="card-title">Production Management</h5>
-                <p class="card-text">Manage your production processes, track progress, and optimize efficiency.</p>
-                <a href="#" class="btn btn-primary disabled">Go to Production</a>
-            </div>
-        </div>
+        <h3>Key Statistics</h3>
+        <table class="table table-bordered mb-4">
+            <tr>
+                <th><a href="{% url 'inventory:inventory-dashboard' %}">Total Products</a></th>
+                <td>{{ product_count }}</td>
+            </tr>
+            <tr>
+                <th><a href="{% url 'sales:sales-dashboard' %}">Open Sales Orders</a></th>
+                <td>{{ open_sales_count }}</td>
+            </tr>
+            <tr>
+                <th><a href="{% url 'procurement:procurement-dashboard' %}">Open Purchase Orders</a></th>
+                <td>{{ open_purchase_count }}</td>
+            </tr>
+            <tr>
+                <th><a href="{% url 'production:production-dashboard' %}">Open Production Jobs</a></th>
+                <td>{{ open_production_count }}</td>
+            </tr>
+        </table>
     </div>
 </div>
 {% endif %}
+
 {% endblock %}

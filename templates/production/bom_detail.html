@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>BOM for {{ bom.product.name }}</h1>
+<p><a class="btn btn-secondary" href="{% url 'production:bom-update' bom.pk %}">Edit</a>
+<a class="btn btn-danger" href="{% url 'production:bom-delete' bom.pk %}">Delete BOM</a></p>
+<h3>Components</h3>
+<p><a class="btn btn-success" href="{% url 'production:bomitem-create' %}?bom={{ bom.pk }}">Add Component</a></p>
+<table class="table table-striped">
+    <thead><tr><th>Product</th><th>Quantity</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for item in bom_items %}
+    <tr>
+        <td>{{ item.product.name }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>
+            <a class="btn btn-sm btn-secondary" href="{% url 'production:bomitem-update' item.pk %}">Edit</a>
+            <a class="btn btn-sm btn-danger" href="{% url 'production:bomitem-delete' item.pk %}">Delete</a>
+        </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="3">No components.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% if bom_items.has_other_pages %}
+<nav>
+  <ul class="pagination">
+    {% if bom_items.has_previous %}
+    <li class="page-item"><a class="page-link" href="?page={{ bom_items.previous_page_number }}">Previous</a></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">Page {{ bom_items.number }} of {{ bom_items.paginator.num_pages }}</span></li>
+    {% if bom_items.has_next %}
+    <li class="page-item"><a class="page-link" href="?page={{ bom_items.next_page_number }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}

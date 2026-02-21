@@ -38,6 +38,23 @@ class Inventory(models.Model):
         ordering = ["product"]
         verbose_name_plural = "Inventory Items"
 
+    @property
+    def required(self) -> int:
+        """Quantity required to satisfy allocated production and sales orders.
+
+        Mirrors logic previously implemented in the admin helper.  Positive
+        value indicates how many more units we need (stock minus demand).
+        """
+        # allocated production amount
+        allocated = sum(job.quantity for job in self.product.production_allocated.all())
+        # sales orders demand (customer products have on_sales_order helper)
+        sales_orders = sum(
+            sold.on_sales_order() for sold in self.product.product_customers.all()
+        )
+        # compute shortage relative to current stock
+        short = self.quantity - allocated - sales_orders
+        return abs(short) if short < 0 else 0
+
 
 @receiver(post_save, sender=Product)
 def create_production_allocation(sender, instance, created, **kwargs):

@@ -29,7 +29,7 @@
     const addBtn = document.getElementById('add-line');
     const container = document.getElementById('lines-container');
     addBtn.addEventListener('click', function() {
-        const totalForms = document.getElementById('id_salesorderline_set-TOTAL_FORMS');
+        const totalForms = document.getElementById('id_sales_order_lines-TOTAL_FORMS');
         let formCount = parseInt(totalForms.value, 10);
         const emptyForm = document.querySelector('#lines-container .line-form:last-child').cloneNode(true);
         // adjust inputs in cloned form

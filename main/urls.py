@@ -15,7 +15,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from django.views.generic import TemplateView
+#from django.views.generic import TemplateView
+from .views import DashboardView
 
 admin.site.site_title = "ERPv 0.0.1"
 admin.site.site_header = "ERPv"
@@ -26,9 +27,10 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path('accounts/', include('django_registration.backends.one_step.urls')),
     path("accounts/", include("django.contrib.auth.urls")),
-    path("", TemplateView.as_view(template_name="home.html"), name="home"),
-    path("dashboard/", TemplateView.as_view(template_name="dashboard.html"), name="dashboard"),
+    path("", DashboardView.as_view(template_name="home.html"), name="home"),
+    path("dashboard/", DashboardView.as_view(), name="dashboard"),
     path("inventory/", include("inventory.urls", namespace="inventory")),
     path("procurement/", include("procurement.urls", namespace="procurement")),
     path("sales/", include("sales.urls", namespace="sales")),
+    path("production/", include("production.urls", namespace="production")),
 ]

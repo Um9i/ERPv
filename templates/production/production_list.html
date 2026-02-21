@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Production Jobs</h1>
+<form method="get" class="mb-3">
+    <div class="input-group">
+        <input type="text" name="q" class="form-control" placeholder="Search jobs" value="{{ request.GET.q }}">
+        <button class="btn btn-outline-secondary" type="submit">Search</button>
+    </div>
+</form>
+<table class="table table-striped">
+    <thead><tr><th>ID</th><th>Product</th><th>Qty</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for job in productions %}
+    <tr>
+        <td>{{ job.order_number }}</td>
+        <td>{{ job.product.name }}</td>
+        <td>{{ job.quantity }}</td>
+        <td>{{ job.status }}</td>
+        <td><a class="btn btn-sm btn-primary" href="{% url 'production:production-detail' job.pk %}">View</a></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% if productions.has_other_pages %}
+<nav>
+  <ul class="pagination">
+    {% if productions.has_previous %}
+    <li class="page-item"><a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}page={{ productions.previous_page_number }}">Previous</a></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">Page {{ productions.number }} of {{ productions.paginator.num_pages }}</span></li>
+    {% if productions.has_next %}
+    <li class="page-item"><a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}page={{ productions.next_page_number }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}

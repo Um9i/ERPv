@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Bill of Materials</h1>
+<form method="get" class="mb-3">
+    <div class="input-group">
+        <input type="text" name="q" class="form-control" placeholder="Search BOMs" value="{{ request.GET.q }}">
+        <button class="btn btn-outline-secondary" type="submit">Search</button>
+    </div>
+</form>
+<table class="table table-striped">
+    <thead><tr><th>Product</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for bom in boms %}
+    <tr>
+        <td><a href="{% url 'production:bom-detail' bom.pk %}">{{ bom.product.name }}</a></td>
+        <td>
+            <a class="btn btn-sm btn-danger" href="{% url 'production:bom-delete' bom.pk %}">Delete</a>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% if boms.has_other_pages %}
+<nav>
+  <ul class="pagination">
+    {% if boms.has_previous %}
+    <li class="page-item"><a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}page={{ boms.previous_page_number }}">Previous</a></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">Page {{ boms.number }} of {{ boms.paginator.num_pages }}</span></li>
+    {% if boms.has_next %}
+    <li class="page-item"><a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}page={{ boms.next_page_number }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}

@@ -7,6 +7,8 @@
   <title>ERPv</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
     integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   {% load static %}
   <link rel="stylesheet" href="{% static 'styles.css' %}">
 </head>
@@ -20,7 +22,7 @@
       {% if user.is_authenticated %}
       {% include "sidemenu.html" %}
       {% endif %}
-      <div class="col p-4" data-bs-theme="light">
+      <div class="col p-5" data-bs-theme="light">
          {% block messages %}
          {% if messages %}
          <div class="mb-4">

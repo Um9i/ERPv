@@ -1,6 +1,7 @@
 from django.db import models, transaction
 from django.db.models import F
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from inventory.models import Product, Inventory, InventoryLedger, ProductionAllocated
 
@@ -42,13 +43,43 @@ class Production(models.Model):
         Product, on_delete=models.CASCADE, related_name="product_jobs"
     )
     quantity = models.PositiveBigIntegerField()
+    # how many units of the finished product have actually been received
+    quantity_received = models.PositiveBigIntegerField(default=0)
     complete = models.BooleanField(default=False)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
     closed = models.BooleanField(default=False)
     bom_allocated = models.BooleanField(default=False)
     bom_allocated_amount = models.PositiveBigIntegerField(blank=True, null=True)
 
+    def __str__(self):
+        return self.product.name
+
+    @property
+    def order_number(self):
+        return f"PR{self.pk:05d}"
+
+    @property
+    def date(self):
+        return self.created_at
+
+    @property
+    def remaining(self):
+        return max(self.quantity - self.quantity_received, 0)
+
+    @property
+    def status(self):
+        # derive a human-friendly status based on reception and closure
+        if self.closed:
+            return "Closed"
+        if self.quantity_received > 0:
+            return "Completing"
+        if self.bom_allocated:
+            return "Allocated"
+        return "Open"
+
     class Meta:
-        ordering = ["-id"]
+        ordering = ["-pk"]
         verbose_name_plural = "Production Planning"
         verbose_name = "planned production"
 
@@ -70,27 +101,28 @@ class Production(models.Model):
     def clean(self):
         if self.bom() == None:
             raise ValidationError(_("Product has no Bill of Materials."))
-        if self.complete == True:
-            if self.bom() is not None:
-                for item in self.bom():
-                    product = Inventory.objects.select_for_update().get(
-                        product=item.product
+        # when attempting to receive anything ensure components are available
+        if self.quantity_received > 0 and self.bom() is not None:
+            for item in self.bom():
+                product = Inventory.objects.select_for_update().get(
+                    product=item.product
+                )
+                if product.quantity - item.quantity * self.quantity_received < 0:
+                    raise ValidationError(
+                        _("Not enough Inventory to complete production.")
                     )
-                    if product.quantity - item.quantity * self.quantity < 0:
-                        raise ValidationError(
-                            _("Not enough Inventory to complete production.")
-                        )
 
     @transaction.atomic
     def save(self, *args, **kwargs):
-        # run validation only when performing allocation or completing production
+        # run validation when allocating or if any quantity_received change
         should_validate = (
             (self.bom() is not None and self.bom_allocated == False)
-            or (self.complete == True and self.closed == False)
+            or (self.quantity_received > 0 and self.closed == False)
         )
         if should_validate:
             self.full_clean()
 
+        # handle allocation
         if self.bom() is not None and self.bom_allocated == False:
             for item in self.bom():
                 product = ProductionAllocated.objects.select_for_update().get(
@@ -100,31 +132,47 @@ class Production(models.Model):
                 product.save()
             self.bom_allocated = True
             self.bom_allocated_amount = self.quantity
-        if self.complete == True and self.closed == False:
-            product = Inventory.objects.select_for_update().get(product=self.product)
-            product.quantity = product.quantity + self.quantity
-            product.save()
+
+        # adjust inventory for newly received amount
+        prev_received = 0
+        if self.pk:
+            try:
+                prev_received = Production.objects.get(pk=self.pk).quantity_received
+            except Production.DoesNotExist:
+                prev_received = 0
+        delta = self.quantity_received - prev_received
+        if delta > 0:
+            # increase finished product
+            prod_obj = Inventory.objects.select_for_update().get(product=self.product)
+            prod_obj.quantity = prod_obj.quantity + delta
+            prod_obj.save()
+
             if self.bom() is not None:
                 for item in self.bom():
+                    qty_change = item.quantity * delta
                     # decrement component inventory atomically
                     Inventory.objects.select_for_update().filter(product=item.product).update(
-                        quantity=F('quantity') - item.quantity * self.quantity
+                        quantity=F('quantity') - qty_change
                     )
                     # reduce the allocated amount atomically
                     ProductionAllocated.objects.select_for_update().filter(product=item.product).update(
-                        quantity=F('quantity') - item.quantity * (self.bom_allocated_amount or 0)
+                        quantity=F('quantity') - qty_change
                     )
                     InventoryLedger.objects.create(
                         product=item.product,
-                        quantity=-abs(item.quantity * self.quantity),
+                        quantity=-abs(qty_change),
                         action="Production",
                         transaction_id=self.pk,
                     )
                 InventoryLedger.objects.create(
                     product=self.product,
-                    quantity=self.quantity,
+                    quantity=delta,
                     action="Production",
                     transaction_id=self.pk,
                 )
-            self.closed = True
+            # close if we've now received everything
+            if self.quantity_received >= self.quantity:
+                self.closed = True
+                self.complete = True
+
         super().save(*args, **kwargs)

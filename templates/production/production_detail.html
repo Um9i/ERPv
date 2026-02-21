@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Production Job {{ production.order_number }}</h1>
+<p><strong>Product:</strong> {{ production.product.name }}</p>
+<p><strong>Quantity:</strong> {{ production.quantity }}</p>
+<p><strong>Status:</strong> {{ production.status }}</p>
+<p><strong>Created:</strong> {{ production.created_at }}</p>
+<p><strong>Updated:</strong> {{ production.updated_at }}</p>
+{% if production.status != "Closed" %}
+<form method="post" class="d-inline">
+    {% csrf_token %}
+    <button name="complete_production" value="1" class="btn btn-warning"
+            onclick="return confirm('Mark this job complete?');">Complete</button>
+</form>
+{% endif %}
+<h3>Bill of Materials</h3>
+{% if bom %}
+<table class="table">
+    <thead><tr><th>Component</th><th>Qty per unit</th></tr></thead>
+    <tbody>
+    {% for item in bom %}
+    <tr>
+        <td>{{ item.product.name }}</td>
+        <td>{{ item.quantity }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No BOM defined for product.</p>
+{% endif %}
+{% endblock %}

@@ -25,7 +25,11 @@ def bom(db, product):
 
 @pytest.fixture
 def bom_item(db, product, bom):
-    return BOMItem.objects.create(bom=bom, product=product, quantity=10)
+    # create a separate component product so the BOM is not self-referential
+    comp = Product.objects.create(name=f"component for {product.name}")
+    # ensure inventory exists for the component as well
+    Inventory.objects.update_or_create(product=comp, defaults={"quantity": 100})
+    return BOMItem.objects.create(bom=bom, product=comp, quantity=10)
 
 
 @pytest.fixture
@@ -95,3 +99,9 @@ def sales_order_line_complete(db, sales_order_line):
     sol.complete = True
     sol.save()
     return sol
+
+
+@pytest.fixture
+def production_job(db, product):
+    # create simple production job without BOM
+    return Production.objects.create(product=product, quantity=5)

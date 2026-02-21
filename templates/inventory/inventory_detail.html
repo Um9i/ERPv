@@ -16,6 +16,19 @@
     </tr>
 </table>
 
+<h3>Pending Activity</h3>
+<div class="mb-4">
+    <canvas id="pending-chart" height="60"></canvas>
+</div>
+<table class="table table-bordered">
+    <tr><th>Sales Orders</th><td>{{ sales_pending }}</td></tr>
+    <tr><th>Purchase Orders</th><td>{{ purchase_pending }}</td></tr>
+    {% if production_pending > 0 %}
+    <tr><th>Production Jobs</th><td>{{ production_pending }}</td></tr>
+{% endif %}
+    <tr><th>Required Shortage</th><td>{{ required_qty }}</td></tr>
+</table>
+
 <h3>Inventory Ledger</h3>
 {% if ledger %}
 <table class="table table-striped">
@@ -48,4 +61,37 @@
 <p>No ledger entries.</p>
 {% endif %}
 
+{% if user.is_authenticated %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const ctx2 = document.getElementById('pending-chart').getContext('2d');
+new Chart(ctx2, {
+    type: 'bar',
+    data: {
+        labels: [
+            'Sales',
+            'Purchases',
+            {% if production_pending > 0 %}'Production',{% endif %}
+            'Required'
+        ],
+        datasets: [{
+            label: 'Pending Qty',
+            backgroundColor: [
+                '#1cc88a',
+                '#36b9cc',
+                {% if production_pending > 0 %}'#f6c23e',{% endif %}
+                '#e74a3b'
+            ],
+            data: [
+                {{ sales_pending }},
+                {{ purchase_pending }},
+                {% if production_pending > 0 %}{{ production_pending }},{% endif %}
+                {{ required_qty }}
+            ]
+        }]
+    },
+    options: { responsive: true, scales: { y: { beginAtZero: true } } }
+});
+</script>
+{% endif %}
 {% endblock %}

@@ -1,4 +1,5 @@
 import pytest
+from django.db.models import Sum
 from inventory.models import Inventory, InventoryAdjust, InventoryLedger
 
 
@@ -77,6 +78,14 @@ class TestInventory:
         assert "Inventory Ledger" in content
         assert str(5) in content or str(-2) in content
         assert "Last Updated" in content
+        # pending activity totals should be present (zero by default)
+        assert "Pending Activity" in content
+        assert "Sales Orders" in content
+        assert "Purchase Orders" in content
+        # production jobs row only appears when nonzero; its absence is acceptable
+        assert "Required Shortage" in content
+        # chart canvas should be present
+        assert '<canvas id="pending-chart"' in content
         # ledger entries should appear (pagination header optional)
 
     def test_last_updated_changes_on_inventory_operations(self, product):
@@ -91,6 +100,8 @@ class TestInventory:
     def test_dashboard_links(self, client, product):
         from django.urls import reverse
         from django.contrib.auth.models import User
+        from inventory.models import Product, Inventory
+
         user = User.objects.create_user(username="tester")
         client.force_login(user)
         url = reverse("inventory:inventory-dashboard")
@@ -99,3 +110,12 @@ class TestInventory:
         content = resp.content.decode()
         assert "Inventory Dashboard" in content
         assert "View Inventory" in content
+        # summary cards should appear
+        assert "Products" in content
+        assert "Inventory Items" in content
+        assert "Stock Value" in content
+        # verify context values reflect database
+        ctx = resp.context
+        assert ctx["total_products"] == Product.objects.count()
+        assert ctx["total_inventory_items"] == Inventory.objects.count()
+        assert ctx["stock_value"] == Inventory.objects.aggregate(total=Sum("quantity"))["total"] or 0

@@ -11,6 +11,7 @@ from django.views.generic import (
     CreateView,
     UpdateView,
     DeleteView,
+    TemplateView,
 )
 from django.urls import reverse_lazy
 from django.shortcuts import redirect
@@ -198,8 +199,27 @@ class PurchaseOrderCreateView(CreateView):
     fields = ["supplier"]
     success_url = reverse_lazy("procurement:supplier-list")
 
+
+class ProcurementDashboardView(TemplateView):
+    template_name = "procurement/procurement_dashboard.html"
+
+    def get_context_data(self, **kwargs):
+        from django.db.models import Count
+
+        context = super().get_context_data(**kwargs)
+        context["total_purchase_orders"] = PurchaseOrder.objects.count()
+        context["pending_receiving"] = PurchaseOrderLine.objects.filter(complete=False).count()
+        context["total_suppliers"] = Supplier.objects.count()
+        return context
+
+
+class PurchaseOrderCreateView(CreateView):
+    model = PurchaseOrder
+    template_name = "procurement/purchase_order_form.html"
+    fields = ["supplier"]
+    success_url = reverse_lazy("procurement:supplier-list")
+
     def get_initial(self):
-        """Prepopulate supplier from query string if provided."""
         initial = super().get_initial()
         supplier_id = self.request.GET.get("supplier")
         if supplier_id:
@@ -210,7 +230,6 @@ class PurchaseOrderCreateView(CreateView):
         form = super().get_form(form_class)
         supplier_id = self.request.GET.get("supplier")
         if supplier_id:
-            # hide the supplier field when we already know the supplier
             form.fields["supplier"].widget = forms.HiddenInput()
         return form
 

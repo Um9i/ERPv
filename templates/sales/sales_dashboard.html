@@ -2,11 +2,44 @@
 {% block content %}
 {% if user.is_authenticated %}
 <h1>Sales Dashboard</h1>
+
+<!-- summary metrics -->
+<div class="row dashboard-summary mb-4">
+    <div class="col-sm-6 col-md-4 col-lg-3">
+        <div class="card text-center shadow-sm">
+            <div class="card-body">
+                <i class="bi bi-cart4 text-primary"></i>
+                <h5 class="card-title mt-2">Total Orders</h5>
+                <p class="card-text h2">{{ total_orders|default:'—' }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-4 col-lg-3">
+        <div class="card text-center shadow-sm">
+            <div class="card-body">
+                <i class="bi bi-truck text-success"></i>
+                <h5 class="card-title mt-2">Shipped</h5>
+                <p class="card-text h2">{{ shipped_orders|default:'—' }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-4 col-lg-3">
+        <div class="card text-center shadow-sm">
+            <div class="card-body">
+                <i class="bi bi-people-fill text-warning"></i>
+                <h5 class="card-title mt-2">Customers</h5>
+                <p class="card-text h2">{{ total_customers|default:'—' }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- action cards -->
 <div class="row">
     <div class="col-md-6">
         <div class="card mb-4 shadow-sm">
             <div class="card-body py-4">
-                <h5 class="card-title">Sales Order Management</h5>
+                <h5 class="card-title"><i class="bi bi-cart-plus me-2"></i>Sales Order Management</h5>
                 <p class="card-text">Create and manage sales orders, track their status, and ensure timely fulfillment.</p>
                 <ul>
                     <li><a href="{% url 'sales:sales-order-list' %}">View Sales Orders</a></li>
@@ -18,7 +51,7 @@
     <div class="col-md-6">
         <div class="card mb-4 shadow-sm">
             <div class="card-body py-4">
-                <h5 class="card-title">Shipping</h5>
+                <h5 class="card-title"><i class="bi bi-box-seam me-2"></i>Shipping</h5>
                 <p class="card-text">Ship orders, update inventory, and track customer shipments.</p>
                 <ul>
                     <li><a href="{% url 'sales:sales-order-ship-list' %}">Shipping Orders</a></li>
@@ -29,7 +62,7 @@
     <div class="col-md-6">
         <div class="card mb-4 shadow-sm">
             <div class="card-body py-4">
-                <h5 class="card-title">Customer Management</h5>
+                <h5 class="card-title"><i class="bi bi-people-fill me-2"></i>Customer Management</h5>
                 <p class="card-text">View and manage your customers, their contact information, and the products they purchase.</p>
                 <ul>
                     <li><a href="{% url 'sales:customer-list' %}">View Customers</a></li>

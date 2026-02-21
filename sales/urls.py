@@ -18,12 +18,13 @@ from .views import (
     SalesOrderShipListView,
     SalesOrderShipView,
     SalesOrderListView,
+    SalesDashboardView,
 )
 
 app_name = "sales"
 
 urlpatterns = [
-    path("", TemplateView.as_view(template_name="sales/sales_dashboard.html"), name="sales-dashboard"),
+    path("", SalesDashboardView.as_view(), name="sales-dashboard"),
     path("customers/", CustomerListView.as_view(), name="customer-list"),
     path("customers/<int:pk>/", CustomerDetailView.as_view(), name="customer-detail"),
     path("customers/create/", CustomerCreateView.as_view(), name="customer-create"),

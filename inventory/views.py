@@ -6,6 +6,7 @@ from django.views.generic import (
     CreateView,
     UpdateView,
     DeleteView,
+    TemplateView,
 )
 from django.urls import reverse_lazy
 
@@ -64,13 +65,40 @@ class InventoryDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         from django.core.paginator import Paginator
+        from django.db.models import Sum, F
+        # import lazily to avoid circular deps
+        from sales.models import SalesOrderLine
+        from procurement.models import PurchaseOrderLine
+        from production.models import Production
 
         context = super().get_context_data(**kwargs)
         inv = self.object
+        # ledger pagination
         ledger_list = inv.product.inventory_ledger.all().order_by("-date")
         page = self.request.GET.get("page")
         paginator = Paginator(ledger_list, 10)
         context["ledger"] = paginator.get_page(page)
+        # compute pending amounts for this product
+        # sales pending: sum of quantities not yet shipped
+        sales_qs = SalesOrderLine.objects.filter(
+            product__product=inv.product,
+            complete=False,
+        )
+        context["sales_pending"] = sales_qs.aggregate(total=Sum(F("quantity") - F("quantity_shipped"))) ["total"] or 0
+        # purchase pending: sum of remaining quantity to receive
+        po_qs = PurchaseOrderLine.objects.filter(
+            product__product=inv.product,
+            complete=False,
+        )
+        context["purchase_pending"] = po_qs.aggregate(total=Sum(F("quantity") - F("quantity_received")))["total"] or 0
+        # production pending: sum of remaining production quantity
+        prod_qs = Production.objects.filter(
+            product=inv.product,
+            closed=False,
+        ).filter(quantity__gt=F('quantity_received'))
+        context["production_pending"] = prod_qs.aggregate(total=Sum(F("quantity") - F("quantity_received")))["total"] or 0
+        # shortage required field
+        context["required_qty"] = inv.required
         return context
 
 
@@ -92,6 +120,30 @@ class InventoryAdjustCreateView(CreateView):
         if "complete" in form.fields:
             del form.fields["complete"]
         return form
+
+    def form_valid(self, form):
+        inventory = Inventory.objects.select_related("product").get(pk=self.kwargs.get("pk"))
+        form.instance.product = inventory.product
+        form.instance.complete = True
+        return super().form_valid(form)
+
+
+class InventoryDashboardView(TemplateView):
+    """Dashboard showing inventory metrics for the inventory app."""
+
+    template_name = "inventory/inventory_dashboard.html"
+
+    def get_context_data(self, **kwargs):
+        from django.db.models import Sum
+
+        context = super().get_context_data(**kwargs)
+        context["total_products"] = Product.objects.count()
+        context["total_inventory_items"] = Inventory.objects.count()
+        # fall back to 0 when there are no inventory rows
+        context["stock_value"] = (
+            Inventory.objects.aggregate(total=Sum("quantity"))["total"] or 0
+        )
+        return context
 
     def form_valid(self, form):
         inventory = Inventory.objects.select_related("product").get(pk=self.kwargs.get("pk"))

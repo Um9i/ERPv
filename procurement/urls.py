@@ -18,12 +18,13 @@ from .views import (
     PurchaseOrderReceivingListView,
     PurchaseOrderReceiveView,
     PurchaseOrderListView,
+    ProcurementDashboardView,
 )
 
 app_name = "procurement"
 
 urlpatterns = [
-    path("", TemplateView.as_view(template_name="procurement/procurement_dashboard.html"), name="procurement-dashboard"),
+    path("", ProcurementDashboardView.as_view(), name="procurement-dashboard"),
     path("suppliers/", SupplierListView.as_view(), name="supplier-list"),
     path("suppliers/<int:pk>/", SupplierDetailView.as_view(), name="supplier-detail"),
     path("suppliers/create/", SupplierCreateView.as_view(), name="supplier-create"),

@@ -7,12 +7,13 @@ from .views import (
     InventoryListView,
     InventoryDetailView,
     InventoryAdjustCreateView,
+    InventoryDashboardView,
 )
 
 app_name = "inventory"
 
 urlpatterns = [
-    path("", TemplateView.as_view(template_name="inventory/inventory_dashboard.html"), name="inventory-dashboard"),
+    path("", InventoryDashboardView.as_view(), name="inventory-dashboard"),
     path("products/create/", ProductCreateView.as_view(), name="product-create"),
     path(
         "products/<int:pk>/update/", ProductUpdateView.as_view(), name="product-update"

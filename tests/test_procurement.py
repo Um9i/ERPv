@@ -66,6 +66,25 @@ class TestSupplier:
         resp2 = client.get(url, {"q": ""})
         assert supplier.name in resp2.content.decode()
 
+    def test_dashboard_metrics(self, client, supplier, purchase_order, purchase_order_line):
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+        from procurement.models import PurchaseOrder, PurchaseOrderLine, Supplier
+
+        user = User.objects.create_user(username="dashuser")
+        client.force_login(user)
+        url = reverse("procurement:procurement-dashboard")
+        resp = client.get(url)
+        assert resp.status_code == 200
+        ctx = resp.context
+        assert ctx["total_purchase_orders"] == PurchaseOrder.objects.count()
+        assert ctx["pending_receiving"] == PurchaseOrderLine.objects.filter(complete=False).count()
+        assert ctx["total_suppliers"] == Supplier.objects.count()
+        content = resp.content.decode()
+        assert "POs" in content or "Purchase Orders" in content
+        assert "Pending Receiving" in content
+        assert "Suppliers" in content
+
     def test_supplier_product_ids_api(self, client, supplier, supplier_product):
         """API should return *supplier-product* ids for a given supplier."""
         from django.urls import reverse

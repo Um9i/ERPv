@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Delete BOM Component</h1>
+<p>Are you sure you want to remove {{ bom_item.product.name }} from {{ bom_item.bom.product.name }}?</p>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Yes, delete</button>
+    <a href="{% url 'production:bom-detail' bom_item.bom.pk %}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}
