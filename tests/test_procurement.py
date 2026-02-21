@@ -13,6 +13,10 @@ class TestSupplier:
 
     def test_supplier_detail_context(self, client, supplier, supplier_product):
         from django.urls import reverse
+        from procurement.models import PurchaseOrder
+
+        # create one purchase order so the "see all" link is shown
+        PurchaseOrder.objects.create(supplier=supplier)
 
         url = reverse("procurement:supplier-detail", args=[supplier.pk])
         response = client.get(url)
@@ -21,7 +25,7 @@ class TestSupplier:
         products_page = response.context.get("supplier_products")
         assert products_page is not None
         assert supplier_product in products_page.object_list
-        # purchase_orders also should be a page object, initially empty
+        # purchase_orders also should be a page object, now non‑empty
         assert "purchase_orders" in response.context
         purchase_page = response.context.get("purchase_orders")
         assert hasattr(purchase_page, "paginator")
@@ -89,6 +93,22 @@ class TestSupplierProduct:
     def test_supplier_product_creation(self, supplier_product):
         assert supplier_product.cost == 10.00
 
+    def test_supplier_product_create_title(self, client, supplier):
+        """Form page for a new product shows the "New" heading."""
+        from django.urls import reverse
+        url = reverse("procurement:supplier-product-create")
+        resp = client.get(url)
+        assert resp.status_code == 200
+        assert "<h1>New Supplier Product</h1>" in resp.content.decode()
+
+    def test_supplier_product_update_title(self, client, supplier_product):
+        """Editing an existing product uses the "Edit" heading."""
+        from django.urls import reverse
+        url = reverse("procurement:supplier-product-update", args=[supplier_product.pk])
+        resp = client.get(url)
+        assert resp.status_code == 200
+        assert "<h1>Edit Supplier Product</h1>" in resp.content.decode()
+
     def test_on_purchase_order(self, supplier_product, purchase_order_line):
         assert supplier_product.on_purchase_order() == 5
 
@@ -97,12 +117,15 @@ class TestSupplierProduct:
 
         If the received quantity equals the ordered quantity we still
         expect the line to be completed and inventory to be updated by
-        that amount.
+        that amount.  The parent order's *updated_at* timestamp should
+        also be modified.
         """
         from django.urls import reverse
         from inventory.models import Inventory, InventoryLedger
+        import datetime
 
         po = purchase_order_line.purchase_order
+        original = po.updated_at
         url = reverse("procurement:purchase-order-receive", args=[po.pk])
         resp = client.get(url)
         assert resp.status_code == 200
@@ -123,6 +146,9 @@ class TestSupplierProduct:
         purchase_order_line.refresh_from_db()
         assert purchase_order_line.complete is True
         assert purchase_order_line.quantity_received == purchase_order_line.quantity
+        # order timestamp should have moved forward
+        po.refresh_from_db()
+        assert po.updated_at > original
         # after the POST the receiving page should now reflect the received amount
         resp3 = client.get(url)
         assert str(purchase_order_line.quantity_received) in resp3.content.decode()

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Confirm Delete Supplier</h1>
+<p>Are you sure you want to delete the supplier "{{ supplier.name }}"?</p>
+<form method="post" action="{% url 'procurement:supplier-delete' supplier.id %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Delete</button>
+    <a href="{% url 'procurement:supplier-detail' supplier.id %}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

@@ -1,9 +1,11 @@
 asgiref==3.11.1
 confusable-homoglyphs==3.3.1
 coverage==7.13.4
+crispy-bootstrap5==2025.6
 dj-database-url==3.1.0
 Django==6.0.2
 django-admin-inline-paginator==0.4.0
+django-crispy-forms==2.5
 django-registration==5.2.1
 factory_boy==3.3.3
 Faker==40.4.0

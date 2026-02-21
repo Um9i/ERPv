@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Purchase Order Receiving - {{ purchase_order.id }}</h1>
+<h1>Purchase Order Receiving - {{ purchase_order.order_number }}</h1>
 <p><strong>Supplier:</strong> {{ purchase_order.supplier.name }}</p>
 <p><strong>Order Number:</strong> {{ purchase_order.order_number }}</p>
 <p><strong>Date:</strong> {{ purchase_order.date }}</p>
@@ -35,8 +35,8 @@
             {% endfor %}
         </tbody>
     </table>
-    <button type="submit" class="btn btn-primary" name="receive">Receive</button>
-    <button type="submit" class="btn btn-secondary" name="receive_all" value="1"
+    <button type="submit" class="btn btn-success" name="receive">Receive</button>
+    <button type="submit" class="btn btn-danger" name="receive_all" value="1"
             onclick="return confirm('Are you sure you want to receive ALL remaining quantities?');">
         Receive All
     </button>

@@ -130,6 +130,27 @@ class SupplierProductCreateView(CreateView):
         return reverse_lazy("procurement:supplier-detail", args=[self.object.supplier.pk])
 
 
+class SupplierProductUpdateView(UpdateView):
+    model = SupplierProduct
+    template_name = "procurement/supplier_product_form.html"
+    fields = ["supplier", "product", "cost"]
+    success_url = reverse_lazy("procurement:supplier-list")
+
+    def get_success_url(self):
+        # after updating a supplier product return to that supplier's detail
+        return reverse_lazy("procurement:supplier-detail", args=[self.object.supplier.pk])
+
+
+class SupplierProductDeleteView(DeleteView):
+    model = SupplierProduct
+    template_name = "procurement/supplier_product_confirm_delete.html"
+    success_url = reverse_lazy("procurement:supplier-list")
+
+    def get_success_url(self):
+        # after deleting a supplier product return to that supplier's detail
+        return reverse_lazy("procurement:supplier-detail", args=[self.object.supplier.pk])
+
+
 class SupplierPurchaseOrderListView(ListView):
     model = PurchaseOrder
     template_name = "procurement/supplier_purchaseorder_list.html"
@@ -328,6 +349,7 @@ class PurchaseOrderReceiveView(DetailView):
         # if receive-all button was clicked, treat each line as if the
         # remaining amount were entered
         receive_all = "receive_all" in request.POST
+        touched = False
         for line in self.object.purchase_order_lines.filter(complete=False):
             if receive_all:
                 qty = line.remaining
@@ -341,6 +363,7 @@ class PurchaseOrderReceiveView(DetailView):
                     continue
             # any positive quantity should be treated as received;
             if qty > 0:
+                touched = True
                 # update inventory and ledgers manually (qty may be less
                 # than order quantity, so we don't rely on the model hook)
                 from inventory.models import Inventory, InventoryLedger
@@ -379,6 +402,11 @@ class PurchaseOrderReceiveView(DetailView):
                 if line.complete:
                     fields += ["complete", "closed"]
                 line.save(update_fields=fields)
+        # if any lines were changed, update the purchase order timestamp so
+        # users can see that something happened
+        if touched:
+            # auto_now takes care of the actual value
+            self.object.save(update_fields=["updated_at"])
         return redirect(self.get_success_url())
 
     def get_success_url(self):

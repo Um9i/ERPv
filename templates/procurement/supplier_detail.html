@@ -1,15 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="mb-5">
-<h1>{{ supplier.name }}</h1>
-<p>Phone: {{ supplier.phone }}</p>
-<p>Email: {{ supplier.email }}</p>
-<p>Address: {{ supplier.address }}</p>
-<p><a href="{% url 'procurement:supplier-update' supplier.id %}">Edit Supplier</a></p>
+    <h1>{{ supplier.name }}</h1>
+    <p>Phone: {{ supplier.phone }}</p>
+    <p>Email: {{ supplier.email }}</p>
+    <p>Address: {{ supplier.address }}</p>
+    <p>
+    <a href="{% url 'procurement:supplier-update' supplier.id %}" class="btn btn-secondary">Edit Supplier</a>
+    <a href="{% url 'procurement:supplier-delete' supplier.id %}" class="btn btn-danger">Delete Supplier</a>
+    </p>
 </div>
 <h2>Purchase Orders</h2>
-<a href="{% url 'procurement:purchase-order-create' %}?supplier={{ supplier.id }}">Create Purchase Order</a>
-<a class="btn btn-link" href="{% url 'procurement:supplier-purchaseorders' supplier.id %}">See all</a>
+<a href="{% url 'procurement:purchase-order-create' %}?supplier={{ supplier.id }}" class="btn btn-success">Create Purchase Order</a>
 <table class="table table-striped">
     <thead>
         <tr>
@@ -27,7 +29,7 @@
             <td>{{ order.date }}</td>
             <td>{{ order.status }}</td>
             <td>{{ order.total_amount }}</td>
-            <td><a href="{% url 'procurement:purchase-order-detail' order.id %}">View</a></td>
+            <td><a href="{% url 'procurement:purchase-order-detail' order.id %}" class="btn btn-sm btn-primary">View</a></td>
         </tr>
         {% empty %}
         <tr>
@@ -36,28 +38,33 @@
         {% endfor %}
     </tbody>
 </table>
+{% if purchase_orders %}
+<a class="btn btn-link" href="{% url 'procurement:supplier-purchaseorders' supplier.id %}">See all</a>
+{% endif %}
 {% if purchase_orders.has_other_pages %}
 <nav>
-  <ul class="pagination">
-    {% if purchase_orders.has_previous %}
-    <li class="page-item"><a class="page-link" href="?po_page={{ purchase_orders.previous_page_number }}">Previous</a></li>
-    {% endif %}
-    <li class="page-item disabled"><span class="page-link">Page {{ purchase_orders.number }} of {{ purchase_orders.paginator.num_pages }}</span></li>
-    {% if purchase_orders.has_next %}
-    <li class="page-item"><a class="page-link" href="?po_page={{ purchase_orders.next_page_number }}">Next</a></li>
-    {% endif %}
-  </ul>
+    <ul class="pagination">
+        {% if purchase_orders.has_previous %}
+        <li class="page-item"><a class="page-link"
+                href="?po_page={{ purchase_orders.previous_page_number }}">Previous</a></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">Page {{ purchase_orders.number }} of {{
+                purchase_orders.paginator.num_pages }}</span></li>
+        {% if purchase_orders.has_next %}
+        <li class="page-item"><a class="page-link" href="?po_page={{ purchase_orders.next_page_number }}">Next</a></li>
+        {% endif %}
+    </ul>
 </nav>
 {% endif %}
 <h2 class="mt-5">Supplied Products</h2>
-<p><a href="{% url 'procurement:supplier-product-create' %}?supplier={{ supplier.id }}">Add Supplier Products</a></p>
-<a class="btn btn-link" href="{% url 'procurement:supplier-products' supplier.id %}">See all</a>
+<p><a href="{% url 'procurement:supplier-product-create' %}?supplier={{ supplier.id }}" class="btn btn-success">Add Supplier Products</a></p>
 {% if supplier_products %}
 <table class="table table-striped">
     <thead>
         <tr>
             <th>Product</th>
             <th>Cost</th>
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
@@ -65,6 +72,10 @@
         <tr>
             <td>{{ supplier_product.product.name }}</td>
             <td>{{ supplier_product.cost }}</td>
+            <td>
+                <a href="{% url 'procurement:supplier-product-update' supplier_product.id %}" class="btn btn-sm btn-secondary">Edit</a>
+                <a href="{% url 'procurement:supplier-product-delete' supplier_product.id %}" class="btn btn-sm btn-danger">Delete</a>
+            </td>
         </tr>
         {% empty %}
         <tr>
@@ -75,16 +86,20 @@
 </table>
 {% if supplier_products.has_other_pages %}
 <nav>
-  <ul class="pagination">
-    {% if supplier_products.has_previous %}
-    <li class="page-item"><a class="page-link" href="?sp_page={{ supplier_products.previous_page_number }}">Previous</a></li>
-    {% endif %}
-    <li class="page-item disabled"><span class="page-link">Page {{ supplier_products.number }} of {{ supplier_products.paginator.num_pages }}</span></li>
-    {% if supplier_products.has_next %}
-    <li class="page-item"><a class="page-link" href="?sp_page={{ supplier_products.next_page_number }}">Next</a></li>
-    {% endif %}
-  </ul>
+    <ul class="pagination">
+        {% if supplier_products.has_previous %}
+        <li class="page-item"><a class="page-link"
+                href="?sp_page={{ supplier_products.previous_page_number }}">Previous</a></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">Page {{ supplier_products.number }} of {{
+                supplier_products.paginator.num_pages }}</span></li>
+        {% if supplier_products.has_next %}
+        <li class="page-item"><a class="page-link" href="?sp_page={{ supplier_products.next_page_number }}">Next</a>
+        </li>
+        {% endif %}
+    </ul>
 </nav>
 {% endif %}
+<a class="btn btn-link" href="{% url 'procurement:supplier-products' supplier.id %}">See all</a>
 {% endif %}
 {% endblock %}
