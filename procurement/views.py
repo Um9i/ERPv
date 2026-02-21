@@ -301,12 +301,43 @@ class PurchaseOrderDetailView(DetailView):
     template_name = "procurement/purchase_order_detail.html"
     context_object_name = "purchase_order"
 
+    def post(self, request, *args, **kwargs):
+        # support a manual "close order" action from the detail page.
+        self.object = self.get_object()
+        if "close_order" in request.POST:
+            # mark every non‑complete line as complete/closed and ensure
+            # quantity_received and value reflect the full ordered amount.
+            # we use queryset.update() so that the save() hooks (which would
+            # adjust inventory) are bypassed; closing an order should not
+            # change stock levels.
+            from django.db.models import F
+
+            open_lines = self.object.purchase_order_lines.filter(complete=False)
+            # iterate so we can safely compute values and set closed/complete
+            # without triggering the inventory adjustment logic in save().
+            for line in open_lines:
+                # mark lines closed without touching receive counts or price
+                line.complete = True
+                line.closed = True
+                # do not modify quantity_received or value; the order is being
+                # closed administratively rather than as a receipt.
+                line.save(update_fields=["complete", "closed"])
+            # update order timestamp to signal change
+            self.object.save(update_fields=["updated_at"])
+            # simply reload the detail page
+            from django.shortcuts import redirect
+            return redirect(request.path)
+        # delegate other POSTs if we ever need them (none today)
+        return super().post(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         purchase_order = self.object
         context["lines"] = purchase_order.purchase_order_lines.select_related(
             "product"
         ).all()
+        # allow template to decide whether to render close button
+        context["can_close"] = purchase_order.status == "Open"
         return context
 
 
@@ -392,15 +423,18 @@ class PurchaseOrderReceiveView(DetailView):
                 if line.quantity_received >= line.quantity:
                     line.complete = True
                     line.closed = True
-                try:
-                    # store value for documentation - use qty received
-                    line.value = line.product.cost * qty
-                except Exception:
-                    line.value = None
-                # save updated fields; inventory adjustment already done
-                fields = ["quantity_received", "value"]
+                    # store the full-order value once the line is closed; do
+                    # not touch it during partial receipts.
+                    try:
+                        line.value = line.product.cost * line.quantity
+                    except Exception:
+                        line.value = None
+                # the monetary *order* value should stay the same; we only want
+                # to record it once the line is fully received.  partial
+                # receipts leave `value` untouched.
+                fields = ["quantity_received"]
                 if line.complete:
-                    fields += ["complete", "closed"]
+                    fields += ["complete", "closed", "value"]
                 line.save(update_fields=fields)
         # if any lines were changed, update the purchase order timestamp so
         # users can see that something happened
@@ -410,4 +444,4 @@ class PurchaseOrderReceiveView(DetailView):
         return redirect(self.get_success_url())
 
     def get_success_url(self):
-        return reverse_lazy("procurement:purchase-order-detail", args=[self.object.pk])
+        return reverse_lazy("procurement:purchase-order-receiving-list")

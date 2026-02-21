@@ -146,9 +146,14 @@ class TestSupplierProduct:
         purchase_order_line.refresh_from_db()
         assert purchase_order_line.complete is True
         assert purchase_order_line.quantity_received == purchase_order_line.quantity
+        # value should reflect the whole line, not just the amount blurred
+        assert purchase_order_line.value == purchase_order_line.unit_price * purchase_order_line.quantity
         # order timestamp should have moved forward
         po.refresh_from_db()
         assert po.updated_at > original
+        # total_amount should stay equal to quantity×unit_price regardless
+        # of the line's stored value or received count
+        assert po.total_amount == purchase_order_line.unit_price * purchase_order_line.quantity
         # after the POST the receiving page should now reflect the received amount
         resp3 = client.get(url)
         assert str(purchase_order_line.quantity_received) in resp3.content.decode()
@@ -177,6 +182,11 @@ class TestSupplierProduct:
         assert purchase_order_line.complete is False
         assert purchase_order_line.closed is False
         assert purchase_order_line.quantity_received == partial
+        # value should not have been touched by a partial receive
+        assert purchase_order_line.value is None
+        # total_amount must still equal full original cost
+        po.refresh_from_db()
+        assert po.total_amount == purchase_order_line.unit_price * purchase_order_line.quantity
         # after the partial post, max input should be remaining quantity
         resp2 = client.get(url)
         remaining = purchase_order_line.quantity - partial
@@ -296,21 +306,38 @@ class TestPurchaseOrder:
         assert purchase_order.order_number.startswith("PO")
         assert purchase_order.date == purchase_order.created_at
         assert purchase_order.status == "Open"
-        # total amount should calculate even before completion and use two decimals
+        # total amount should always compute from quantity × unit price
         expected = purchase_order_line.product.cost * purchase_order_line.quantity
         from decimal import Decimal, ROUND_HALF_UP
         expected = Decimal(expected).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         assert purchase_order.total_amount == expected
-        # close the line and recalc
+        # closing the line sets its stored `value` but order total remains
         purchase_order_line.complete = True
         purchase_order_line.save()
         assert purchase_order.status == "Closed"
-        # total amount should equal line value now that value field populated
-        total = purchase_order.purchase_order_lines.aggregate(total=__import__('django').db.models.Sum('value'))['total']
-        assert purchase_order.total_amount == (total or 0)
+        assert purchase_order.total_amount == expected
+
+    def test_remaining_and_order_values(self, purchase_order_line):
+        """Computed totals should include remaining and received amounts."""
+        po = purchase_order_line.purchase_order
+        # initially nothing received – order remaining should equal total
+        assert po.remaining_total == po.total_amount
+        original_total = po.total_amount
+        # check line helpers
+        assert purchase_order_line.received_total == 0
+        assert purchase_order_line.remaining_total == purchase_order_line.unit_price * purchase_order_line.quantity
+        # simulate receiving some quantity
+        purchase_order_line.quantity_received = 2
+        purchase_order_line.save()
+        # total order value should not change when we record received amounts
+        assert po.total_amount == original_total
+        expected_rem = (purchase_order_line.quantity - 2) * purchase_order_line.unit_price
+        assert purchase_order_line.remaining_total == expected_rem
+        # order remaining value updates accordingly
+        assert po.remaining_total == expected_rem
 
     def test_purchase_order_detail_shows_received(self, client, purchase_order_line):
-        """Detail page includes quantity_received column."""
+        """Detail page includes received and remaining totals."""
         from django.urls import reverse
         po = purchase_order_line.purchase_order
         # update received on the line to simulate partial receipt
@@ -321,6 +348,41 @@ class TestPurchaseOrder:
         assert resp.status_code == 200
         content = resp.content.decode()
         assert str(purchase_order_line.quantity_received) in content
+        # the received_total and remaining_total should appear as numbers
+        assert str(purchase_order_line.received_total) in content
+        assert str(purchase_order_line.remaining_total) in content
+
+    def test_can_close_order_from_detail(self, client, purchase_order_line):
+        """A button on the detail page allows manual closing of an order."""
+        from django.urls import reverse
+        from inventory.models import Inventory
+
+        po = purchase_order_line.purchase_order
+        url = reverse("procurement:purchase-order-detail", args=[po.pk])
+        resp = client.get(url)
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert 'name="close_order"' in content
+        # perform the close action
+        resp2 = client.post(url, {"close_order": "1"})
+        assert resp2.status_code == 302
+        assert resp2.url == url
+        po.refresh_from_db()
+        assert po.status == "Closed"
+        # all lines should now be complete/closed but quantities untouched
+        for line in po.purchase_order_lines.all():
+            assert line.complete is True
+            assert line.closed is True
+            assert line.quantity_received == 0
+            assert line.value is None
+        # closing does not alter inventory
+        inv = Inventory.objects.filter(product=purchase_order_line.product.product).first()
+        assert inv is None or inv.quantity == 0
+        # after closing the detail page no longer shows the close button
+        resp3 = client.get(url)
+        assert 'name="close_order"' not in resp3.content.decode()
+        # open order value may still show remaining amount
+        assert "Open Order Value" in resp3.content.decode()
 
     def test_create_view_prefills_and_filters(self, client, supplier, supplier_product):
         """GET should prefill supplier and limit the product choices on each line."""

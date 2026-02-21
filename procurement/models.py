@@ -94,24 +94,30 @@ class PurchaseOrder(models.Model):
 
     @property
     def total_amount(self):
-        # sum values, but if a line hasn't had value set yet (incomplete)
-        # calculate using cost * quantity so totals display correctly in
-        # templates even before lines are closed.
+        # total should always be calculated from line quantities and current
+        # unit price rather than relying on the stored `value` field.  this
+        # avoids confusion when partial receipts or manual edits tweak the
+        # value column; the order header should simply reflect the sum of
+        # quantity×unit_price for every line.
         total = (
             self.purchase_order_lines.aggregate(
-                total=Sum(
-                    Coalesce(
-                        "value",
-                        F("product__cost") * F("quantity"),
-                    )
-                )
-            )
-            .get("total")
+                total=Sum(F("product__cost") * F("quantity"))
+            ).get("total")
         )
         if total is None:
             return Decimal("0.00")
-        # ensure a Decimal rounded to 2 places (currency)
         return Decimal(total).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    @property
+    def remaining_total(self):
+        """Cash value of all remaining quantity on the order."""
+        total = Decimal("0.00")
+        for line in self.purchase_order_lines.all():
+            # remaining_total on line already does the right thing
+            rt = line.remaining_total
+            if rt is not None:
+                total += rt
+        return total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 class PurchaseLedger(models.Model):
@@ -170,9 +176,23 @@ class PurchaseOrderLine(models.Model):
         return self.unit_price * self.quantity
 
     @property
+    def received_total(self):
+        """Monetary value of what has been received so far."""
+        if self.unit_price is None:
+            return None
+        return self.unit_price * self.quantity_received
+
+    @property
     def remaining(self):
         """Quantity still to be received (non‑negative)."""
         return max(self.quantity - self.quantity_received, 0)
+
+    @property
+    def remaining_total(self):
+        """Monetary value still outstanding on this line."""
+        if self.unit_price is None:
+            return None
+        return self.unit_price * self.remaining
 
     @transaction.atomic
     def save(self, *args, **kwargs):
