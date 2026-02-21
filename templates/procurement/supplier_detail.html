@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="mb-5">
-    <h1>{{ supplier.name }}</h1>
+<h1>{{ supplier.name }}</h1>
 <p>Phone: {{ supplier.phone }}</p>
 <p>Email: {{ supplier.email }}</p>
 <p>Address: {{ supplier.address }}</p>
@@ -9,7 +9,8 @@
 </div>
 <h2>Purchase Orders</h2>
 <a href="{% url 'procurement:purchase-order-create' %}?supplier={{ supplier.id }}">Create Purchase Order</a>
-<table class="table">
+<a class="btn btn-link" href="{% url 'procurement:supplier-purchaseorders' supplier.id %}">See all</a>
+<table class="table table-striped">
     <thead>
         <tr>
             <th>Order Number</th>
@@ -35,10 +36,24 @@
         {% endfor %}
     </tbody>
 </table>
-<h2>Supplied Products</h2>
+{% if purchase_orders.has_other_pages %}
+<nav>
+  <ul class="pagination">
+    {% if purchase_orders.has_previous %}
+    <li class="page-item"><a class="page-link" href="?po_page={{ purchase_orders.previous_page_number }}">Previous</a></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">Page {{ purchase_orders.number }} of {{ purchase_orders.paginator.num_pages }}</span></li>
+    {% if purchase_orders.has_next %}
+    <li class="page-item"><a class="page-link" href="?po_page={{ purchase_orders.next_page_number }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+<h2 class="mt-5">Supplied Products</h2>
 <p><a href="{% url 'procurement:supplier-product-create' %}?supplier={{ supplier.id }}">Add Supplier Products</a></p>
+<a class="btn btn-link" href="{% url 'procurement:supplier-products' supplier.id %}">See all</a>
 {% if supplier_products %}
-<table class="table">
+<table class="table table-striped">
     <thead>
         <tr>
             <th>Product</th>
@@ -58,5 +73,18 @@
         {% endfor %}
     </tbody>
 </table>
+{% if supplier_products.has_other_pages %}
+<nav>
+  <ul class="pagination">
+    {% if supplier_products.has_previous %}
+    <li class="page-item"><a class="page-link" href="?sp_page={{ supplier_products.previous_page_number }}">Previous</a></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">Page {{ supplier_products.number }} of {{ supplier_products.paginator.num_pages }}</span></li>
+    {% if supplier_products.has_next %}
+    <li class="page-item"><a class="page-link" href="?sp_page={{ supplier_products.next_page_number }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
 {% endif %}
 {% endblock %}

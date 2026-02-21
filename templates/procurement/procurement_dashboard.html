@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+{% if user.is_authenticated %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body py-4">
+                <h5 class="card-title">Purchase Order Receiving</h5>
+                <p class="card-text">Receive and manage incoming purchase orders, update inventory levels, and track supplier performance.</p>
+                <a href="{% url 'procurement:purchase-order-receiving-list' %}" class="btn btn-primary">Go to Receiving</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body py-4">
+                <h5 class="card-title">Suppliers</h5>
+                <p class="card-text">View and manage your suppliers, their contact information, and the products they provide. And create Purchase Orders.</p>
+                <a href="{% url 'procurement:supplier-list' %}" class="btn btn-primary">View Suppliers</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Purchase Order Receiving - {{ purchase_order.id }}</h1>
+<p><strong>Supplier:</strong> {{ purchase_order.supplier.name }}</p>
+<p><strong>Order Number:</strong> {{ purchase_order.order_number }}</p>
+<p><strong>Date:</strong> {{ purchase_order.date }}</p>
+<p><strong>Status:</strong> {{ purchase_order.status }}</p>
+<p><strong>Total Amount:</strong> {{ purchase_order.total_amount }}</p>
+<h3>Order Lines</h3>
+<form method="post">
+    {% csrf_token %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Quantity Ordered</th>
+                <th>Already Received</th>
+                <th>Unit Price</th>
+                <th>Total Price</th>
+                <th>Quantity Received</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for line in purchase_order.purchase_order_lines.all %}
+            <tr>
+                <td>{{ line.product.product.name }}</td>
+                <td>{{ line.quantity }}</td>
+                <td>{{ line.quantity_received }}</td>
+                <td>{{ line.unit_price }}</td>
+                <td>{{ line.total_price }}</td>
+                <td><input type="number" name="received_{{ line.id }}" min="0" max="{{ line.remaining }}" value="0"></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">No lines.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <button type="submit" class="btn btn-primary">Receive</button>
+</form>
+{% endblock %}

@@ -4,7 +4,7 @@
 <div class="row">
     <div class="col-md-4">
         <div class="card mb-4 shadow-sm">
-            <div class="card-body">
+            <div class="card-body py-4">
                 <h5 class="card-title">Inventory Management</h5>
                 <p class="card-text">Manage your inventory, track stock levels, and organize your products.</p>
                 <a href="{% url 'inventory:inventory-list' %}" class="btn btn-primary">Go to Inventory</a>
@@ -14,7 +14,7 @@
     <!-- Add more cards for other features like Sales, Purchasing, etc. -->
     <div class="col-md-4">
         <div class="card mb-4 shadow-sm">
-            <div class="card-body">
+            <div class="card-body py-4">
                 <h5 class="card-title">Sales Management</h5>
                 <p class="card-text">Track your sales, manage customers, and analyze your sales performance.</p>
                 <a href="#" class="btn btn-primary">Go to Sales</a>
@@ -23,11 +23,11 @@
     </div>
     <div class="col-md-4">
         <div class="card mb-4 shadow-sm">
-            <div class="card-body">
+            <div class="card-body py-4">
                 <h5 class="card-title">Purchasing Management</h5>
                 <p class="card-text">Manage your suppliers, track purchase orders, and optimize your procurement
                     process.</p>
-                <a href="{% url 'procurement:supplier-list' %}" class="btn btn-primary">Go to Purchasing</a>
+                <a href="{% url 'procurement:procurement-dashboard' %}" class="btn btn-primary">Go to Purchasing</a>
             </div>
         </div>
     </div>
@@ -35,17 +35,7 @@
 <div class="row">
     <div class="col-md-4">
         <div class="card mb-4 shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title">Reporting and Analytics</h5>
-                <p class="card-text">Generate reports and analyze your business performance with our powerful analytics
-                    tools.</p>
-                <a href="#" class="btn btn-primary">Go to Analytics</a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body">
+            <div class="card-body py-4">
                 <h5 class="card-title">Production Management</h5>
                 <p class="card-text">Manage your production processes, track progress, and optimize efficiency.</p>
                 <a href="#" class="btn btn-primary">Go to Production</a>

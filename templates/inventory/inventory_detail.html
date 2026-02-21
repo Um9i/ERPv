@@ -2,7 +2,7 @@
 {% block content %}
 <h1>{{ inventory.product.name }}</h1>
 <small><a href="{% url 'inventory:product-update' inventory.product.pk %}">Edit Name</a></small>
-<table class="table">
+<table class="table table-bordered table-striped">
     <tr>
         <th>Quantity</th>
         <td>{{ inventory.quantity }}</td>

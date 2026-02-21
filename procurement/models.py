@@ -1,5 +1,8 @@
 from django.db import models, transaction
 from django.db.models import F, Sum
+from django.db.models.functions import Coalesce
+from django.utils import timezone
+from decimal import Decimal, ROUND_HALF_UP
 from inventory.models import Product, Inventory, InventoryLedger
 
 
@@ -57,18 +60,58 @@ class SupplierProduct(models.Model):
         )
         return total or 0
 
+    class Meta:
+        unique_together = ("supplier", "product")
 
 class PurchaseOrder(models.Model):
     supplier = models.ForeignKey(
         Supplier, on_delete=models.CASCADE, related_name="supplier_purchase_orders"
     )
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["-pk"]
         verbose_name_plural = "Purchase Orders"
 
     def __str__(self):
-        return f"{self.pk}"
+        return f"PO{self.pk:05d}"  # nice padded number
+
+    # convenience properties used in templates
+    @property
+    def order_number(self):
+        return str(self)
+
+    @property
+    def date(self):
+        return self.created_at
+
+    @property
+    def status(self):
+        if self.purchase_order_lines.filter(complete=False).exists():
+            return "Open"
+        return "Closed"
+
+    @property
+    def total_amount(self):
+        # sum values, but if a line hasn't had value set yet (incomplete)
+        # calculate using cost * quantity so totals display correctly in
+        # templates even before lines are closed.
+        total = (
+            self.purchase_order_lines.aggregate(
+                total=Sum(
+                    Coalesce(
+                        "value",
+                        F("product__cost") * F("quantity"),
+                    )
+                )
+            )
+            .get("total")
+        )
+        if total is None:
+            return Decimal("0.00")
+        # ensure a Decimal rounded to 2 places (currency)
+        return Decimal(total).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 class PurchaseLedger(models.Model):
@@ -101,6 +144,7 @@ class PurchaseOrderLine(models.Model):
         related_name="product_purchase_orders",
     )
     quantity = models.PositiveBigIntegerField()
+    quantity_received = models.PositiveBigIntegerField(default=0)
     complete = models.BooleanField(default=False)
     closed = models.BooleanField(default=False)
     value = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
@@ -111,10 +155,34 @@ class PurchaseOrderLine(models.Model):
     def __str__(self):
         return self.product.product.name
 
+    @property
+    def unit_price(self):
+        # take cost from the supplier-product relationship
+        return self.product.cost
+
+    @property
+    def total_price(self):
+        # if value already recorded use it, otherwise compute
+        if self.value is not None:
+            return self.value
+        if self.unit_price is None:
+            return None
+        return self.unit_price * self.quantity
+
+    @property
+    def remaining(self):
+        """Quantity still to be received (non‑negative)."""
+        return max(self.quantity - self.quantity_received, 0)
+
     @transaction.atomic
     def save(self, *args, **kwargs):
         # Ensure validation runs before making inventory changes
         self.full_clean()
+        # when the line is being marked complete (first time) and not
+        # previously closed we perform the inventory adjustment. this
+        # logic still uses `self.quantity` because the order quantity is
+        # what drives stock increases; the view responsible for receiving
+        # will update `quantity_received` separately.
         if self.complete == True and self.closed == False:
             product_qs = Inventory.objects.select_for_update().filter(
                 product=self.product.product
