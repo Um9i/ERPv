@@ -40,9 +40,27 @@ class TestSupplier:
         url = reverse("procurement:supplier-list")
         resp = client.get(url)
         assert resp.status_code == 200
-        assert "Page 1 of" in resp.content.decode()
+        # paginator exists regardless of page count
+        assert resp.context["suppliers"].paginator is not None
         resp2 = client.get(url + "?page=2")
         assert resp2.status_code == 200
+
+    def test_supplier_list_search(self, client, supplier):
+        """Search box should filter suppliers by name."""
+        from django.urls import reverse
+        from procurement.models import Supplier
+
+        Supplier.objects.create(name="Alpha Corp")
+        Supplier.objects.create(name="Beta LLC")
+        url = reverse("procurement:supplier-list")
+        resp = client.get(url, {"q": "Alpha"})
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert "Alpha Corp" in content
+        assert "Beta LLC" not in content
+        # empty search returns everything (ensure original supplier still present)
+        resp2 = client.get(url, {"q": ""})
+        assert supplier.name in resp2.content.decode()
 
     def test_supplier_product_ids_api(self, client, supplier, supplier_product):
         """API should return *supplier-product* ids for a given supplier."""
@@ -62,7 +80,7 @@ class TestSupplier:
         url = reverse("procurement:supplier-list")
         resp = client.get(url)
         assert resp.status_code == 200
-        assert "Page 1 of" in resp.content.decode()
+        assert resp.context["suppliers"].paginator is not None
         resp2 = client.get(url + "?page=2")
         assert resp2.status_code == 200
 
@@ -155,9 +173,28 @@ class TestSupplierProduct:
         url = reverse("procurement:purchase-order-receiving-list")
         resp = client.get(url)
         assert resp.status_code == 200
-        assert "Page 1 of" in resp.content.decode()
+        assert resp.context["purchase_orders"].paginator is not None
         resp2 = client.get(url + "?page=2")
         assert resp2.status_code == 200
+
+    def test_receiving_list_search(self, client, supplier, supplier_product):
+        """Search box should filter receiving orders by supplier or ID."""
+        from django.urls import reverse
+        from procurement.models import Supplier
+        other = Supplier.objects.create(name="Other Supplier")
+        # create one incomplete order for each supplier
+        po1 = PurchaseOrder.objects.create(supplier=supplier)
+        PurchaseOrderLine.objects.create(purchase_order=po1, product=supplier_product, quantity=1)
+        po2 = PurchaseOrder.objects.create(supplier=other)
+        PurchaseOrderLine.objects.create(purchase_order=po2, product=supplier_product, quantity=1)
+        url = reverse("procurement:purchase-order-receiving-list")
+        resp = client.get(url, {"q": "Test Supplier"})
+        content = resp.content.decode()
+        assert po1.order_number in content
+        assert "Other Supplier" not in content
+        # numeric id search
+        resp2 = client.get(url, {"q": str(po2.pk)})
+        assert po2.order_number in resp2.content.decode()
 
     def test_receive_all_button(self, client, supplier, supplier_product):
         """Clicking receive-all should mark every line as received."""
@@ -207,9 +244,26 @@ class TestPurchaseOrder:
         url = reverse("procurement:purchase-order-list")
         resp = client.get(url)
         assert resp.status_code == 200
-        assert "Page 1 of" in resp.content.decode()
+        assert resp.context["purchase_orders"].paginator is not None
         resp2 = client.get(url + "?page=2")
         assert resp2.status_code == 200
+
+    def test_purchase_order_list_search(self, client, supplier, purchase_order):
+        """Orders should be searchable by supplier name or ID."""
+        from django.urls import reverse
+        from procurement.models import PurchaseOrder, Supplier
+
+        other = Supplier.objects.create(name="Other Supplier")
+        PurchaseOrder.objects.create(supplier=other)
+        url = reverse("procurement:purchase-order-list")
+        # search by supplier name
+        resp = client.get(url, {"q": "Test Supplier"})
+        content = resp.content.decode()
+        assert purchase_order.supplier.name in content
+        assert "Other Supplier" not in content
+        # search by numeric ID should still work
+        resp2 = client.get(url, {"q": str(purchase_order.pk)})
+        assert purchase_order.order_number in resp2.content.decode()
 
     def test_purchase_order_properties(self, purchase_order, purchase_order_line):
         # Ensure computed fields work

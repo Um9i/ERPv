@@ -44,13 +44,30 @@ class SupplierListView(ListView):
     template_name = "procurement/supplier_list.html"
     context_object_name = "suppliers"
 
+    def get_queryset(self):
+        """Allow filtering by a simple ``q`` query parameter.
+
+        We only expose a basic case-insensitive name search right now; the
+        calling templates render a search box and include any existing query
+        when paginating.
+        """
+        qs = Supplier.objects.all().order_by("name")
+        q = self.request.GET.get("q", "").strip()
+        if q:
+            qs = qs.filter(name__icontains=q)
+        return qs
+
     def get_context_data(self, **kwargs):
         from django.core.paginator import Paginator
+
         context = super().get_context_data(**kwargs)
-        supplier_list = Supplier.objects.all().order_by("name")
+        # rely on ``get_queryset`` so the pagination respects the search
+        supplier_list = self.get_queryset()
         page_num = self.request.GET.get("page")
         paginator = Paginator(supplier_list, 20)
         context["suppliers"] = paginator.get_page(page_num)
+        # preserve the search term for templates
+        context["q"] = self.request.GET.get("q", "")
         return context
 
 
@@ -236,7 +253,14 @@ class PurchaseOrderListView(ListView):
     context_object_name = "purchase_orders"
 
     def get_queryset(self):
-        return PurchaseOrder.objects.all().order_by("-created_at")
+        qs = PurchaseOrder.objects.all().order_by("-created_at")
+        q = self.request.GET.get("q", "").strip()
+        if q:
+            # allow searching by supplier name or order primary key
+            from django.db.models import Q
+
+            qs = qs.filter(Q(supplier__name__icontains=q) | Q(pk__icontains=q))
+        return qs
 
     def get_context_data(self, **kwargs):
         # mirror supplier list pagination behaviour
@@ -247,6 +271,7 @@ class PurchaseOrderListView(ListView):
         page = self.request.GET.get("page")
         paginator = Paginator(qs, 15)
         context["purchase_orders"] = paginator.get_page(page)
+        context["q"] = self.request.GET.get("q", "")
         return context
 
 
@@ -271,9 +296,15 @@ class PurchaseOrderReceivingListView(ListView):
 
     def get_queryset(self):
         # show only purchase orders that have unreceived lines
-        return PurchaseOrder.objects.filter(
+        qs = PurchaseOrder.objects.filter(
             purchase_order_lines__complete=False
         ).distinct().order_by("-created_at")
+        q = self.request.GET.get("q", "").strip()
+        if q:
+            from django.db.models import Q
+
+            qs = qs.filter(Q(supplier__name__icontains=q) | Q(pk__icontains=q))
+        return qs
 
     def get_context_data(self, **kwargs):
         from django.core.paginator import Paginator
@@ -282,6 +313,7 @@ class PurchaseOrderReceivingListView(ListView):
         page = self.request.GET.get("page")
         paginator = Paginator(qs, 10)
         context["purchase_orders"] = paginator.get_page(page)
+        context["q"] = self.request.GET.get("q", "")
         return context
 
 

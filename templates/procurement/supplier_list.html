@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Suppliers</h1>
+<form method="get" class="mb-3">
+    <div class="input-group">
+        <input type="text" name="q" class="form-control" placeholder="Search suppliers" value="{{ request.GET.q }}">
+        <button class="btn btn-outline-secondary" type="submit">Search</button>
+    </div>
+</form>
 <p><a class="btn btn-primary" href="{% url 'procurement:supplier-create' %}">Create Supplier</a></p>
 <table class="table table-striped">
     <thead>
@@ -22,11 +28,11 @@
 <nav>
   <ul class="pagination">
     {% if suppliers.has_previous %}
-    <li class="page-item"><a class="page-link" href="?page={{ suppliers.previous_page_number }}">Previous</a></li>
+    <li class="page-item"><a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}page={{ suppliers.previous_page_number }}">Previous</a></li>
     {% endif %}
     <li class="page-item disabled"><span class="page-link">Page {{ suppliers.number }} of {{ suppliers.paginator.num_pages }}</span></li>
     {% if suppliers.has_next %}
-    <li class="page-item"><a class="page-link" href="?page={{ suppliers.next_page_number }}">Next</a></li>
+    <li class="page-item"><a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}page={{ suppliers.next_page_number }}">Next</a></li>
     {% endif %}
   </ul>
 </nav>

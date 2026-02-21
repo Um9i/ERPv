@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Purchase Orders</h1>
+<form method="get" class="mb-3">
+    <div class="input-group">
+        <input type="text" name="q" class="form-control" placeholder="Search orders" value="{{ request.GET.q }}">
+        <button class="btn btn-outline-secondary" type="submit">Search</button>
+    </div>
+</form>
 <a href="{% url 'procurement:purchase-order-create' %}" class="btn btn-primary mb-3">Create Purchase Order</a>
 <table class="table">
     <thead>
@@ -30,11 +36,11 @@
 <nav>
   <ul class="pagination">
     {% if purchase_orders.has_previous %}
-    <li class="page-item"><a class="page-link" href="?page={{ purchase_orders.previous_page_number }}">Previous</a></li>
+    <li class="page-item"><a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}page={{ purchase_orders.previous_page_number }}">Previous</a></li>
     {% endif %}
     <li class="page-item disabled"><span class="page-link">Page {{ purchase_orders.number }} of {{ purchase_orders.paginator.num_pages }}</span></li>
     {% if purchase_orders.has_next %}
-    <li class="page-item"><a class="page-link" href="?page={{ purchase_orders.next_page_number }}">Next</a></li>
+    <li class="page-item"><a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}page={{ purchase_orders.next_page_number }}">Next</a></li>
     {% endif %}
   </ul>
 </nav>
