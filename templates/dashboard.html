@@ -12,7 +12,7 @@
           <a href="{% url 'sales:sales-order-ship-list' %}" class="text-decoration-none">
             <div class="p-3 bg-white rounded shadow-sm text-center">
               <h4 class="fw-bold text-primary">{{ attention.pending_shipping }}</h4>
-              <small class="text-dark">Pending Shipping</small>
+              <small class="text-dark">Orders Pending Shipping</small>
             </div>
           </a>
         </div>
@@ -20,7 +20,7 @@
           <a href="{% url 'production:production-receiving-list' %}" class="text-decoration-none">
             <div class="p-3 bg-white rounded shadow-sm text-center">
               <h4 class="fw-bold text-primary">{{ attention.open_production }}</h4>
-              <small class="text-dark">Open Production</small>
+              <small class="text-dark">Open Production Jobs</small>
             </div>
           </a>
         </div>
@@ -28,7 +28,7 @@
           <a href="{% url 'procurement:purchase-order-receiving-list' %}" class="text-decoration-none">
             <div class="p-3 bg-white rounded shadow-sm text-center">
               <h4 class="fw-bold">{{ attention.open_pos }}</h4>
-              <small class="text-dark">Open POs</small>
+              <small class="text-dark">Open PO Lines</small>
             </div>
           </a>
         </div>

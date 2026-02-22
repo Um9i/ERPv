@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Staff List</h1>
+<ul>
+    {% for staff in staff_profiles %}
+        <li>{{ staff.user.username }}
+            <ul>
+                {# try profile-specific groups first, fall back to user's groups #}
+                {% if staff.groups.exists %}
+                    {% for group in staff.groups.all %}
+                        <li>{{ group.name }}</li>
+                    {% endfor %}
+                {% elif staff.user.groups.exists %}
+                    {% for group in staff.user.groups.all %}
+                        <li>{{ group.name }}</li>
+                    {% endfor %}
+                {% else %}
+                    <li><em>No groups assigned</em></li>
+                {% endif %}
+            </ul>
+        </li>
+    {% empty %}
+        <li>No staff members found.</li>
+    {% endfor %}
+</ul>
+{% endblock %}

@@ -185,24 +185,114 @@ class LowStockListView(TemplateView):
 
         context = super().get_context_data(**kwargs)
         items = []
-        for inv in Inventory.objects.select_related("product").all():
-            if inv.required > 0:
-                # indicate whether there are any open production jobs or open POs
-                has_job = Production.objects.filter(
-                    product=inv.product,
-                    closed=False,
-                ).exists()
-                has_po = PurchaseOrderLine.objects.filter(
-                    product__product=inv.product,
-                    complete=False,
-                ).exists()
-                items.append({
-                    "product": inv.product,
-                    "required": inv.required,
-                    "quantity": inv.quantity,
-                    "has_job": has_job,
-                    "has_po": has_po,
-                })
+        from django.db.models import Sum, F
+
+        from production.models import BillOfMaterials
+
+        # mapping suppliers to the items we could order from them
+        supplier_items: dict[int, list[tuple[int, int]]] = {}
+
+        # compute a tie-breaker ranking: total cost of all products a supplier offers
+        from procurement.models import SupplierProduct
+        total_cost_by_supplier = (
+            SupplierProduct.objects
+            .values('supplier')
+            .annotate(total=Sum('cost'))
+            .order_by('supplier')
+        )
+        supplier_total = {entry['supplier']: entry['total'] for entry in total_cost_by_supplier}
+
+        # retrieve all inventories once and build helper maps to avoid N+1
+        inv_list = list(
+            Inventory.objects.select_related("product")
+            .prefetch_related("product__production_allocated")
+            .all()
+        )
+        prod_ids = [inv.product_id for inv in inv_list]
+
+        # supplier-products grouped by product id, sorted by cost
+        sp_qs = SupplierProduct.objects.filter(product_id__in=prod_ids).order_by("product_id","cost")
+        sp_map: dict[int, list[SupplierProduct]] = {}
+        for sp in sp_qs:
+            sp_map.setdefault(sp.product_id, []).append(sp)
+
+        # which products have BOMs
+        bom_ids = set(
+            BillOfMaterials.objects.filter(product_id__in=prod_ids)
+            .values_list('product_id', flat=True)
+        )
+
+        # aggregate pending PO and production quantities per product
+        po_vals = (
+            PurchaseOrderLine.objects.filter(product__product_id__in=prod_ids, complete=False)
+            .annotate(rem=F('quantity') - F('quantity_received'))
+            .values('product__product_id')
+            .annotate(total=Sum('rem'))
+        )
+        po_map = {v['product__product_id']: v['total'] or 0 for v in po_vals}
+
+        job_vals = (
+            Production.objects.filter(product_id__in=prod_ids, closed=False)
+            .annotate(rem=F('quantity') - F('quantity_received'))
+            .values('product_id')
+            .annotate(total=Sum('rem'))
+        )
+        job_map = {v['product']: v['total'] or 0 for v in job_vals}
+
+        # now build items list using the precomputed maps
+        for inv in inv_list:
+            if inv.required <= 0:
+                continue
+
+            prod_amount = job_map.get(inv.product_id, 0)
+            po_amount = po_map.get(inv.product_id, 0)
+            needed_po = max(inv.required - po_amount, 0)
+
+            has_bom = inv.product_id in bom_ids
+            can_start = has_bom and prod_amount < inv.required
+
+            supplier_id = None
+            supplierproduct_id = None
+            candidates = sp_map.get(inv.product_id, [])
+            if candidates:
+                lowest_cost = candidates[0].cost
+                ties = [sp for sp in candidates if sp.cost == lowest_cost]
+                if len(ties) > 1:
+                    ties.sort(key=lambda sp: supplier_total.get(sp.supplier_id, 0))
+                sp = ties[0]
+                supplier_id = sp.supplier_id
+                supplierproduct_id = sp.pk
+                supplier_items.setdefault(supplier_id, []).append(
+                    (supplierproduct_id, needed_po)
+                )
+
+            can_order = supplier_id is not None and needed_po > 0
+            order_qty = max(inv.required - prod_amount, 0)
+
+            items.append({
+                "product": inv.product,
+                "required": inv.required,
+                "quantity": inv.quantity,
+                "production_amount": prod_amount,
+                "po_amount": po_amount,
+                "has_bom": has_bom,
+                "can_start_job": can_start,
+                "supplier_id": supplier_id,
+                "supplierproduct_id": supplierproduct_id,
+                "can_order": can_order,
+                "order_qty": order_qty,
+                "po_order_qty": needed_po,
+            })
+        # generate purchase-order URLs for each entry that has a supplier
+        from django.urls import reverse
+        for entry in items:
+            sid = entry.get("supplier_id")
+            if sid is not None and entry.get("can_order", False):
+                pairs = supplier_items.get(sid, [])
+                qs = "&".join(f"item={pid}:{qty}" for pid, qty in pairs)
+                entry["po_url"] = f"{reverse('procurement:purchase-order-create')}?supplier={sid}&{qs}"
+            else:
+                entry["po_url"] = None
         context["required_items"] = items
         return context
 

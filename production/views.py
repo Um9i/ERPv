@@ -132,6 +132,20 @@ class ProductionCreateView(CreateView):
     fields = ["product", "quantity"]
     success_url = reverse_lazy("production:production-list")
 
+    def get_initial(self):
+        initial = super().get_initial()
+        product_id = self.request.GET.get("product")
+        if product_id:
+            initial["product"] = product_id
+        qty = self.request.GET.get("quantity")
+        if qty:
+            try:
+                # allow numeric value or string
+                initial["quantity"] = int(qty)
+            except ValueError:
+                initial["quantity"] = qty
+        return initial
+
     def get_form(self, form_class=None):
         # only allow selection of products that actually have a bill of materials
         form = super().get_form(form_class)

@@ -137,10 +137,11 @@ class Production(models.Model):
         # handle allocation
         if self.bom() is not None and self.bom_allocated == False:
             for item in self.bom():
+                # accumulate across jobs rather than overwriting existing
                 product = ProductionAllocated.objects.select_for_update().get(
                     product=item.product
                 )
-                product.quantity = item.quantity * self.quantity
+                product.quantity = (product.quantity or 0) + item.quantity * self.quantity
                 product.save()
             self.bom_allocated = True
             self.bom_allocated_amount = self.quantity

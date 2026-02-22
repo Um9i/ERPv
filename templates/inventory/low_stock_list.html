@@ -3,15 +3,31 @@
 <h1>Low Stock Items</h1>
 {% if required_items %}
 <table class="table">
-    <thead><tr><th>Product</th><th>Quantity</th><th>Required</th><th>Production</th><th>POs</th></tr></thead>
+    <thead>
+        <tr>
+            <th>Product</th><th>Required</th>
+            <th>In production</th><th>On PO</th><th>Actions</th>
+        </tr>
+    </thead>
     <tbody>
     {% for entry in required_items %}
         <tr>
             <td><a href="{% url 'inventory:inventory-detail' entry.product.pk %}">{{ entry.product.name }}</a></td>
-            <td>{{ entry.quantity }}</td>
             <td>{{ entry.required }}</td>
-            <td>{{ entry.has_job|yesno:"Yes,No" }}</td>
-            <td>{{ entry.has_po|yesno:"Yes,No" }}</td>
+            <td>{{ entry.production_amount }}</td>
+            <td>{{ entry.po_amount }}</td>
+            <td>
+                {% if entry.can_start_job %}
+                    <a href="{% url 'production:production-create' %}?product={{ entry.product.pk }}&quantity={{ entry.order_qty }}" class="btn btn-sm btn-primary">
+                        New job
+                    </a>
+                {% endif %}
+                {% if entry.can_order and entry.po_url %}
+                    <a href="{{ entry.po_url }}" class="btn btn-sm btn-secondary">
+                        New PO
+                    </a>
+                {% endif %}
+            </td>
         </tr>
     {% endfor %}
     </tbody>

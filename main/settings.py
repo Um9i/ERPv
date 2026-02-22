@@ -51,8 +51,8 @@ INSTALLED_APPS = [
     "procurement.apps.ProcurementConfig",
     "production.apps.ProductionConfig",
     "sales.apps.SalesConfig",
+    'staff.apps.StaffConfig',
     "debug_toolbar",
-    'silk',
 ]
 
 MIDDLEWARE = [
@@ -66,7 +66,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
-    'silk.middleware.SilkyMiddleware',
 ]
 
 ROOT_URLCONF = "main.urls"

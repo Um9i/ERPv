@@ -12,21 +12,89 @@ class DashboardView(TemplateView):
         from production.models import Production, BillOfMaterials
 
         context = super().get_context_data(**kwargs)
-        # reuse inventory queryset for multiple stats and prefetch related product data
-        # start with inventory queryset; prefetch related data needed for
-        # cost calculations to avoid per-product queries
+        # reuse inventory queryset for multiple stats; we'll use the
+        # resulting product list as the seed for a broader graph walk that
+        # gathers all products referenced by BOMs.  By computing a full set of
+        # product ids up front we can eagerly load supplier cost rows and BOM
+        # objects in a couple of queries instead of repeatedly hitting the
+        # database during recursive cost computation.
         inv_qs = (
-            Inventory.objects.select_related("product")
-            .prefetch_related(
-                "product__product_suppliers",
-                "product__billofmaterials__bom_items__product",
-            )
-            .all()
+            Inventory.objects.select_related("product").all()
         )
+
+        # also grab any products directly appearing on production rows; these
+        # may not be present in inventory yet but still need cost data.
+        prod_qs = Production.objects.select_related("product").all()
+
+        # build closure of all products reachable via BOM relationships
+        product_ids = set(inv_qs.values_list("product_id", flat=True))
+        product_ids.update(prod_qs.values_list("product_id", flat=True))
+        # breadth‑first traverse BOM graph
+        from production.models import BOMItem
+        queue = list(product_ids)
+        while queue:
+            pid = queue.pop()
+            for item in BOMItem.objects.filter(bom__product_id=pid).select_related("product"):
+                cid = item.product_id
+                if cid not in product_ids:
+                    product_ids.add(cid)
+                    queue.append(cid)
+
+        # fetch all supplier entries once
+        supplier_map: dict[int, list] = {}
+        # also keep reverse map from supplierproduct id -> product id
+        sp_to_prod: dict[int, int] = {}
+        from procurement.models import SupplierProduct
+        for sp in SupplierProduct.objects.filter(product_id__in=product_ids).order_by("cost"):
+            supplier_map.setdefault(sp.product_id, []).append(sp)
+            sp_to_prod[sp.pk] = sp.product_id
+
+        # fetch all BOM objects with their items -> convert to dict for O(1)
+        bom_map = {
+            b.product_id: b
+            for b in BillOfMaterials.objects.filter(product_id__in=product_ids)
+            .prefetch_related("bom_items__product")
+        }
+
+        context["total_inventory"] = inv_qs.aggregate(total=Sum("quantity"))["total"] or 0
+        # compute total inventory value without triggering unit_cost DB
+        # queries by using local recursive helper plus the preloaded maps
+        def calc_cost(product, visited=None):
+            if visited is None:
+                visited = set()
+            if product.pk in visited:
+                return 0
+            visited.add(product.pk)
+
+            # cheapest supplier cost (use our pre‑built map)
+            suppliers = supplier_map.get(product.pk, [])
+            if suppliers:
+                return suppliers[0].cost
+
+            # no supplier; attempt BOM via map
+            bom = bom_map.get(product.pk)
+            if not bom:
+                return 0
+            total = 0
+            for item in bom.bom_items.all():
+                total += item.quantity * calc_cost(item.product, visited)
+            return total
         context["total_inventory"] = inv_qs.aggregate(total=Sum("quantity"))["total"] or 0
         # compute total inventory value without triggering unit_cost DB
         # queries by using prefetched relations and a local recursive helper
+        # memoization dictionary keyed by product.pk.  Without this we would
+        # recompute costs for the same product repeatedly when iterating over
+        # inventory or production rows; the recursion itself doesn't hit the
+        # database thanks to prefetch_related, but eliminating duplicate
+        # work reduces overall CPU and simplifies reasoning about the cost
+        # graph.  See task earlier about dashboard optimization.
+        cost_cache: dict[int, float] = {}
+
         def calc_cost(product, visited=None):
+            # check memo first
+            if product.pk in cost_cache:
+                return cost_cache[product.pk]
+
             if visited is None:
                 visited = set()
             if product.pk in visited:
@@ -35,16 +103,20 @@ class DashboardView(TemplateView):
             # cheapest supplier cost (use prefetched cache)
             suppliers = sorted(product.product_suppliers.all(), key=lambda s: s.cost)
             if suppliers:
-                return suppliers[0].cost
-            # no supplier; attempt BOM
-            try:
-                bom = product.billofmaterials
-            except Product.billofmaterials.RelatedObjectDoesNotExist:
-                return 0
-            total = 0
-            for item in bom.bom_items.all():
-                total += item.quantity * calc_cost(item.product, visited)
-            return total
+                cost = suppliers[0].cost
+            else:
+                # no supplier; attempt BOM
+                try:
+                    bom = product.billofmaterials
+                except Product.billofmaterials.RelatedObjectDoesNotExist:
+                    cost = 0
+                else:
+                    total = 0
+                    for item in bom.bom_items.all():
+                        total += item.quantity * calc_cost(item.product, visited)
+                    cost = total
+            cost_cache[product.pk] = cost
+            return cost
 
         context["total_inventory_value"] = sum(
             inv.quantity * calc_cost(inv.product) for inv in inv_qs
@@ -117,15 +189,31 @@ class DashboardView(TemplateView):
             context["sales_vs_target_pct"] = float((sales_this_month - context["sales_target"]) / context["sales_target"] * 100)
         else:
             context["sales_vs_target_pct"] = None
-        context["total_purchase_value"] = (
-            PurchaseOrderLine.objects.aggregate(
-                total=Sum(F("product__cost") * F("quantity"))
-            )["total"]
-            or 0
-        )
-        # total produced value (use quantity_received * cached cost helper)
+        # compute total purchase value from supplier_map instead of
+        # performing another SQL join.  fall back to zero if supplier
+        # information is missing.
+        total_purchase_value = 0
+        for line in PurchaseOrderLine.objects.all():
+            sp_id = line.product_id
+            suppliers_for_line = supplier_map.get(sp_id) or []
+            if suppliers_for_line:
+                total_purchase_value += suppliers_for_line[0].cost * line.quantity
+        context["total_purchase_value"] = total_purchase_value
+        # total produced value (use quantity_received * cached cost helper).
+        # we fetch productions with the same prefetch pattern so that
+        # products appearing only in production jobs also participate in our
+        # prefetch cache and avoid per-product queries in calc_cost.
         total_prod_val = 0
-        for prod in Production.objects.select_related('product').all():
+        prod_qs = (
+            Production.objects.select_related('product')
+            .prefetch_related(
+                "product__product_suppliers",
+                "product__billofmaterials__bom_items__product",
+                "product__billofmaterials__bom_items__product__product_suppliers",
+            )
+            .all()
+        )
+        for prod in prod_qs:
             total_prod_val += prod.quantity_received * calc_cost(prod.product)
         context["total_production_value"] = total_prod_val
         # executive summary metrics
@@ -193,12 +281,21 @@ class DashboardView(TemplateView):
             inv_qs.aggregate(total=Sum('required_cached'))['total'] or 0
         )
         # prepare lookup maps for purchase orders and production jobs
+        # pending quantities by underlying product; first aggregate by
+        # supplierproduct id, then translate via supplier_map to the real
+        # product id without another join.
         po_vals = (
             PurchaseOrderLine.objects.filter(complete=False)
-            .values('product__product')
+            .values('product')
             .annotate(total=Sum(F('quantity') - F('quantity_received')))
         )
-        po_map = {v['product__product']: v['total'] or 0 for v in po_vals}
+        po_map = {}
+        for v in po_vals:
+            sp_id = v['product']
+            total = v['total'] or 0
+            prod_id = sp_to_prod.get(sp_id)
+            if prod_id is not None:
+                po_map[prod_id] = po_map.get(prod_id, 0) + total
         job_vals = (
             Production.objects.filter(closed=False)
             .annotate(rem=F('quantity') - F('quantity_received'))
@@ -211,19 +308,30 @@ class DashboardView(TemplateView):
         bom_ids = set(BillOfMaterials.objects.values_list('product_id', flat=True))
         # we already know producible count from the number of unique ids
         context["producible_count"] = len(bom_ids)
-        # list of required inventory records (use cached field)
-        req_qs = inv_qs.filter(required_cached__gt=0)
+        # list of required inventory records; compute live using property
         required_items = []
-        for inv in req_qs:
-            req_amount = inv.required_cached
+        for inv in inv_qs:
+            # use live calculation rather than cached to stay consistent with
+            # the low-stock view.  update cache while we're here so both stay
+            # in sync for performance elsewhere.
+            req_amount = inv.required
             if req_amount <= 0:
+                # if cached is stale, reset it
+                if inv.required_cached != 0:
+                    inv.required_cached = 0
+                    inv.save(update_fields=["required_cached"])
                 continue
+            # save cache in case it changed
+            if inv.required_cached != req_amount:
+                inv.required_cached = req_amount
+                inv.save(update_fields=["required_cached"])
+
             pid = inv.product.pk
             pending_po = po_map.get(pid, 0)
             pending_job = job_map.get(pid, 0)
             has_job = pending_job > 0
-            if pending_job >= req_amount:
-                continue
+            # do not drop items simply because there are open jobs; keep
+            # dashboard count in sync with the low-stock list
             inv._pending_po = pending_po
             inv._pending_job = pending_job
             inv._has_job = has_job

@@ -290,17 +290,35 @@ class PurchaseOrderCreateView(CreateView):
         # don't offer complete or deletion on the initial create formset;
         # completion is handled later via the line save logic and deletion not
         # necessary at create time.
-        LineFormset = inlineformset_factory(
-            PurchaseOrder,
-            PurchaseOrderLine,
-            fields=["product", "quantity"],
-            extra=1,
-            can_delete=False,
-        )
+        # helper for creating formset class with configurable extra rows
+        def make_lineformset(extra=1):
+            return inlineformset_factory(
+                PurchaseOrder,
+                PurchaseOrderLine,
+                fields=["product", "quantity"],
+                extra=extra,
+                can_delete=False,
+            )
+
+        # handle inline formset initialisation
         if self.request.POST:
+            LineFormset = make_lineformset()
             context["lines_formset"] = LineFormset(self.request.POST)
         else:
-            context["lines_formset"] = LineFormset()
+            # attempt to prepopulate from GET parameters
+            initial = []
+            for item in self.request.GET.getlist("item"):
+                try:
+                    spid, qty = item.split(":")
+                    initial.append({"product": spid, "quantity": qty})
+                except ValueError:
+                    continue
+            if initial:
+                LineFormset = make_lineformset(extra=len(initial))
+                context["lines_formset"] = LineFormset(initial=initial)
+            else:
+                LineFormset = make_lineformset()
+                context["lines_formset"] = LineFormset()
 
         # if we know the supplier either from GET or submitted POST data,
         # limit the product dropdowns on each line to that supplier's products.

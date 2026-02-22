@@ -359,68 +359,73 @@ class SalesOrderShipView(DetailView):
     context_object_name = "sales_order"
 
     def post(self, request, *args, **kwargs):
+        # wrap whole operation in a transaction so select_for_update works
+        from django.db import transaction
+
         self.object = self.get_object()
         ship_all = "ship_all" in request.POST
         touched = False
         errors = []
-        # iterate lines to attempt shipment, but validate stock first
-        for line in self.object.sales_order_lines.filter(complete=False):
-            if ship_all:
-                qty = line.remaining
-            else:
-                key = f"shipped_{line.id}"
-                if key not in request.POST:
-                    continue
-                try:
-                    qty = int(request.POST[key])
-                except ValueError:
-                    continue
-            if qty <= 0:
-                continue
-            # before we touch inventory ensure sufficient quantity exists
-            from inventory.models import Inventory, InventoryLedger
-            from sales.models import SalesLedger
 
-            try:
-                inv = Inventory.objects.select_for_update().get(product=line.product.product)
-            except Inventory.DoesNotExist:
-                inv = None
-            if inv is None or (inv.quantity - qty) < 0:
-                errors.append(
-                    f"Not enough inventory to ship {qty} of {line.product.product.name}."
+        with transaction.atomic():
+            # iterate lines to attempt shipment, but validate stock first
+            for line in self.object.sales_order_lines.filter(complete=False):
+                if ship_all:
+                    qty = line.remaining
+                else:
+                    key = f"shipped_{line.id}"
+                    if key not in request.POST:
+                        continue
+                    try:
+                        qty = int(request.POST[key])
+                    except ValueError:
+                        continue
+                if qty <= 0:
+                    continue
+                # before we touch inventory ensure sufficient quantity exists
+                from inventory.models import Inventory, InventoryLedger
+                from sales.models import SalesLedger
+
+                try:
+                    inv = Inventory.objects.select_for_update().get(product=line.product.product)
+                except Inventory.DoesNotExist:
+                    inv = None
+                if inv is None or (inv.quantity - qty) < 0:
+                    errors.append(
+                        f"Not enough inventory to ship {qty} of {line.product.product.name}."
+                    )
+                    continue
+
+                # perform updates
+                touched = True
+                inv.quantity -= qty
+                inv.save(update_fields=["quantity", "last_updated"])
+                InventoryLedger.objects.create(
+                    product=line.product.product,
+                    quantity=-abs(qty),
+                    action="Sales Order",
+                    transaction_id=self.object.pk,
                 )
-                continue
+                SalesLedger.objects.create(
+                    product=line.product.product,
+                    quantity=qty,
+                    customer=self.object.customer,
+                    value=(line.product.price or 0) * qty,
+                    transaction_id=self.object.pk,
+                )
 
-            # perform updates
-            touched = True
-            inv.quantity -= qty
-            inv.save(update_fields=["quantity", "last_updated"])
-            InventoryLedger.objects.create(
-                product=line.product.product,
-                quantity=-abs(qty),
-                action="Sales Order",
-                transaction_id=self.object.pk,
-            )
-            SalesLedger.objects.create(
-                product=line.product.product,
-                quantity=qty,
-                customer=self.object.customer,
-                value=(line.product.price or 0) * qty,
-                transaction_id=self.object.pk,
-            )
-
-            line.quantity_shipped = line.quantity_shipped + qty
-            if line.quantity_shipped >= line.quantity:
-                line.complete = True
-                line.closed = True
-                try:
-                    line.value = line.product.price * line.quantity
-                except Exception:
-                    line.value = None
-            fields = ["quantity_shipped"]
-            if line.complete:
-                fields += ["complete", "closed", "value"]
-            line.save(update_fields=fields)
+                line.quantity_shipped = line.quantity_shipped + qty
+                if line.quantity_shipped >= line.quantity:
+                    line.complete = True
+                    line.closed = True
+                    try:
+                        line.value = line.product.price * line.quantity
+                    except Exception:
+                        line.value = None
+                fields = ["quantity_shipped"]
+                if line.complete:
+                    fields += ["complete", "closed", "value"]
+                line.save(update_fields=fields)
         if errors:
             # re-render form with error messages
             context = self.get_context_data()
