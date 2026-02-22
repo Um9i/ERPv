@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Low Stock Items</h1>
+{% if required_items %}
+<table class="table">
+    <thead><tr><th>Product</th><th>Quantity</th><th>Required</th><th>Production</th><th>POs</th></tr></thead>
+    <tbody>
+    {% for entry in required_items %}
+        <tr>
+            <td><a href="{% url 'inventory:inventory-detail' entry.product.pk %}">{{ entry.product.name }}</a></td>
+            <td>{{ entry.quantity }}</td>
+            <td>{{ entry.required }}</td>
+            <td>{{ entry.has_job|yesno:"Yes,No" }}</td>
+            <td>{{ entry.has_po|yesno:"Yes,No" }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No items currently required.</p>
+{% endif %}
+{% endblock %}

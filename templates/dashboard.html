@@ -2,222 +2,183 @@
 {% block content %}
 {% if user.is_authenticated %}
 <h1>Dashboard</h1>
-<div class="row">
-    <div class="col-md-8">
-        {% if required_list %}
-        <h3>Required Products</h3>
-        <table class="table mb-4">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Needed</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in required_list %}
-                <tr>
-                    <td><a href="{% url 'inventory:inventory-detail' item.inventory.product.pk %}">{{ item.inventory.product.name }}</a></td>
-                    <td>{{ item.inventory.required }}</td>
-                    <td>
-                        {% if item.pending_po %}
-                        <span class="badge bg-info">On order: {{ item.pending_po }}</span>
-                        {% endif %}
-                        {% if item.has_job %}
-                        <span class="badge bg-warning">In production ({{ item.pending_job }})</span>
-                        {% endif %}
-                        {% if item.can_purchase %}
-                        <a href="{% url 'procurement:purchase-order-create' %}?product={{ item.inventory.product.pk }}"
-                            class="btn btn-sm btn-outline-primary">Buy</a>
-                        {% endif %}
-                        {% if item.can_produce %}
-                        <a href="{% url 'production:production-create' %}?product={{ item.inventory.product.pk }}"
-                            class="btn btn-sm btn-outline-success">Make</a>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% endif %}
-    </div>
-    <div class="col-md-12">
-        <h3>Key Statistics</h3>
-        <div class="row"> <!-- cards grid -->
-            <!-- inventory group -->
-            <div class="col-12">
-                <h5 class="mt-3">Inventory</h5>
+<div class="container-fluid py-4">
+  <!-- 1️⃣ Attention Required Section -->
+  <div class="card border-0 shadow-sm mb-4 bg-light">
+    <div class="card-body">
+      <h5 class="mb-4">⚠ Attention Required</h5>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <a href="{% url 'sales:sales-order-ship-list' %}" class="text-decoration-none">
+            <div class="p-3 bg-white rounded shadow-sm text-center">
+              <h4 class="fw-bold text-primary">{{ attention.pending_shipping }}</h4>
+              <small class="text-dark">Pending Shipping</small>
             </div>
-            <div class="col-lg-3 mb-3">
-                <div class="card text-center shadow-sm">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="p-3 me-3">
-                            <i class="bi bi-box-seam text-primary"></i>
-                        </div>
-                        <div class="text-start w-100">
-                            <h6 class="card-title mt-2"><a href="{% url 'inventory:inventory-dashboard' %}" class="stretched-link text-decoration-none">Total Products</a></h6>
-                            <p class="card-text h4">{{ product_count }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- procurement group -->
-            <div class="col-12">
-                <h5 class="mt-3">Procurement</h5>
-            </div>
-            <div class="col-lg-3 mb-3">
-                <div class="card text-center shadow-sm">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="p-3 me-3">
-                            <i class="bi bi-receipt text-primary"></i>
-                        </div>
-                        <div class="text-start w-100">
-                            <h6 class="card-title mt-2"><a href="{% url 'procurement:procurement-dashboard' %}" class="stretched-link text-decoration-none">Total Purchase Orders</a></h6>
-                            <p class="card-text h4">{{ total_purchase_orders }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3 mb-3">
-                <div class="card text-center shadow-sm">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="p-3 me-3">
-                            <i class="bi bi-box-arrow-in-down text-success"></i>
-                        </div>
-                        <div class="text-start w-100">
-                            <h6 class="card-title mt-2"><a href="{% url 'procurement:purchase-order-receiving-list' %}" class="stretched-link text-decoration-none">Pending Receiving</a></h6>
-                            <p class="card-text h4">{{ pending_receiving }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3 mb-3">
-                <div class="card text-center shadow-sm">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="p-3 me-3">
-                            <i class="bi bi-check2-square text-info"></i>
-                        </div>
-                        <div class="text-start w-100">
-                            <h6 class="card-title mt-2"><a href="{% url 'procurement:purchase-order-receiving-list' %}" class="stretched-link text-decoration-none">Lines Received</a></h6>
-                            <p class="card-text h4">{{ lines_received }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3 mb-3">
-                <div class="card text-center shadow-sm">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="p-3 me-3">
-                            <i class="bi bi-people-fill text-warning"></i>
-                        </div>
-                        <div class="text-start w-100">
-                            <h6 class="card-title mt-2"><a href="{% url 'procurement:supplier-list' %}" class="stretched-link text-decoration-none">Total Suppliers</a></h6>
-                            <p class="card-text h4">{{ total_suppliers }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3 mb-3">
-                <div class="card text-center shadow-sm">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="p-3 me-3">
-                            <i class="bi bi-card-list text-secondary"></i>
-                        </div>
-                        <div class="text-start w-100">
-                            <h6 class="card-title mt-2"><a href="{% url 'procurement:purchase-order-list' %}" class="stretched-link text-decoration-none">Open Purchase Orders</a></h6>
-                            <p class="card-text h4">{{ open_purchase_count }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- sales group -->
-            <div class="col-12">
-                <h5 class="mt-3">Sales</h5>
-            </div>
-            <div class="col-lg-3 mb-3">
-                <div class="card text-center shadow-sm">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="p-3 me-3">
-                            <i class="bi bi-cart4 text-primary"></i>
-                        </div>
-                        <div class="text-start w-100">
-                            <h6 class="card-title mt-2"><a href="{% url 'sales:sales-dashboard' %}" class="stretched-link text-decoration-none">Total Orders</a></h6>
-                            <p class="card-text h4">{{ total_orders }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3 mb-3">
-                <div class="card text-center shadow-sm">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="p-3 me-3">
-                            <i class="bi bi-truck text-success"></i>
-                        </div>
-                        <div class="text-start w-100">
-                            <h6 class="card-title mt-2"><a href="{% url 'sales:sales-order-ship-list' %}" class="stretched-link text-decoration-none">Shipped Orders</a></h6>
-                            <p class="card-text h4">{{ shipped_orders }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3 mb-3">
-                <div class="card text-center shadow-sm">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="p-3 me-3">
-                            <i class="bi bi-hourglass-split text-info"></i>
-                        </div>
-                        <div class="text-start w-100">
-                            <h6 class="card-title mt-2"><a href="{% url 'sales:sales-order-ship-list' %}" class="stretched-link text-decoration-none">Pending Shipping</a></h6>
-                            <p class="card-text h4">{{ pending_shipping }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3 mb-3">
-                <div class="card text-center shadow-sm">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="p-3 me-3">
-                            <i class="bi bi-people-fill text-warning"></i>
-                        </div>
-                        <div class="text-start w-100">
-                            <h6 class="card-title mt-2"><a href="{% url 'sales:customer-list' %}" class="stretched-link text-decoration-none">Total Customers</a></h6>
-                            <p class="card-text h4">{{ total_customers }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3 mb-3">
-                <div class="card text-center shadow-sm">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="p-3 me-3">
-                            <i class="bi bi-card-list text-secondary"></i>
-                        </div>
-                        <div class="text-start w-100">
-                            <h6 class="card-title mt-2"><a href="{% url 'sales:sales-dashboard' %}" class="stretched-link text-decoration-none">Open Sales Orders</a></h6>
-                            <p class="card-text h4">{{ open_sales_count }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- production group -->
-            <div class="col-12">
-                <h5 class="mt-3">Production</h5>
-            </div>
-            <div class="col-lg-3 mb-3">
-                <div class="card text-center shadow-sm">
-                    <div class="card-body d-flex align-items-center">
-                        <div class="p-3 me-3">
-                            <i class="bi bi-card-list text-secondary"></i>
-                        </div>
-                        <div class="text-start w-100">
-                            <h6 class="card-title mt-2"><a href="{% url 'production:production-dashboard' %}" class="stretched-link text-decoration-none">Open Production Jobs</a></h6>
-                            <p class="card-text h4">{{ open_production_count }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+          </a>
         </div>
+        <div class="col-md-3">
+          <a href="{% url 'production:production-receiving-list' %}" class="text-decoration-none">
+            <div class="p-3 bg-white rounded shadow-sm text-center">
+              <h4 class="fw-bold text-primary">{{ attention.open_production }}</h4>
+              <small class="text-dark">Open Production</small>
+            </div>
+          </a>
+        </div>
+        <div class="col-md-3">
+          <a href="{% url 'procurement:purchase-order-receiving-list' %}" class="text-decoration-none">
+            <div class="p-3 bg-white rounded shadow-sm text-center">
+              <h4 class="fw-bold">{{ attention.open_pos }}</h4>
+              <small class="text-dark">Open POs</small>
+            </div>
+          </a>
+        </div>
+        <div class="col-md-3">
+          <a href="{% url 'inventory:inventory-low-stock' %}" class="text-decoration-none">
+            <div class="p-3 bg-white rounded shadow-sm text-center">
+              <h4 class="fw-bold text-danger">{{ attention.low_stock }}</h4>
+              <small class="text-dark">Low Stock Items</small>
+            </div>
+          </a>
+        </div>
+      </div>
     </div>
+  </div>
+  <!-- 2️⃣ Executive Summary Row -->
+  <div class="row g-4 mb-4">
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <h6 class="text-muted">Total Sales</h6>
+          <h3 class="fw-bold">${{ executive.total_sales|floatformat:2 }}</h3>
+          {% if sales_change_pct is not None %}
+          <small class="text-success d-block">
+            {{ sales_change_pct|floatformat:1 }}% vs last month
+          </small>
+          {% endif %}
+          {% if sales_yoy_pct is not None %}
+          <small class="text-info d-block">
+            {{ sales_yoy_pct|floatformat:1 }}% vs last year
+          </small>
+          {% endif %}
+          {% if sales_vs_target_pct is not None %}
+          <small class="text-warning d-block">
+            {{ sales_vs_target_pct|floatformat:1 }}% vs target
+          </small>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <h6 class="text-muted">Open Orders</h6>
+          <h3 class="fw-bold">{{ executive.open_orders }}</h3>
+          <small class="text-primary">{{ attention.pending_shipping }} pending shipment</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <h6 class="text-muted">Inventory Value</h6>
+          <h3 class="fw-bold">${{ executive.inventory_value|floatformat:2 }}</h3>
+          <small class="text-muted">{{ product_count }} products</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <h6 class="text-muted">Active Jobs</h6>
+          <h3 class="fw-bold">{{ executive.active_jobs }}</h3>
+          <small class="text-primary">In production</small>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- 3️⃣ Charts Section -->
+  <div class="row g-4 mb-4">
+    <div class="col-md-8">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h5>Purchase vs Sales</h5>
+          <canvas id="purchase-sales-chart" height="150"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h5>Inventory Breakdown</h5>
+          <canvas id="inventory-breakdown-chart" height="150"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-12">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h5>Sales Over Time</h5>
+          <div class="btn-group mb-2" role="group" aria-label="Time range">
+            <button type="button" class="btn btn-sm btn-outline-primary" id="range7">7d</button>
+            <button type="button" class="btn btn-sm btn-outline-primary active" id="range30">30d</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="range90">90d</button>
+          </div>
+          <canvas id="sales-time-chart" height="150"></canvas>
+          <div class="mt-2">
+            <small id="sales-metrics"></small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- chart scripts -->
+  <script>
+  const ctxSales = document.getElementById('sales-time-chart').getContext('2d');
+  const salesChart = new Chart(ctxSales, { type:'line', data: { labels: {{ sales_over_time_labels|safe }}, datasets:[{label:'Sales Value',data:{{ sales_over_time_data|safe }},borderColor:'#4e73df',fill:false}] }, options:{responsive:true,scales:{y:{beginAtZero:true}}}});
+  function updateSalesChart(range){
+    let labels, data, metrics;
+    if(range===7){
+      labels = {{ sales_over_time_labels_7|safe }};
+      data = {{ sales_over_time_data_7|safe }};
+      metrics = {{ sales_metrics_7|safe }};
+    } else if(range===90){
+      labels = {{ sales_over_time_labels_90|safe }};
+      data = {{ sales_over_time_data_90|safe }};
+      metrics = {{ sales_metrics_90|safe }};
+    } else {
+      labels = {{ sales_over_time_labels|safe }};
+      data = {{ sales_over_time_data|safe }};
+      metrics = {{ sales_metrics_30|safe }};
+    }
+    salesChart.data.labels = labels;
+    salesChart.data.datasets[0].data = data;
+    salesChart.update();
+    document.getElementById('sales-metrics').textContent =
+      'avg: ' + metrics.avg.toFixed(0) + ', max: ' + metrics.max.toFixed(0);
+  }
+  document.getElementById('range7').addEventListener('click',()=>{
+    updateSalesChart(7);
+    document.getElementById('range7').classList.add('active');
+    document.getElementById('range30').classList.remove('active');
+    document.getElementById('range90').classList.remove('active');
+  });
+  document.getElementById('range30').addEventListener('click',()=>{
+    updateSalesChart(30);
+    document.getElementById('range7').classList.remove('active');
+    document.getElementById('range30').classList.add('active');
+    document.getElementById('range90').classList.remove('active');
+  });
+  document.getElementById('range90').addEventListener('click',()=>{
+    updateSalesChart(90);
+    document.getElementById('range7').classList.remove('active');
+    document.getElementById('range30').classList.remove('active');
+    document.getElementById('range90').classList.add('active');
+  });
+  const ctxComp = document.getElementById('purchase-sales-chart').getContext('2d');
+  new Chart(ctxComp, { type:'bar', data:{labels:{{ purchase_sales_labels|safe }},datasets:[{label:'Value',backgroundColor:['#1cc88a','#36b9cc'],data:{{ purchase_sales_data|safe }}}]}, options:{responsive:true,scales:{y:{beginAtZero:true}}}});
+  const ctxInv = document.getElementById('inventory-breakdown-chart').getContext('2d');
+  new Chart(ctxInv, { type:'doughnut', data:{labels:{{ inventory_breakdown_labels|safe }},datasets:[{data:{{ inventory_breakdown_data|safe }},backgroundColor:['#4e73df','#1cc88a','#36b9cc','#f6c23e','#e74a3b']}]}, options:{responsive:true}});
+  </script>
 </div>
 {% endif %}
 

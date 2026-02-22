@@ -9,12 +9,14 @@ from .views import (
     InventoryAdjustCreateView,
     InventoryDashboardView,
     InventoryListApiView,
+    LowStockListView,
 )
 
 app_name = "inventory"
 
 urlpatterns = [
     path("", InventoryDashboardView.as_view(), name="inventory-dashboard"),
+    path("low-stock/", LowStockListView.as_view(), name="inventory-low-stock"),
     path("products/create/", ProductCreateView.as_view(), name="product-create"),
     path(
         "products/<int:pk>/update/", ProductUpdateView.as_view(), name="product-update"

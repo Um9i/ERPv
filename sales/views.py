@@ -76,15 +76,19 @@ class CustomerDetailView(DetailView):
         customer = self.object
         order_list = customer.customer_sales_orders.all()
         prod_list = customer.customer_products.all().order_by('product__name')
+        contacts_list = customer.customer_contacts.all().order_by('name')
 
         order_page = self.request.GET.get("order_page")
         prod_page = self.request.GET.get("cp_page")
+        ct_page = self.request.GET.get("ct_page")
 
         order_paginator = Paginator(order_list, 5)
         prod_paginator = Paginator(prod_list, 5)
+        ct_paginator = Paginator(contacts_list, 5)
 
         context["sales_orders"] = order_paginator.get_page(order_page)
         context["customer_products"] = prod_paginator.get_page(prod_page)
+        context["customer_contacts"] = ct_paginator.get_page(ct_page)
         return context
 
 
@@ -93,7 +97,39 @@ class CustomerContactCreateView(CreateView):
     template_name = "sales/customer_contact_form.html"
     fields = ["customer", "name", "email", "phone"]
     success_url = reverse_lazy("sales:customer-list")
+    def get_initial(self):
+        initial = super().get_initial()
+        customer_id = self.request.GET.get("customer")
+        if customer_id:
+            initial["customer"] = customer_id
+        return initial
 
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        customer_id = self.request.GET.get("customer")
+        if customer_id:
+            form.fields["customer"].widget = forms.HiddenInput()
+        return form
+
+    def get_success_url(self):
+        return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
+
+
+class CustomerContactUpdateView(UpdateView):
+    model = CustomerContact
+    template_name = "sales/customer_contact_form.html"
+    fields = ["customer", "name", "address", "phone", "email"]
+
+    def get_success_url(self):
+        return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
+
+
+class CustomerContactDeleteView(DeleteView):
+    model = CustomerContact
+    template_name = "sales/customer_contact_confirm_delete.html"
+
+    def get_success_url(self):
+        return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
 
 class CustomerProductCreateView(CreateView):
     model = CustomerProduct

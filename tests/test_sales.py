@@ -36,6 +36,62 @@ class TestCustomer:
         assert f"href=\"{reverse('sales:customer-salesorders', args=[customer.pk])}\"" in content
         assert f"href=\"{reverse('sales:customer-products', args=[customer.pk])}\"" in content
 
+    def test_customer_contacts_shown_and_links(self, client, customer, customer_contact):
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester2")
+        client.force_login(user)
+        url = reverse("sales:customer-detail", args=[customer.pk])
+        resp = client.get(url)
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert "Contacts" in content
+        assert customer_contact.name in content
+        assert "customer-contacts/create" in content
+        assert f"customer-contacts/{customer_contact.pk}/update" in content
+        assert f"customer-contacts/{customer_contact.pk}/delete" in content
+
+    def test_customer_contact_create_from_form(self, client, customer):
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester3")
+        client.force_login(user)
+        url = reverse("sales:customer-contact-create") + f"?customer={customer.pk}"
+        resp = client.get(url)
+        assert resp.status_code == 200
+        data = {"customer": customer.pk, "name": "New C", "email": "a@b.com"}
+        resp2 = client.post(url, data)
+        assert resp2.status_code == 302
+        assert resp2.url == reverse("sales:customer-detail", args=[customer.pk])
+        resp3 = client.get(resp2.url)
+        assert "New C" in resp3.content.decode()
+
+    def test_customer_contact_edit_and_delete(self, client, customer, customer_contact):
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester4")
+        client.force_login(user)
+        # edit
+        url = reverse("sales:customer-contact-update", args=[customer_contact.pk])
+        resp = client.get(url)
+        assert resp.status_code == 200
+        data = {"customer": customer.pk, "name": "Edited Cust", "email": customer_contact.email}
+        resp2 = client.post(url, data)
+        assert resp2.status_code == 302
+        assert resp2.url == reverse("sales:customer-detail", args=[customer.pk])
+        customer_contact.refresh_from_db()
+        assert customer_contact.name == "Edited Cust"
+        # delete
+        del_url = reverse("sales:customer-contact-delete", args=[customer_contact.pk])
+        resp3 = client.post(del_url)
+        assert resp3.status_code == 302
+        assert resp3.url == reverse("sales:customer-detail", args=[customer.pk])
+        from sales.models import CustomerContact
+        assert not CustomerContact.objects.filter(pk=customer_contact.pk).exists()
+
     def test_customer_list_pagination(self, client, customer):
         from django.urls import reverse
         from sales.models import Customer

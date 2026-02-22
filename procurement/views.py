@@ -88,15 +88,20 @@ class SupplierDetailView(DetailView):
         po_list = supplier.supplier_purchase_orders.all()
         # enforce ordering to avoid paginator warnings
         pp_list = supplier.supplier_products.all().order_by("product__name")
+        # contacts
+        contacts_list = supplier.supplier_contacts.all().order_by("name")
 
         po_page_number = self.request.GET.get("po_page")
         pp_page_number = self.request.GET.get("sp_page")
+        ct_page_number = self.request.GET.get("ct_page")
 
         po_paginator = Paginator(po_list, 5)
         pp_paginator = Paginator(pp_list, 5)
+        ct_paginator = Paginator(contacts_list, 5)
 
         context["purchase_orders"] = po_paginator.get_page(po_page_number)
         context["supplier_products"] = pp_paginator.get_page(pp_page_number)
+        context["supplier_contacts"] = ct_paginator.get_page(ct_page_number)
         return context
 
 
@@ -105,7 +110,39 @@ class SupplierContactCreateView(CreateView):
     template_name = "procurement/supplier_contact_form.html"
     fields = ["supplier", "name", "email", "phone"]
     success_url = reverse_lazy("procurement:supplier-list")
+    def get_initial(self):
+        initial = super().get_initial()
+        supplier_id = self.request.GET.get("supplier")
+        if supplier_id:
+            initial["supplier"] = supplier_id
+        return initial
 
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        supplier_id = self.request.GET.get("supplier")
+        if supplier_id:
+            form.fields["supplier"].widget = forms.HiddenInput()
+        return form
+
+    def get_success_url(self):
+        return reverse_lazy("procurement:supplier-detail", args=[self.object.supplier.pk])
+
+
+class SupplierContactUpdateView(UpdateView):
+    model = SupplierContact
+    template_name = "procurement/supplier_contact_form.html"
+    fields = ["supplier", "name", "address", "phone", "email"]
+
+    def get_success_url(self):
+        return reverse_lazy("procurement:supplier-detail", args=[self.object.supplier.pk])
+
+
+class SupplierContactDeleteView(DeleteView):
+    model = SupplierContact
+    template_name = "procurement/supplier_contact_confirm_delete.html"
+
+    def get_success_url(self):
+        return reverse_lazy("procurement:supplier-detail", args=[self.object.supplier.pk])
 
 class SupplierProductCreateView(CreateView):
     model = SupplierProduct

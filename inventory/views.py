@@ -145,12 +145,12 @@ class InventoryDashboardView(TemplateView):
     template_name = "inventory/inventory_dashboard.html"
 
     def get_context_data(self, **kwargs):
+        # mirror previous dashboard calculations formerly misplaced on LowStockListView
         from django.db.models import Sum
 
         context = super().get_context_data(**kwargs)
         context["total_products"] = Product.objects.count()
         context["total_inventory_items"] = Inventory.objects.count()
-        # compute summed quantity for dashboard
         context["total_quantity"] = (
             Inventory.objects.aggregate(total=Sum("quantity"))["total"] or 0
         )
@@ -159,6 +159,51 @@ class InventoryDashboardView(TemplateView):
         for inv in Inventory.objects.select_related("product").all():
             stock_val += inv.quantity * inv.product.unit_cost
         context["stock_value"] = stock_val
+        # optionally show list of products with required shortage
+        req = getattr(self, "request", None)
+        if req and req.GET.get("required"):
+            req_items = []
+            for inv in Inventory.objects.select_related("product").all():
+                if inv.required > 0:
+                    req_items.append({
+                        "product": inv.product,
+                        "required": inv.required,
+                    })
+            context["required_items"] = req_items
+        return context
+
+
+class LowStockListView(TemplateView):
+    """Page listing all products currently below required stock."""
+
+    template_name = "inventory/low_stock_list.html"
+
+    def get_context_data(self, **kwargs):
+        # collect all inventories where a shortage is present
+        from procurement.models import PurchaseOrderLine
+        from production.models import Production
+
+        context = super().get_context_data(**kwargs)
+        items = []
+        for inv in Inventory.objects.select_related("product").all():
+            if inv.required > 0:
+                # indicate whether there are any open production jobs or open POs
+                has_job = Production.objects.filter(
+                    product=inv.product,
+                    closed=False,
+                ).exists()
+                has_po = PurchaseOrderLine.objects.filter(
+                    product__product=inv.product,
+                    complete=False,
+                ).exists()
+                items.append({
+                    "product": inv.product,
+                    "required": inv.required,
+                    "quantity": inv.quantity,
+                    "has_job": has_job,
+                    "has_po": has_po,
+                })
+        context["required_items"] = items
         return context
 
     def form_valid(self, form):

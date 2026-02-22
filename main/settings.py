@@ -29,6 +29,9 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"
 
+INTERNAL_IPS = [
+    "127.0.0.1",
+]
 
 # Application definition
 
@@ -48,6 +51,8 @@ INSTALLED_APPS = [
     "procurement.apps.ProcurementConfig",
     "production.apps.ProductionConfig",
     "sales.apps.SalesConfig",
+    "debug_toolbar",
+    'silk',
 ]
 
 MIDDLEWARE = [
@@ -60,6 +65,8 @@ MIDDLEWARE = [
     "main.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
+    'silk.middleware.SilkyMiddleware',
 ]
 
 ROOT_URLCONF = "main.urls"
@@ -95,6 +102,13 @@ DATABASES = {
 
 _ssl_req = os.getenv("DB_SSL_REQUIRE", "False").lower() in ("1", "true", "yes")
 DATABASES["default"].update(dj_database_url.config(conn_max_age=500, ssl_require=_ssl_req))
+
+# Silk profiler configuration – we don't want it to fire on the
+# public landing page because that request is deliberately simple and
+# seeing the profiler's own housekeeping queries is confusing.
+
+# ignore the root URL (and any other static endpoints if desired)
+SILKY_IGNORE_PATHS = [r"^/$"]
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators

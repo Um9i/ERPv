@@ -86,16 +86,17 @@ class TestInventory:
         # perform two adjustments to generate ledger entries
         InventoryAdjust.objects.create(product=product, quantity=5, complete=True)
         InventoryAdjust.objects.create(product=product, quantity=-2, complete=True)
-        # detail page should show ledger entries and last_updated recent
+        # detail page should show ledger entries and sensible totals
         url = reverse("inventory:inventory-detail", args=[inv.pk])
         resp = client.get(url)
         assert resp.status_code == 200
         content = resp.content.decode()
         assert "Inventory Ledger" in content
         assert str(5) in content or str(-2) in content
-        assert "Last Updated" in content
-        # pending activity totals should be present (zero by default)
-        assert "Pending Activity" in content
+        # old last-updated text removed, ensure inventory object is in context
+        ctx = resp.context
+        assert ctx["inventory"].last_updated is not None
+        # summary statistics should appear as table rows
         assert "Sales Orders" in content
         assert "Purchase Orders" in content
         # production jobs row only appears when nonzero; its absence is acceptable
@@ -176,6 +177,43 @@ class TestInventory:
         assert ctx["total_products"] == Product.objects.count()
         assert ctx["total_inventory_items"] == Inventory.objects.count()
         assert ctx["total_quantity"] == Inventory.objects.aggregate(total=Sum("quantity"))["total"] or 0
+        # when the required filter is applied we expect a list in context
+        resp2 = client.get(url + '?required=1')
+        assert 'required_items' in resp2.context
+        # ensure the low-stock view renders entries when shortages exist
+        # create a shortage if none already
+        if not resp2.context['required_items']:
+            inv = Inventory.objects.first()
+            inv.quantity = 0
+            inv.save()
+            from sales.models import Customer, CustomerProduct, SalesOrder, SalesOrderLine
+            cust = Customer.objects.create(name='C4')
+            cp = CustomerProduct.objects.create(customer=cust, product=inv.product, price=1)
+            so = SalesOrder.objects.create(customer=cust)
+            SalesOrderLine.objects.create(sales_order=so, product=cp, quantity=5)
+            resp2 = client.get(url + '?required=1')
+        assert resp2.context['required_items']
+        content_l = client.get(reverse('inventory:inventory-low-stock')).content.decode()
+        # there should be table rows for required products
+        assert '<table' in content_l
+        entry = resp2.context['required_items'][0]
+        assert entry['product'].name in content_l
+        # production or PO flags should render as text
+        assert ("Yes" in content_l) or ("No" in content_l)
+        # create explicit job & PO and confirm flags
+        prod_inv = entry if entry else resp2.context['required_items'][0]
+        inv_obj = Inventory.objects.get(product=prod_inv['product'])
+        # create production job and PO referencing this product
+        from production.models import Production
+        from procurement.models import Supplier, SupplierProduct, PurchaseOrder, PurchaseOrderLine
+        supplier = Supplier.objects.create(name='S2')
+        sp = SupplierProduct.objects.create(supplier=supplier, product=inv_obj.product, cost=1)
+        po = PurchaseOrder.objects.create(supplier=supplier)
+        PurchaseOrderLine.objects.create(purchase_order=po, product=sp, quantity=1)
+        Production.objects.create(product=inv_obj.product, quantity=1)
+        # refresh page and check flags updated
+        content_l2 = client.get(reverse('inventory:inventory-low-stock')).content.decode()
+        assert 'Yes' in content_l2
         # previously stock value mirrored quantity, now uses unit cost
         assert ctx["stock_value"] == sum(
             inv.quantity * inv.product.unit_cost for inv in Inventory.objects.all()

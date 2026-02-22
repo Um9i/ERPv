@@ -22,8 +22,9 @@ reporting.
 ## Views & Workflows
 
 * CRUD views for suppliers, contacts, and supplier products with standard
-  forms.  List pages implement search and pagination.  Detail pages for
-  suppliers display paginated lists of their products and orders.
+  forms (rendered via crispy‑forms with the `bootstrap5` pack).  List pages
+  implement search and pagination.  Detail pages for suppliers display
+  paginated lists of their products, orders and contacts.
 * **SupplierProductIDsView** returns JSON of supplier‑product IDs – used by
   client‑side JS on the order form to limit drop‑down choices.
 * Purchase order creation uses an inline formset for lines.  Forms may be

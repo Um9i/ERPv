@@ -21,8 +21,10 @@ Indexes on product and customer fields assist with searching and reporting.
 
 ## Key Views & Processes
 
-* CRUD for customers, contacts and customer products.  Lists support search
-  and pagination; detail pages include paginated related orders/products.
+* CRUD for customers, contacts and customer products.  All forms use
+  crispy‑forms with the `bootstrap5` pack for consistent Bootstrap styling.  
+  Lists support search and pagination; detail pages include paginated related
+  orders, products and contacts.
 * **CustomerProductIDsView** returns JSON of IDs for dynamic form filtering.
 * Sales order creation works like purchase orders: inline formset, optional
   prefilled customer, product dropdown filtered by allowed products.

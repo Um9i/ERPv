@@ -140,3 +140,14 @@ body {
 .dashboard-summary .card {
     min-height: 180px;
 }
+
+/* polish from design suggestions */
+.card {
+  border-radius: 12px;
+}
+.card-body h3 {
+  font-size: 28px;
+}
+.bg-light {
+  background-color: #f8f9fa !important;
+}

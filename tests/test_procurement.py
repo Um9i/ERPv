@@ -39,6 +39,64 @@ class TestSupplier:
         assert f"href=\"{reverse('procurement:supplier-purchaseorders', args=[supplier.pk])}\"" in content
         assert f"href=\"{reverse('procurement:supplier-products', args=[supplier.pk])}\"" in content
 
+    def test_supplier_contacts_shown_and_links(self, client, supplier, supplier_contact):
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester2")
+        client.force_login(user)
+        url = reverse("procurement:supplier-detail", args=[supplier.pk])
+        resp = client.get(url)
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert "Contacts" in content
+        assert supplier_contact.name in content
+        assert "supplier-contacts/create" in content
+        assert f"supplier-contacts/{supplier_contact.pk}/update" in content
+        assert f"supplier-contacts/{supplier_contact.pk}/delete" in content
+
+    def test_supplier_contact_create_from_form(self, client, supplier):
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester3")
+        client.force_login(user)
+        url = reverse("procurement:supplier-contact-create") + f"?supplier={supplier.pk}"
+        resp = client.get(url)
+        assert resp.status_code == 200
+        # post new contact
+        data = {"supplier": supplier.pk, "name": "New Contact", "email": "x@example.com"}
+        resp2 = client.post(url, data)
+        assert resp2.status_code == 302
+        assert resp2.url == reverse("procurement:supplier-detail", args=[supplier.pk])
+        # ensure appears on detail
+        resp3 = client.get(resp2.url)
+        assert "New Contact" in resp3.content.decode()
+
+    def test_supplier_contact_edit_and_delete(self, client, supplier, supplier_contact):
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester4")
+        client.force_login(user)
+        # edit
+        url = reverse("procurement:supplier-contact-update", args=[supplier_contact.pk])
+        resp = client.get(url)
+        assert resp.status_code == 200
+        data = {"supplier": supplier.pk, "name": "Edited Name", "email": supplier_contact.email}
+        resp2 = client.post(url, data)
+        assert resp2.status_code == 302
+        assert resp2.url == reverse("procurement:supplier-detail", args=[supplier.pk])
+        supplier_contact.refresh_from_db()
+        assert supplier_contact.name == "Edited Name"
+        # delete
+        del_url = reverse("procurement:supplier-contact-delete", args=[supplier_contact.pk])
+        resp3 = client.post(del_url)
+        assert resp3.status_code == 302
+        assert resp3.url == reverse("procurement:supplier-detail", args=[supplier.pk])
+        from procurement.models import SupplierContact
+        assert not SupplierContact.objects.filter(pk=supplier_contact.pk).exists()
+
     def test_supplier_list_pagination(self, client, supplier):
         """Supplier list should paginate when many entries exist."""
         from django.urls import reverse

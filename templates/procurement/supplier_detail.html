@@ -10,6 +10,50 @@
     <a href="{% url 'procurement:supplier-delete' supplier.id %}" class="btn btn-danger">Delete Supplier</a>
     </p>
 </div>
+<h2>Contacts</h2>
+<p><a href="{% url 'procurement:supplier-contact-create' %}?supplier={{ supplier.id }}" class="btn btn-success">Add Contact</a></p>
+{% if supplier_contacts %}
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for contact in supplier_contacts %}
+        <tr>
+            <td>{{ contact.name }}</td>
+            <td>{{ contact.email }}</td>
+            <td>{{ contact.phone }}</td>
+            <td>
+                <a href="{% url 'procurement:supplier-contact-update' contact.id %}" class="btn btn-sm btn-secondary">Edit</a>
+                <a href="{% url 'procurement:supplier-contact-delete' contact.id %}" class="btn btn-sm btn-danger">Delete</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="3">No contacts found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% if supplier_contacts.has_other_pages %}
+<nav>
+    <ul class="pagination">
+        {% if supplier_contacts.has_previous %}
+        <li class="page-item"><a class="page-link" href="?ct_page={{ supplier_contacts.previous_page_number }}">Previous</a></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">Page {{ supplier_contacts.number }} of {{ supplier_contacts.paginator.num_pages }}</span></li>
+        {% if supplier_contacts.has_next %}
+        <li class="page-item"><a class="page-link" href="?ct_page={{ supplier_contacts.next_page_number }}">Next</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endif %}
+
 <h2>Purchase Orders</h2>
 <a href="{% url 'procurement:purchase-order-create' %}?supplier={{ supplier.id }}" class="btn btn-success">Create Purchase Order</a>
 <table class="table table-striped">
