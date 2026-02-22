@@ -51,7 +51,6 @@ INSTALLED_APPS = [
     "procurement.apps.ProcurementConfig",
     "production.apps.ProductionConfig",
     "sales.apps.SalesConfig",
-    'staff.apps.StaffConfig',
     "debug_toolbar",
 ]
 
