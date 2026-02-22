@@ -1,19 +1,43 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="text-center">
-    <div class="alert alert-info" role="alert">
-        This is a demo of ERPv, an open-source ERP system built with Django. The project is in early development, so
-        expect
-        things to be broken and missing. If you're interested in contributing, check out the <a
-            href="https://github.com/your-repo/erpv">GitHub repository</a>.
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="display-4">Welcome to ERPv</h1>
+        <p class="lead">An open-source ERP built with Django — manage inventory, sales, purchasing, production and more.</p>
+        <p>Early development; contributions welcome on <a href="https://github.com/your-repo/erpv">GitHub</a>.</p>
+        <a href="{% url 'login' %}" class="btn btn-lg btn-primary">Login</a>
     </div>
-    <div class="py-5">
-        <h1>Welcome to ERPv</h1>
-        <p class="lead">ERPv is an open-source ERP system built with Django. It aims to provide a comprehensive solution
-            for
-            managing business processes, including inventory, sales, purchasing, and more.</p>
-        <p>Explore the features and contribute to the project on GitHub!</p>
-        <a href="{% url 'login' %}" class="btn btn-primary">Login</a></p>
+    <div class="row g-4 justify-content-center">
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-stack display-4 text-success"></i>
+                    <h5 class="card-title mt-3">Inventory</h5>
+                    <p class="card-text">View products, stock levels and adjust inventory.</p>
+                    <a href="{% url 'inventory:inventory-dashboard' %}" class="stretched-link"></a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-receipt display-4 text-primary"></i>
+                    <h5 class="card-title mt-3">Procurement</h5>
+                    <p class="card-text">Create and manage purchase orders and suppliers.</p>
+                    <a href="{% url 'procurement:procurement-dashboard' %}" class="stretched-link"></a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="bi bi-cart4 display-4 text-primary"></i>
+                    <h5 class="card-title mt-3">Sales</h5>
+                    <p class="card-text">Manage customers and sales orders with ease.</p>
+                    <a href="{% url 'sales:sales-dashboard' %}" class="stretched-link"></a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

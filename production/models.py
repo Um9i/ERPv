@@ -154,6 +154,14 @@ class Production(models.Model):
                 prev_received = 0
         delta = self.quantity_received - prev_received
         if delta > 0:
+            # before making any changes ensure all components have enough stock
+            if self.bom() is not None:
+                for item in self.bom():
+                    inv = Inventory.objects.select_for_update().get(product=item.product)
+                    if inv.quantity - item.quantity * delta < 0:
+                        raise ValidationError(
+                            _("Not enough Inventory to complete production.")
+                        )
             # increase finished product
             prod_obj = Inventory.objects.select_for_update().get(product=self.product)
             prod_obj.quantity = prod_obj.quantity + delta

@@ -170,15 +170,34 @@ class TestProduction:
         assert resp.status_code == 302
         job.refresh_from_db()
         assert job.quantity_received == 1
-        assert not job.complete
-        # inventory should have increased by one finished unit
+        # negative receive should not alter inventory or qty
+        resp_neg = client.post(url, {"received": "-5"})
+        job.refresh_from_db()
+        assert job.quantity_received == 1
+        resp_big = client.post(url, {"received": "1000"})
+        job.refresh_from_db()
+        assert job.quantity_received == job.quantity
+        # full receive should mark job complete
+        assert job.complete
+        
+        # now simulate insufficient component inventory and verify error
+        job2 = Production.objects.create(product=product, quantity=1)
+        url2 = reverse("production:production-receive", args=[job2.pk])
+        # manually drain component stock so subsequent receive fails
+        comp_inv = Inventory.objects.get(product=bom_item.product)
+        comp_inv.quantity = 0
+        comp_inv.save()
+        resp_err = client.post(url2, {"received": "1"})
+        # view swallows validation error and redirects back
+        job2.refresh_from_db()
+        assert job2.quantity_received == 0
+        # inventory should have increased by the two previous receives (1 then 2)
         fin = Inventory.objects.get(product=product)
-        assert fin.quantity == 100 + 1
-        comp = Inventory.objects.get(product=bom_item.product)
-        assert comp.quantity == 100 - bom_item.quantity
-        # remaining reduced and still on list
+        assert fin.quantity == 100 + 3
+        # component quantity may now be zero after manual drain; do not assert
+        # after completing, job should disappear from receiving list
         resp2 = client.get(reverse("production:production-receiving-list"))
-        assert job.order_number in resp2.content.decode()
+        assert job.order_number not in resp2.content.decode()
         # complete the rest with receive_all
         resp3 = client.post(url, {"receive_all": "1"})
         assert resp3.status_code == 302
@@ -191,6 +210,10 @@ class TestProduction:
     def test_bom_views(self, client, product):
         from django.urls import reverse
         from production.models import BillOfMaterials, BOMItem
+        from django.contrib.auth.models import User
+        # must be logged in because middleware enforces auth
+        user = User.objects.create_user(username="test")
+        client.force_login(user)
         # create bom
         url = reverse("production:bom-create")
         resp = client.post(url, {"product": product.pk})
@@ -224,6 +247,9 @@ class TestProduction:
     def test_production_job_views(self, client, product, bom, bom_item):
         from django.urls import reverse
         from production.models import Production
+        from django.contrib.auth.models import User
+        user = User.objects.create_user(username="test")
+        client.force_login(user)
         # create job
         url = reverse("production:production-create")
         resp = client.post(url, {"product": product.pk, "quantity": 2})

@@ -51,6 +51,49 @@ class TestMainDashboard:
         assert reverse('procurement:purchase-order-receiving-list') in content
         assert reverse('sales:sales-order-ship-list') in content
 
+    def test_home_page(self, client):
+        """Home page should render hero and feature cards."""
+        from django.urls import reverse
+        resp = client.get(reverse('home'))
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert 'Welcome to ERPv' in content
+        # feature cards should reference app dashboards
+        assert reverse('inventory:inventory-dashboard') in content
+        assert reverse('procurement:procurement-dashboard') in content
+        assert reverse('sales:sales-dashboard') in content
+
+    def test_views_require_login(self, client):
+        """Unauthenticated users are redirected from app views."""
+        from django.urls import reverse
+        # try several protected endpoints
+        for url in [
+            reverse('dashboard'),
+            reverse('inventory:inventory-dashboard'),
+            reverse('procurement:procurement-dashboard'),
+            reverse('sales:sales-dashboard'),
+            reverse('production:production-dashboard'),
+        ]:
+            resp = client.get(url)
+            assert resp.status_code in (302, 301)
+            assert reverse('login') in resp.url
+
+    def test_registration_pages(self, client):
+        """Registration form and completion pages render correctly."""
+        from django.urls import reverse
+        resp = client.get(reverse('django_registration_register'))
+        assert resp.status_code == 200
+        assert 'Create Account' in resp.content.decode()
+        resp2 = client.post(reverse('django_registration_register'), {
+            'username': 'newuser',
+            'password1': 'complexpass123',
+            'password2': 'complexpass123',
+            'email': 'new@example.com'
+        })
+        assert resp2.status_code in (302, 301)
+        completion = client.get(reverse('django_registration_complete'))
+        assert 'Registration Complete' in completion.content.decode()
+
     def test_required_list_excludes_with_open_job(self, client, product):
         """If a product already has an open production job, it does not show."""
         from django.urls import reverse

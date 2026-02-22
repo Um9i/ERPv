@@ -97,6 +97,37 @@ class TestInventory:
         inv.refresh_from_db()
         assert inv.last_updated > orig
 
+    def test_stock_value_uses_bom(self, product):
+        """Stock value should include BOM-derived cost when no direct cost.
+
+        Product1 is made from Product2/3 and Product1 has no supplier cost.
+        """
+        from inventory.models import Inventory, Product
+        from procurement.models import Supplier, SupplierProduct
+        from production.models import BillOfMaterials, BOMItem
+        # create components with supplier cost
+        comp2 = Product.objects.create(name="component2")
+        comp3 = Product.objects.create(name="component3")
+        supplier = Supplier.objects.create(name="S")
+        SupplierProduct.objects.create(supplier=supplier, product=comp2, cost=10)
+        SupplierProduct.objects.create(supplier=supplier, product=comp3, cost=5)
+        # finished product without supplier cost
+        finished = Product.objects.create(name="finished1")
+        # BOM: 2*comp2 +3*comp3
+        bom = BillOfMaterials.objects.create(product=finished)
+        BOMItem.objects.create(bom=bom, product=comp2, quantity=2)
+        BOMItem.objects.create(bom=bom, product=comp3, quantity=3)
+        # inventories
+        Inventory.objects.update_or_create(product=finished, defaults={"quantity":1})
+        Inventory.objects.update_or_create(product=comp2, defaults={"quantity":0})
+        Inventory.objects.update_or_create(product=comp3, defaults={"quantity":0})
+        # compute dashboard context
+        from inventory.views import InventoryDashboardView
+        view = InventoryDashboardView()
+        ctx = view.get_context_data()
+        expected_cost = 1 * (2*10 + 3*5)
+        assert ctx["stock_value"] == expected_cost
+
     def test_dashboard_links(self, client, product):
         from django.urls import reverse
         from django.contrib.auth.models import User
@@ -119,4 +150,7 @@ class TestInventory:
         assert ctx["total_products"] == Product.objects.count()
         assert ctx["total_inventory_items"] == Inventory.objects.count()
         assert ctx["total_quantity"] == Inventory.objects.aggregate(total=Sum("quantity"))["total"] or 0
-        assert ctx["stock_value"] == ctx["total_quantity"]
+        # previously stock value mirrored quantity, now uses unit cost
+        assert ctx["stock_value"] == sum(
+            inv.quantity * inv.product.unit_cost for inv in Inventory.objects.all()
+        )

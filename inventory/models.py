@@ -14,6 +14,33 @@ class Product(models.Model):
     def __str__(self) -> str:
         return self.name
 
+    @property
+    def unit_cost(self):
+        """Return a per-unit cost for this product.
+
+        Priority:
+        1. Cheapest supplier cost if any supplier products exist.
+        2. If a bill of materials exists, compute cost as sum(component_cost * quantity).
+        3. Otherwise zero.
+        """
+        # cheapest supplier cost
+        suppliers = self.product_suppliers.all().order_by('cost')
+        if suppliers.exists():
+            try:
+                return suppliers.first().cost
+            except Exception:
+                return 0
+        # compute from BOM if available
+        try:
+            bom = self.billofmaterials
+        except Product.billofmaterials.RelatedObjectDoesNotExist:
+            return 0
+        total = 0
+        for item in bom.bom_items.all().select_related('product'):
+            # recursive call
+            total += item.quantity * item.product.unit_cost
+        return total
+
     class Meta:
         ordering = ["name"]
         verbose_name_plural = "Inventory Management"

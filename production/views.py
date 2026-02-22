@@ -256,6 +256,11 @@ class ProductionReceiveView(DetailView):
                 received = int(request.POST.get("received", 0))
             except (TypeError, ValueError):
                 received = 0
+            # sanitize input: cannot be negative or exceed remaining
+            if received < 0:
+                received = 0
+            if received > self.object.remaining:
+                received = self.object.remaining
         if received > 0:
             self.object.quantity_received = self.object.quantity_received + received
             try:

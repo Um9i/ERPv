@@ -143,9 +143,11 @@ class InventoryDashboardView(TemplateView):
         context["total_quantity"] = (
             Inventory.objects.aggregate(total=Sum("quantity"))["total"] or 0
         )
-        # fall back to 0 when there are no inventory rows; currently mirrors
-        # total_quantity until we later support monetary valuation.
-        context["stock_value"] = context["total_quantity"]
+        # compute monetary stock value using per-unit costs
+        stock_val = 0
+        for inv in Inventory.objects.select_related("product").all():
+            stock_val += inv.quantity * inv.product.unit_cost
+        context["stock_value"] = stock_val
         return context
 
     def form_valid(self, form):
