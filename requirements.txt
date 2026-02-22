@@ -1,4 +1,5 @@
 asgiref==3.11.1
+autopep8==2.3.2
 confusable-homoglyphs==3.3.1
 coverage==7.13.4
 crispy-bootstrap5==2025.6
@@ -8,13 +9,16 @@ django-admin-inline-paginator==0.4.0
 django-crispy-forms==2.5
 django-debug-toolbar==6.2.0
 django-registration==5.2.1
+django-silk==5.4.3
 factory_boy==3.3.3
 Faker==40.4.0
+gprof2dot==2025.4.14
 gunicorn==25.0.2
 iniconfig==2.3.0
 packaging==26.0
 pluggy==1.6.0
 psycopg2-binary==2.9.11
+pycodestyle==2.14.0
 Pygments==2.19.2
 pytest==9.0.2
 pytest-cov==7.0.0
