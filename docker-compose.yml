@@ -17,7 +17,7 @@ services:
     build: .
     command: gunicorn main.wsgi:application --bind 0.0.0.0:8000 --workers 3
     volumes:
-      - .:/app
+      - .:/app:Z
     ports:
       - "8000:8000"
     environment:
