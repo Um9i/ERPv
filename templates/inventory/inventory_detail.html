@@ -5,29 +5,32 @@
     <a class="btn btn-sm btn-secondary" href="{% url 'inventory:product-update' inventory.product.pk %}">Edit Name</a>
     <a class="btn btn-sm btn-warning ms-2" href="{% url 'inventory:inventory-adjust' inventory.pk %}">Adjust Quantity</a>
 </div>
-<table class="table table-bordered">
-    <tr>
-        <th>Quantity</th>
-        <td>{{ inventory.quantity }}</td>
-    </tr>
-    <tr>
-        <th>Last Updated</th>
-        <td>{{ inventory.last_updated }}</td>
-    </tr>
-</table>
 
-<h3>Pending Activity</h3>
-<div class="mb-4">
-    <canvas id="pending-chart" height="60"></canvas>
+<div class="row">
+    <div class="col">
+        <table class="table table-bordered mt-4">
+            <tr>
+                <th>Quantity</th>
+                <td>{{ inventory.quantity }}</td>
+            </tr>
+            <tr><th>Sales Orders</th><td>{{ sales_pending }}</td></tr>
+            <tr><th>Purchase Orders</th><td>{{ purchase_pending }}</td></tr>
+            {% if production_pending > 0 %}
+            <tr><th>Production Jobs</th><td>{{ production_pending }}</td></tr>
+        {% endif %}
+            <tr><th>Required Shortage</th><td>{{ required_qty }}</td></tr>
+        </table>
+    </div>
+    <div class="col">
+        <div class="mb-4">
+            <canvas id="pending-chart" height="60"></canvas>
+        </div>
+    </div>
 </div>
-<table class="table table-bordered">
-    <tr><th>Sales Orders</th><td>{{ sales_pending }}</td></tr>
-    <tr><th>Purchase Orders</th><td>{{ purchase_pending }}</td></tr>
-    {% if production_pending > 0 %}
-    <tr><th>Production Jobs</th><td>{{ production_pending }}</td></tr>
-{% endif %}
-    <tr><th>Required Shortage</th><td>{{ required_qty }}</td></tr>
-</table>
+
+<div class="mb-4">
+    <canvas id="history-chart" height="60"></canvas>
+</div>
 
 <h3>Inventory Ledger</h3>
 {% if ledger %}
@@ -88,6 +91,22 @@ new Chart(ctx2, {
                 {% if production_pending > 0 %}{{ production_pending }},{% endif %}
                 {{ required_qty }}
             ]
+        }]
+    },
+    options: { responsive: true, scales: { y: { beginAtZero: true } } }
+});
+
+// history time series chart
+const ctx3 = document.getElementById('history-chart').getContext('2d');
+new Chart(ctx3, {
+    type: 'line',
+    data: {
+        labels: {{ history_dates|safe }},
+        datasets: [{
+            label: 'Quantity',
+            data: {{ history_qty|safe }},
+            borderColor: '#4e73df',
+            fill: false
         }]
     },
     options: { responsive: true, scales: { y: { beginAtZero: true } } }

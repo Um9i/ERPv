@@ -15,6 +15,7 @@ from .views import (
     ProductionReceivingListView,
     ProductionReceiveView,
     ProductionDashboardView,
+    ProductionListApiView,
 )
 
 app_name = "production"
@@ -35,4 +36,5 @@ urlpatterns = [
     path("jobs/<int:pk>/update/", ProductionUpdateView.as_view(), name="production-update"),
     path("jobs/receiving/", ProductionReceivingListView.as_view(), name="production-receiving-list"),
     path("jobs/<int:pk>/receive/", ProductionReceiveView.as_view(), name="production-receive"),
+    path("jobs/api/", ProductionListApiView.as_view(), name="production-list-api"),
 ]

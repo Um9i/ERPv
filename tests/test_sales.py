@@ -15,6 +15,10 @@ class TestCustomer:
     def test_customer_detail_context(self, client, customer, customer_product):
         from django.urls import reverse
         from sales.models import SalesOrder
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         # create one order so the "see all" link is shown
         SalesOrder.objects.create(customer=customer)
@@ -35,6 +39,10 @@ class TestCustomer:
     def test_customer_list_pagination(self, client, customer):
         from django.urls import reverse
         from sales.models import Customer
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
         for i in range(12):
             Customer.objects.create(name=f"C{i}")
         url = reverse("sales:customer-list")
@@ -47,6 +55,11 @@ class TestCustomer:
     def test_customer_list_search(self, client, customer):
         from django.urls import reverse
         from sales.models import Customer
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
         Customer.objects.create(name="Alpha Corp")
         Customer.objects.create(name="Beta LLC")
         url = reverse("sales:customer-list")
@@ -87,6 +100,11 @@ class TestCustomerProduct:
 
     def test_customer_product_create_title(self, client, customer):
         from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
         url = reverse("sales:customer-product-create")
         resp = client.get(url)
         assert resp.status_code == 200
@@ -94,6 +112,11 @@ class TestCustomerProduct:
 
     def test_customer_product_update_title(self, client, customer_product):
         from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
         url = reverse("sales:customer-product-update", args=[customer_product.pk])
         resp = client.get(url)
         assert resp.status_code == 200
@@ -110,6 +133,11 @@ class TestSalesOrder:
     def test_sales_order_list_pagination(self, client, sales_order):
         from django.urls import reverse
         from sales.models import SalesOrder
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
         for i in range(12):
             SalesOrder.objects.create(customer=sales_order.customer)
         url = reverse("sales:sales-order-list")
@@ -122,6 +150,10 @@ class TestSalesOrder:
     def test_sales_order_list_search(self, client, customer, sales_order):
         from django.urls import reverse
         from sales.models import SalesOrder, Customer
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         other = Customer.objects.create(name="Other Customer")
         SalesOrder.objects.create(customer=other)
@@ -162,6 +194,11 @@ class TestSalesOrder:
 
     def test_sales_order_detail_shows_shipped(self, client, sales_order_line):
         from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
         so = sales_order_line.sales_order
         sales_order_line.quantity_shipped = 3
         sales_order_line.save()
@@ -176,6 +213,10 @@ class TestSalesOrder:
     def test_can_close_order_from_detail(self, client, sales_order_line):
         from django.urls import reverse
         from inventory.models import Inventory
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         so = sales_order_line.sales_order
         url = reverse("sales:sales-order-detail", args=[so.pk])
@@ -201,6 +242,10 @@ class TestSalesOrder:
 
     def test_create_view_prefills_and_filters(self, client, customer, customer_product):
         from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         url = reverse("sales:sales-order-create") + f"?customer={customer.pk}"
         response = client.get(url)
@@ -220,6 +265,10 @@ class TestSalesOrder:
 
     def test_customer_product_create_prefills_customer(self, client, customer, product):
         from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         url = reverse("sales:customer-product-create") + f"?customer={customer.pk}"
         response = client.get(url)
@@ -238,6 +287,10 @@ class TestSalesOrder:
     def test_create_view_auto_customer_and_lines(self, client, customer, customer_product):
         from django.urls import reverse
         from sales.models import SalesOrder
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         url = reverse("sales:sales-order-create") + f"?customer={customer.pk}"
         prefix = "sales_order_lines"
@@ -267,6 +320,10 @@ class TestSalesOrder:
     def test_create_view_rejects_mismatched_product(self, client, customer, customer_product, product):
         from sales.models import Customer, CustomerProduct, SalesOrder
         from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         other_customer = Customer.objects.create(name="OtherCust")
         other_cp = CustomerProduct.objects.create(
@@ -313,6 +370,10 @@ class TestShipping:
         from django.urls import reverse
         from inventory.models import Inventory, InventoryLedger
         from sales.models import SalesOrder
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         so = sales_order_line.sales_order
         url = reverse("sales:sales-order-ship", args=[so.pk])
@@ -345,6 +406,10 @@ class TestShipping:
     def test_ship_view_partial_quantity(self, client, sales_order_line):
         from django.urls import reverse
         from inventory.models import Inventory, InventoryLedger
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         so = sales_order_line.sales_order
         url = reverse("sales:sales-order-ship", args=[so.pk])
@@ -371,6 +436,11 @@ class TestShipping:
     def test_shipping_list_pagination(self, client, customer, customer_product):
         from django.urls import reverse
         from sales.models import SalesOrder, SalesOrderLine
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
         for _ in range(12):
             so = SalesOrder.objects.create(customer=customer)
             SalesOrderLine.objects.create(sales_order=so, product=customer_product, quantity=2)
@@ -384,6 +454,11 @@ class TestShipping:
     def test_shipping_list_search(self, client, customer, customer_product):
         from django.urls import reverse
         from sales.models import Customer, SalesOrder, SalesOrderLine
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
         other = Customer.objects.create(name="Other Customer")
         so1 = SalesOrder.objects.create(customer=customer)
         SalesOrderLine.objects.create(sales_order=so1, product=customer_product, quantity=1)
@@ -401,6 +476,10 @@ class TestShipping:
         from django.urls import reverse
         from inventory.models import Inventory, InventoryLedger
         from sales.models import SalesOrder, SalesOrderLine
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         # ensure inventory on product so shipping succeeds
         Inventory.objects.update_or_create(product=customer_product.product, defaults={"quantity": 100})

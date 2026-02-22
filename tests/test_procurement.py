@@ -14,6 +14,11 @@ class TestSupplier:
     def test_supplier_detail_context(self, client, supplier, supplier_product):
         from django.urls import reverse
         from procurement.models import PurchaseOrder
+        from django.contrib.auth.models import User
+
+        # login before accessing protected pages
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         # create one purchase order so the "see all" link is shown
         PurchaseOrder.objects.create(supplier=supplier)
@@ -38,6 +43,10 @@ class TestSupplier:
         """Supplier list should paginate when many entries exist."""
         from django.urls import reverse
         from procurement.models import Supplier
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
         # create enough extra suppliers to require more than one page
         for i in range(12):
             Supplier.objects.create(name=f"Pagi{i}")
@@ -53,6 +62,10 @@ class TestSupplier:
         """Search box should filter suppliers by name."""
         from django.urls import reverse
         from procurement.models import Supplier
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         Supplier.objects.create(name="Alpha Corp")
         Supplier.objects.create(name="Beta LLC")
@@ -90,6 +103,11 @@ class TestSupplier:
     def test_supplier_product_ids_api(self, client, supplier, supplier_product):
         """API should return *supplier-product* ids for a given supplier."""
         from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
         url = reverse("procurement:supplier-product-ids", args=[supplier.pk])
         response = client.get(url)
         assert response.status_code == 200
@@ -117,6 +135,11 @@ class TestSupplierProduct:
     def test_supplier_product_create_title(self, client, supplier):
         """Form page for a new product shows the "New" heading."""
         from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
         url = reverse("procurement:supplier-product-create")
         resp = client.get(url)
         assert resp.status_code == 200
@@ -125,6 +148,11 @@ class TestSupplierProduct:
     def test_supplier_product_update_title(self, client, supplier_product):
         """Editing an existing product uses the "Edit" heading."""
         from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
         url = reverse("procurement:supplier-product-update", args=[supplier_product.pk])
         resp = client.get(url)
         assert resp.status_code == 200
@@ -144,6 +172,10 @@ class TestSupplierProduct:
         from django.urls import reverse
         from inventory.models import Inventory, InventoryLedger
         import datetime
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         po = purchase_order_line.purchase_order
         original = po.updated_at
@@ -190,6 +222,10 @@ class TestSupplierProduct:
         """Receiving less than ordered still updates inventory and keeps line open."""
         from django.urls import reverse
         from inventory.models import Inventory, InventoryLedger
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         po = purchase_order_line.purchase_order
         url = reverse("procurement:purchase-order-receive", args=[po.pk])
@@ -223,6 +259,10 @@ class TestSupplierProduct:
     def test_receiving_list_pagination(self, client, supplier, supplier_product):
         """The receiving list view should paginate when many orders exist."""
         from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
         # create 12 purchase orders with incomplete lines
         for _ in range(12):
             po = PurchaseOrder.objects.create(supplier=supplier)
@@ -238,6 +278,10 @@ class TestSupplierProduct:
         """Search box should filter receiving orders by supplier or ID."""
         from django.urls import reverse
         from procurement.models import Supplier
+        from django.contrib.auth.models import User
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
         other = Supplier.objects.create(name="Other Supplier")
         # create one incomplete order for each supplier
         po1 = PurchaseOrder.objects.create(supplier=supplier)
@@ -257,6 +301,10 @@ class TestSupplierProduct:
         """Clicking receive-all should mark every line as received."""
         from django.urls import reverse
         from inventory.models import Inventory, InventoryLedger
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         po = PurchaseOrder.objects.create(supplier=supplier)
         # two lines with different quantities
@@ -295,6 +343,10 @@ class TestPurchaseOrder:
         """List view should paginate when many orders exist."""
         from django.urls import reverse
         from procurement.models import PurchaseOrder
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
         # create extra orders to force multiple pages
         for i in range(12):
             PurchaseOrder.objects.create(supplier=purchase_order.supplier)
@@ -309,6 +361,10 @@ class TestPurchaseOrder:
         """Orders should be searchable by supplier name or ID."""
         from django.urls import reverse
         from procurement.models import PurchaseOrder, Supplier
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         other = Supplier.objects.create(name="Other Supplier")
         PurchaseOrder.objects.create(supplier=other)
@@ -360,6 +416,11 @@ class TestPurchaseOrder:
     def test_purchase_order_detail_shows_received(self, client, purchase_order_line):
         """Detail page includes received and remaining totals."""
         from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
         po = purchase_order_line.purchase_order
         # update received on the line to simulate partial receipt
         purchase_order_line.quantity_received = 3
@@ -377,6 +438,10 @@ class TestPurchaseOrder:
         """A button on the detail page allows manual closing of an order."""
         from django.urls import reverse
         from inventory.models import Inventory
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         po = purchase_order_line.purchase_order
         url = reverse("procurement:purchase-order-detail", args=[po.pk])
@@ -408,6 +473,10 @@ class TestPurchaseOrder:
     def test_create_view_prefills_and_filters(self, client, supplier, supplier_product):
         """GET should prefill supplier and limit the product choices on each line."""
         from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         url = reverse("procurement:purchase-order-create") + f"?supplier={supplier.pk}"
         response = client.get(url)
@@ -427,6 +496,10 @@ class TestPurchaseOrder:
 
     def test_supplier_product_create_prefills_supplier(self, client, supplier, product):
         from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         url = reverse("procurement:supplier-product-create") + f"?supplier={supplier.pk}"
         response = client.get(url)
@@ -447,6 +520,10 @@ class TestPurchaseOrder:
         """The create view should prefill supplier from the query string and
         allow submitting one or more order lines."""
         from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         url = reverse("procurement:purchase-order-create") + f"?supplier={supplier.pk}"
         # build post data for a single line using the actual prefix
@@ -480,6 +557,10 @@ class TestPurchaseOrder:
         supplier should result in form errors and not create a PO."""
         from procurement.models import Supplier, SupplierProduct
         from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         # create a second supplier and a product relationship pointing at it
         other_supplier = Supplier.objects.create(name="OtherSup")

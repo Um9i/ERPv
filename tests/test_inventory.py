@@ -28,6 +28,11 @@ class TestInventory:
     def test_adjust_form_prefills_product_and_is_readonly(self, client, product):
         from inventory.models import Inventory
         from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        # login required
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
 
         inventory = Inventory.objects.get(product=product)
         url = reverse("inventory:inventory-adjust", args=[inventory.pk])
@@ -48,6 +53,11 @@ class TestInventory:
     def test_inventory_list_search_and_pagination(self, client, product):
         from django.urls import reverse
         from inventory.models import Inventory, Product
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
         # insert many products
         for i in range(25):
             p = Product.objects.create(name=f"X{i}")
@@ -66,6 +76,12 @@ class TestInventory:
     def test_inventory_detail_ledger_and_last_updated(self, client, product):
         from inventory.models import Inventory, InventoryLedger
         from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        # login required for protected views
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
         inv = Inventory.objects.get(product=product)
         # perform two adjustments to generate ledger entries
         InventoryAdjust.objects.create(product=product, quantity=5, complete=True)
@@ -84,9 +100,19 @@ class TestInventory:
         assert "Purchase Orders" in content
         # production jobs row only appears when nonzero; its absence is acceptable
         assert "Required Shortage" in content
-        # chart canvas should be present
+        # chart canvases should be present
         assert '<canvas id="pending-chart"' in content
+        assert '<canvas id="history-chart"' in content
         # ledger entries should appear (pagination header optional)
+
+        # context should include history arrays matching adjustments
+        ctx = resp.context
+        assert "history_dates" in ctx and isinstance(ctx["history_dates"], list)
+        assert "history_qty" in ctx and isinstance(ctx["history_qty"], list)
+        # there should be two entries corresponding to the two adjustments
+        assert len(ctx["history_qty"]) >= 2
+        # final total should equal net change of adjustments (5 + -2)
+        assert ctx["history_qty"][-1] == 3
 
     def test_last_updated_changes_on_inventory_operations(self, product):
         from inventory.models import Inventory

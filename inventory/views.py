@@ -9,6 +9,7 @@ from django.views.generic import (
     TemplateView,
 )
 from django.urls import reverse_lazy
+from django.http import JsonResponse
 
 
 class ProductCreateView(CreateView):
@@ -78,6 +79,16 @@ class InventoryDetailView(DetailView):
         page = self.request.GET.get("page")
         paginator = Paginator(ledger_list, 10)
         context["ledger"] = paginator.get_page(page)
+        # build time series of inventory levels from ledger
+        history = []
+        total = 0
+        dates = []
+        for entry in inv.product.inventory_ledger.all().order_by("date"):
+            total += entry.quantity
+            dates.append(entry.date.strftime("%Y-%m-%d %H:%M"))
+            history.append(total)
+        context["history_dates"] = dates
+        context["history_qty"] = history
         # compute pending amounts for this product
         # sales pending: sum of quantities not yet shipped
         sales_qs = SalesOrderLine.objects.filter(
@@ -155,3 +166,20 @@ class InventoryDashboardView(TemplateView):
         form.instance.product = inventory.product
         form.instance.complete = True
         return super().form_valid(form)
+
+
+class InventoryListApiView(TemplateView):
+    """API view to return inventory data for dashboard charts."""
+
+    def get(self, request, *args, **kwargs):
+        from django.db.models import Sum
+
+        # compute inventory levels for all products
+        data = []
+        for inv in Inventory.objects.select_related("product").all():
+            data.append({
+                "product": inv.product.name,
+                "quantity": inv.quantity,
+                "required": inv.required,
+            })
+        return JsonResponse(data, safe=False)

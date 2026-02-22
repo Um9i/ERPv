@@ -8,6 +8,7 @@ from .views import (
     InventoryDetailView,
     InventoryAdjustCreateView,
     InventoryDashboardView,
+    InventoryListApiView,
 )
 
 app_name = "inventory"
@@ -22,6 +23,7 @@ urlpatterns = [
         "products/<int:pk>/delete/", ProductDeleteView.as_view(), name="product-delete"
     ),
     path("inventories/", InventoryListView.as_view(), name="inventory-list"),
+    path("inventories/api/", InventoryListApiView.as_view(), name="inventory-list-api"),
     path(
         "inventories/<int:pk>/", InventoryDetailView.as_view(), name="inventory-detail"
     ),

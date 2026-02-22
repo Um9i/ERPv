@@ -18,6 +18,7 @@ from django.shortcuts import redirect
 from django import forms
 from django.forms.models import inlineformset_factory
 from django.db.models import F
+from django.http import JsonResponse
 
 
 class SupplierCreateView(CreateView):
@@ -86,7 +87,7 @@ class SupplierDetailView(DetailView):
         supplier = self.object
         po_list = supplier.supplier_purchase_orders.all()
         # enforce ordering to avoid paginator warnings
-        pp_list = supplier.supplier_products.all().order_by('product__name')
+        pp_list = supplier.supplier_products.all().order_by("product__name")
 
         po_page_number = self.request.GET.get("po_page")
         pp_page_number = self.request.GET.get("sp_page")
@@ -128,7 +129,9 @@ class SupplierProductCreateView(CreateView):
 
     def get_success_url(self):
         # after creating a supplier product return to that supplier's detail
-        return reverse_lazy("procurement:supplier-detail", args=[self.object.supplier.pk])
+        return reverse_lazy(
+            "procurement:supplier-detail", args=[self.object.supplier.pk]
+        )
 
 
 class SupplierProductUpdateView(UpdateView):
@@ -139,7 +142,9 @@ class SupplierProductUpdateView(UpdateView):
 
     def get_success_url(self):
         # after updating a supplier product return to that supplier's detail
-        return reverse_lazy("procurement:supplier-detail", args=[self.object.supplier.pk])
+        return reverse_lazy(
+            "procurement:supplier-detail", args=[self.object.supplier.pk]
+        )
 
 
 class SupplierProductDeleteView(DeleteView):
@@ -149,7 +154,9 @@ class SupplierProductDeleteView(DeleteView):
 
     def get_success_url(self):
         # after deleting a supplier product return to that supplier's detail
-        return reverse_lazy("procurement:supplier-detail", args=[self.object.supplier.pk])
+        return reverse_lazy(
+            "procurement:supplier-detail", args=[self.object.supplier.pk]
+        )
 
 
 class SupplierPurchaseOrderListView(ListView):
@@ -180,15 +187,16 @@ class SupplierProductIDsView(DetailView):
     Product. The javascript code relies on these IDs when showing/hiding
     options.
     """
+
     model = Supplier
 
     def get(self, request, *args, **kwargs):
         supplier = self.get_object()
         ids = list(
-            SupplierProduct.objects.filter(supplier=supplier)
-            .values_list("id", flat=True)
+            SupplierProduct.objects.filter(supplier=supplier).values_list(
+                "id", flat=True
+            )
         )
-        from django.http import JsonResponse
 
         return JsonResponse({"product_ids": ids})
 
@@ -209,8 +217,12 @@ class ProcurementDashboardView(TemplateView):
         context = super().get_context_data(**kwargs)
         context["total_purchase_orders"] = PurchaseOrder.objects.count()
         # how many individual order lines have already been received
-        context["lines_received"] = PurchaseOrderLine.objects.filter(complete=True).count()
-        context["pending_receiving"] = PurchaseOrderLine.objects.filter(complete=False).count()
+        context["lines_received"] = PurchaseOrderLine.objects.filter(
+            complete=True
+        ).count()
+        context["pending_receiving"] = PurchaseOrderLine.objects.filter(
+            complete=False
+        ).count()
         context["total_suppliers"] = Supplier.objects.count()
         return context
 
@@ -347,6 +359,7 @@ class PurchaseOrderDetailView(DetailView):
             self.object.save(update_fields=["updated_at"])
             # simply reload the detail page
             from django.shortcuts import redirect
+
             return redirect(request.path)
         # delegate other POSTs if we ever need them (none today)
         return super().post(request, *args, **kwargs)
@@ -369,9 +382,11 @@ class PurchaseOrderReceivingListView(ListView):
 
     def get_queryset(self):
         # show only purchase orders that have unreceived lines
-        qs = PurchaseOrder.objects.filter(
-            purchase_order_lines__complete=False
-        ).distinct().order_by("-created_at")
+        qs = (
+            PurchaseOrder.objects.filter(purchase_order_lines__complete=False)
+            .distinct()
+            .order_by("-created_at")
+        )
         q = self.request.GET.get("q", "").strip()
         if q:
             from django.db.models import Q
@@ -381,6 +396,7 @@ class PurchaseOrderReceivingListView(ListView):
 
     def get_context_data(self, **kwargs):
         from django.core.paginator import Paginator
+
         context = super().get_context_data(**kwargs)
         qs = self.get_queryset()
         page = self.request.GET.get("page")
@@ -422,9 +438,10 @@ class PurchaseOrderReceiveView(DetailView):
                 from procurement.models import PurchaseLedger
 
                 from django.utils import timezone
-                Inventory.objects.filter(
-                    product=line.product.product
-                ).update(quantity=F("quantity") + qty, last_updated=timezone.now())
+
+                Inventory.objects.filter(product=line.product.product).update(
+                    quantity=F("quantity") + qty, last_updated=timezone.now()
+                )
                 InventoryLedger.objects.create(
                     product=line.product.product,
                     quantity=qty,

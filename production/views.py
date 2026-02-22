@@ -15,6 +15,7 @@ from django.urls import reverse_lazy
 from django.shortcuts import redirect
 from django import forms
 from django.db.models import F
+from django.http import JsonResponse
 
 
 # ----- BOM views -----
@@ -189,6 +190,30 @@ class ProductionListView(ListView):
         context["productions"] = paginator.get_page(page)
         context["q"] = self.request.GET.get("q", "")
         return context
+
+
+class ProductionListApiView(TemplateView):
+    def get(self, request, *args, **kwargs):
+        qs = Production.objects.all().order_by("-created_at").filter(complete=False)
+        q = self.request.GET.get("q", "").strip()
+        if q:
+            from django.db.models import Q
+
+            qs = qs.filter(Q(product__name__icontains=q) | Q(pk__icontains=q))
+        data = []
+        for prod in qs:
+            data.append(
+                {
+                    "id": prod.id,
+                    "product": prod.product.name,
+                    "quantity": prod.quantity,
+                    "quantity_received": prod.quantity_received,
+                    "complete": prod.complete,
+                    "closed": prod.closed,
+                    "created_at": prod.created_at.isoformat(),
+                }
+            )
+        return JsonResponse({"productions": data})
 
 
 class ProductionDetailView(DetailView):
