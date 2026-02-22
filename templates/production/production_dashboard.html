@@ -41,9 +41,9 @@
             <div class="card-body py-4">
                 <h5 class="card-title"><i class="bi bi-list-columns me-2"></i>Bill of Materials</h5>
                 <p class="card-text">Define and manage component lists for finished products.</p>
-                <ul>
-                    <li><a href="{% url 'production:bom-list' %}">View BOMs</a></li>
-                    <li><a href="{% url 'production:bom-create' %}">New BOM</a></li>
+                <ul class="list-group list-group-flush">
+                    <a class="list-group-item list-group-item-action" href="{% url 'production:bom-list' %}">View BOMs</a>
+                    <a class="list-group-item list-group-item-action" href="{% url 'production:bom-create' %}">New BOM</a>
                 </ul>
             </div>
         </div>
@@ -53,8 +53,8 @@
             <div class="card-body py-4">
                 <h5 class="card-title"><i class="bi bi-calendar-plus me-2"></i>Production Planning</h5>
                 <p class="card-text">Create production jobs, allocate components, and record completion.</p>
-                <ul>
-                    <li><a href="{% url 'production:production-create' %}">New Job</a></li>
+                <ul class="list-group list-group-flush">
+                    <a class="list-group-item list-group-item-action" href="{% url 'production:production-create' %}">New Job</a>
                 </ul>
             </div>
         </div>
@@ -66,8 +66,8 @@
             <div class="card-body py-4">
                 <h5 class="card-title"><i class="bi bi-check-square me-2"></i>Job Completion</h5>
                 <p class="card-text">Mark completed production jobs and update inventories.</p>
-                <ul>
-                    <li><a href="{% url 'production:production-receiving-list' %}">Complete Jobs</a></li>
+                <ul class="list-group list-group-flush">
+                    <a class="list-group-item list-group-item-action" href="{% url 'production:production-receiving-list' %}">Complete Jobs</a>
                 </ul>
             </div>
         </div>
@@ -77,8 +77,8 @@
             <div class="card-body py-4">
                 <h5 class="card-title"><i class="bi bi-clock-history me-2"></i>Job Log</h5>
                 <p class="card-text">Review past production jobs and monitor historical activity.</p>
-                <ul>
-                    <li><a href="{% url 'production:production-list' %}">View Job Log</a></li>
+                <ul class="list-group list-group-flush">
+                    <a class="list-group-item list-group-item-action" href="{% url 'production:production-list' %}">View Job Log</a>
                 </ul>
             </div>
         </div>
