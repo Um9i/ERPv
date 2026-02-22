@@ -237,7 +237,8 @@ class LowStockListView(TemplateView):
             .values('product_id')
             .annotate(total=Sum('rem'))
         )
-        job_map = {v['product']: v['total'] or 0 for v in job_vals}
+        # values() returns dicts with a "product_id" key, not "product"
+        job_map = {v['product_id']: v['total'] or 0 for v in job_vals}
 
         # now build items list using the precomputed maps
         for inv in inv_list:
