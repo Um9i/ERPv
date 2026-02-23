@@ -1,41 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
 {% if user.is_authenticated %}
-<h1>Dashboard</h1>
-<div class="container-fluid py-4">
-  <!-- 1️⃣ Attention Required Section -->
-  <div class="card border-0 shadow-sm mb-4 bg-light">
-    <div class="card-body">
+<div class="container-fluid">
+  <div class="card border-0 shadow-sm mb-4 bg-danger">
+    <div class="card-body text-white">
       <h5 class="mb-4">⚠ Attention Required</h5>
-      <div class="row g-3">
-        <div class="col-md-3">
-          <a href="{% url 'sales:sales-order-ship-list' %}" class="text-decoration-none">
-            <div class="p-3 bg-white rounded shadow-sm text-center">
-              <h4 class="fw-bold text-primary">{{ attention.pending_shipping }}</h4>
-              <small class="text-dark">Orders Pending Shipping</small>
-            </div>
-          </a>
-        </div>
-        <div class="col-md-3">
-          <a href="{% url 'production:production-receiving-list' %}" class="text-decoration-none">
-            <div class="p-3 bg-white rounded shadow-sm text-center">
-              <h4 class="fw-bold text-primary">{{ attention.open_production }}</h4>
-              <small class="text-dark">Open Production Jobs</small>
-            </div>
-          </a>
-        </div>
-        <div class="col-md-3">
-          <a href="{% url 'procurement:purchase-order-receiving-list' %}" class="text-decoration-none">
-            <div class="p-3 bg-white rounded shadow-sm text-center">
-              <h4 class="fw-bold">{{ attention.open_pos }}</h4>
-              <small class="text-dark">Open PO Lines</small>
-            </div>
-          </a>
-        </div>
+      <div class="row">
         <div class="col-md-3">
           <a href="{% url 'inventory:inventory-low-stock' %}" class="text-decoration-none">
             <div class="p-3 bg-white rounded shadow-sm text-center">
-              <h4 class="fw-bold text-danger">{{ attention.low_stock }}</h4>
+              <h4 class="fw-bold text-danger">⚠ {{ attention.low_stock }}</h4>
               <small class="text-dark">Low Stock Items</small>
             </div>
           </a>
@@ -43,143 +17,54 @@
       </div>
     </div>
   </div>
-  <!-- 2️⃣ Executive Summary Row -->
-  <div class="row g-4 mb-4">
-    <div class="col-md-3">
-      <div class="card shadow-sm border-0 h-100">
-        <div class="card-body">
-          <h6 class="text-muted">Total Sales</h6>
-          <h3 class="fw-bold">${{ executive.total_sales|floatformat:2 }}</h3>
-          {% if sales_change_pct is not None %}
-          <small class="text-success d-block">
-            {{ sales_change_pct|floatformat:1 }}% vs last month
-          </small>
-          {% endif %}
-          {% if sales_yoy_pct is not None %}
-          <small class="text-info d-block">
-            {{ sales_yoy_pct|floatformat:1 }}% vs last year
-          </small>
-          {% endif %}
-          {% if sales_vs_target_pct is not None %}
-          <small class="text-warning d-block">
-            {{ sales_vs_target_pct|floatformat:1 }}% vs target
-          </small>
-          {% endif %}
+  <div class="card mb-4 shadow-sm bg-light">
+    <div class="card-body p-4">
+      <h5 class="card-title mb-4"><i class="bi bi-speedometer2 me-4"></i>Executive Overview</h5>
+      <div class="row my-4">
+        <div class="col-lg-3">
+          <ul class="list-group list-group-flush mb-4">
+            <a class="list-group-item list-group-item-action" href="{% url 'inventory:inventory-list' %}">Inventory</a>
+            <a class="list-group-item list-group-item-action" href="{% url 'sales:sales-order-list' %}">Sales Orders</a>
+            <a class="list-group-item list-group-item-action" href="{% url 'production:production-list' %}">Production Jobs</a>
+            <a class="list-group-item list-group-item-action" href="{% url 'procurement:purchase-order-list' %}">Purchase Orders</a>
+          </ul>
         </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card shadow-sm border-0 h-100">
-        <div class="card-body">
-          <h6 class="text-muted">Open Orders</h6>
-          <h3 class="fw-bold">{{ executive.open_orders }}</h3>
-          <small class="text-primary">{{ attention.pending_shipping }} pending shipment</small>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card shadow-sm border-0 h-100">
-        <div class="card-body">
-          <h6 class="text-muted">Inventory Value</h6>
-          <h3 class="fw-bold">${{ executive.inventory_value|floatformat:2 }}</h3>
-          <small class="text-muted">{{ product_count }} products</small>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card shadow-sm border-0 h-100">
-        <div class="card-body">
-          <h6 class="text-muted">Active Jobs</h6>
-          <h3 class="fw-bold">{{ executive.active_jobs }}</h3>
-          <small class="text-primary">In production</small>
-        </div>
-      </div>
-    </div>
-  </div>
-  <!-- 3️⃣ Charts Section -->
-  <div class="row g-4 mb-4">
-    <div class="col-md-8">
-      <div class="card shadow-sm border-0">
-        <div class="card-body">
-          <h5>Purchase vs Sales</h5>
-          <canvas id="purchase-sales-chart" height="150"></canvas>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card shadow-sm border-0">
-        <div class="card-body">
-          <h5>Inventory Breakdown</h5>
-          <canvas id="inventory-breakdown-chart" height="150"></canvas>
-        </div>
-      </div>
-    </div>
-    <div class="col-12">
-      <div class="card shadow-sm border-0">
-        <div class="card-body">
-          <h5>Sales Over Time</h5>
-          <div class="btn-group mb-2" role="group" aria-label="Time range">
-            <button type="button" class="btn btn-sm btn-outline-primary" id="range7">7d</button>
-            <button type="button" class="btn btn-sm btn-outline-primary active" id="range30">30d</button>
-            <button type="button" class="btn btn-sm btn-outline-primary" id="range90">90d</button>
-          </div>
-          <canvas id="sales-time-chart" height="150"></canvas>
-          <div class="mt-2">
-            <small id="sales-metrics"></small>
+        <div class="col-lg-6">
+          <div class="row">
+            <div class="col">
+              <div class="card text-center shadow-sm">
+                <div class="card-body">
+                  <i class="bi bi-cart4 text-primary"></i>
+                  <h5 class="card-title mt-2">Open Sales Orders</h5>
+                  <p class="card-text h2">{{ executive.open_orders }}</p>
+                </div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card text-center shadow-sm">
+                <div class="card-body">
+                  <i class="bi bi-play-circle text-success"></i>
+                  <h5 class="card-title mt-2">Active Jobs</h5>
+                  <p class="card-text h2">{{ executive.active_jobs }}</p>
+                </div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card text-center shadow-sm">
+                <div class="card-body">
+                  <i class="bi bi-box-arrow-in-down text-warning"></i>
+                  <h5 class="card-title mt-2">Open PO Lines</h5>
+                  <p class="card-text h2">{{ attention.open_pos }}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-  <!-- chart scripts -->
-  <script>
-  const ctxSales = document.getElementById('sales-time-chart').getContext('2d');
-  const salesChart = new Chart(ctxSales, { type:'line', data: { labels: {{ sales_over_time_labels|safe }}, datasets:[{label:'Sales Value',data:{{ sales_over_time_data|safe }},borderColor:'#4e73df',fill:false}] }, options:{responsive:true,scales:{y:{beginAtZero:true}}}});
-  function updateSalesChart(range){
-    let labels, data, metrics;
-    if(range===7){
-      labels = {{ sales_over_time_labels_7|safe }};
-      data = {{ sales_over_time_data_7|safe }};
-      metrics = {{ sales_metrics_7|safe }};
-    } else if(range===90){
-      labels = {{ sales_over_time_labels_90|safe }};
-      data = {{ sales_over_time_data_90|safe }};
-      metrics = {{ sales_metrics_90|safe }};
-    } else {
-      labels = {{ sales_over_time_labels|safe }};
-      data = {{ sales_over_time_data|safe }};
-      metrics = {{ sales_metrics_30|safe }};
-    }
-    salesChart.data.labels = labels;
-    salesChart.data.datasets[0].data = data;
-    salesChart.update();
-    document.getElementById('sales-metrics').textContent =
-      'avg: ' + metrics.avg.toFixed(0) + ', max: ' + metrics.max.toFixed(0);
-  }
-  document.getElementById('range7').addEventListener('click',()=>{
-    updateSalesChart(7);
-    document.getElementById('range7').classList.add('active');
-    document.getElementById('range30').classList.remove('active');
-    document.getElementById('range90').classList.remove('active');
-  });
-  document.getElementById('range30').addEventListener('click',()=>{
-    updateSalesChart(30);
-    document.getElementById('range7').classList.remove('active');
-    document.getElementById('range30').classList.add('active');
-    document.getElementById('range90').classList.remove('active');
-  });
-  document.getElementById('range90').addEventListener('click',()=>{
-    updateSalesChart(90);
-    document.getElementById('range7').classList.remove('active');
-    document.getElementById('range30').classList.remove('active');
-    document.getElementById('range90').classList.add('active');
-  });
-  const ctxComp = document.getElementById('purchase-sales-chart').getContext('2d');
-  new Chart(ctxComp, { type:'bar', data:{labels:{{ purchase_sales_labels|safe }},datasets:[{label:'Value',backgroundColor:['#1cc88a','#36b9cc'],data:{{ purchase_sales_data|safe }}}]}, options:{responsive:true,scales:{y:{beginAtZero:true}}}});
-  const ctxInv = document.getElementById('inventory-breakdown-chart').getContext('2d');
-  new Chart(ctxInv, { type:'doughnut', data:{labels:{{ inventory_breakdown_labels|safe }},datasets:[{data:{{ inventory_breakdown_data|safe }},backgroundColor:['#4e73df','#1cc88a','#36b9cc','#f6c23e','#e74a3b']}]}, options:{responsive:true}});
-  </script>
 </div>
+
 {% endif %}
 
 {% endblock %}

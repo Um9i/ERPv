@@ -11,13 +11,13 @@ class TestMainDashboard:
         resp = client.get(url)
         assert resp.status_code == 200
         content = resp.content.decode()
-        # new layout should display executive summary and attention sections
-        assert 'Total Sales' in content
-        assert 'Open Orders' in content
-        assert 'Inventory Value' in content
-        assert 'Active Jobs' in content
+        # new layout should display the updated summary cards and attention section
         assert 'Attention Required' in content
-        assert 'Pending Shipping' in content
+        assert 'Open Sales Orders' in content
+        assert 'Active Jobs' in content
+        assert 'Open PO Lines' in content
+        # still have the pending shipment hint under open orders
+        assert 'pending shipment' in content
         # verify context keys exist and values match queries
         ctx = resp.context
         from procurement.models import PurchaseOrder, PurchaseOrderLine, Supplier

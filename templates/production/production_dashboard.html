@@ -1,88 +1,62 @@
 {% extends "base.html" %}
 {% block content %}
 {% if user.is_authenticated %}
-<h1>Production Dashboard</h1>
 
 <!-- summary metrics -->
 <div class="row dashboard-summary mb-4">
-    <div class="col-sm-6 col-md-4 col-lg-3">
-        <div class="card text-center shadow-sm">
-            <div class="card-body">
-                <i class="bi bi-gear-fill text-primary"></i>
-                <h5 class="card-title mt-2">BOMs</h5>
-                <p class="card-text h2">{{ total_boms|default:'—' }}</p>
+    <div class="col">
+        <div class="card mb-4 bg-light shadow-sm">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-4"><i class="bi bi-gear-fill me-4"></i>Production Management</h5>
+                <div class="row my-4">
+                    <div class="col-lg-3">
+                        <ul class="list-group list-group-flush mb-4">
+                            <a class="list-group-item list-group-item-action" href="{% url 'production:bom-create' %}">Create BOM</a>
+                            <a class="list-group-item list-group-item-action" href="{% url 'production:bom-list' %}">View BOMs</a>
+                            <a class="list-group-item list-group-item-action" href="{% url 'production:production-create' %}">Create Job</a>
+                            <a class="list-group-item list-group-item-action" href="{% url 'production:production-receiving-list' %}">Complete Jobs</a>
+                            <a class="list-group-item list-group-item-action" href="{% url 'production:production-list' %}">View Job Log</a>
+                        </ul>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="row">
+                            <div class="col">
+                                <div class="card text-center shadow-sm">
+                                    <div class="card-body">
+                                        <i class="bi bi-gear-fill text-primary"></i>
+                                        <h5 class="card-title mt-2">BOMs</h5>
+                                        <p class="card-text h2">{{ total_boms|default:'—' }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="card text-center shadow-sm">
+                                    <div class="card-body">
+                                        <i class="bi bi-play-circle text-success"></i>
+                                        <h5 class="card-title mt-2">Active Jobs</h5>
+                                        <p class="card-text h2">{{ active_jobs|default:'—' }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="card text-center shadow-sm">
+                                    <div class="card-body">
+                                        <i class="bi bi-check-circle text-warning"></i>
+                                        <h5 class="card-title mt-2">Completed</h5>
+                                        <p class="card-text h2">{{ completed_jobs|default:'—' }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-md-4 col-lg-3">
-        <div class="card text-center shadow-sm">
-            <div class="card-body">
-                <i class="bi bi-play-circle text-success"></i>
-                <h5 class="card-title mt-2">Active Jobs</h5>
-                <p class="card-text h2">{{ active_jobs|default:'—' }}</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-md-4 col-lg-3">
-        <div class="card text-center shadow-sm">
-            <div class="card-body">
-                <i class="bi bi-check-circle text-warning"></i>
-                <h5 class="card-title mt-2">Completed</h5>
-                <p class="card-text h2">{{ completed_jobs|default:'—' }}</p>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- action cards -->
-<div class="row">
-    <div class="col-md-6">
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body py-4">
-                <h5 class="card-title"><i class="bi bi-list-columns me-2"></i>Bill of Materials</h5>
-                <p class="card-text">Define and manage component lists for finished products.</p>
-                <ul class="list-group list-group-flush">
-                    <a class="list-group-item list-group-item-action" href="{% url 'production:bom-list' %}">View BOMs</a>
-                    <a class="list-group-item list-group-item-action" href="{% url 'production:bom-create' %}">New BOM</a>
-                </ul>
-            </div>
-        </div>
+    <!-- action cards -->
+    <div class="row">
+        <!-- additional actions can be placed here if needed -->
     </div>
-    <div class="col-md-6">
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body py-4">
-                <h5 class="card-title"><i class="bi bi-calendar-plus me-2"></i>Production Planning</h5>
-                <p class="card-text">Create production jobs, allocate components, and record completion.</p>
-                <ul class="list-group list-group-flush">
-                    <a class="list-group-item list-group-item-action" href="{% url 'production:production-create' %}">New Job</a>
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
-<div class="row">
-    <div class="col-md-6">
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body py-4">
-                <h5 class="card-title"><i class="bi bi-check-square me-2"></i>Job Completion</h5>
-                <p class="card-text">Mark completed production jobs and update inventories.</p>
-                <ul class="list-group list-group-flush">
-                    <a class="list-group-item list-group-item-action" href="{% url 'production:production-receiving-list' %}">Complete Jobs</a>
-                </ul>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body py-4">
-                <h5 class="card-title"><i class="bi bi-clock-history me-2"></i>Job Log</h5>
-                <p class="card-text">Review past production jobs and monitor historical activity.</p>
-                <ul class="list-group list-group-flush">
-                    <a class="list-group-item list-group-item-action" href="{% url 'production:production-list' %}">View Job Log</a>
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
+</div>{% endif %}
 {% endblock %}

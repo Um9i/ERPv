@@ -1,85 +1,73 @@
 {% extends "base.html" %}
 {% block content %}
 {% if user.is_authenticated %}
-<h1>Sales Dashboard</h1>
 
 <!-- summary metrics -->
 <div class="row dashboard-summary mb-4">
-    <div class="col-sm-6 col-md-4 col-lg-3">
-        <div class="card text-center shadow-sm">
-            <div class="card-body">
-                <i class="bi bi-cart4 text-primary"></i>
-                <h5 class="card-title mt-2">Total Orders</h5>
-                <p class="card-text h2">{{ total_orders|default:'—' }}</p>
+    <div class="col">
+        <div class="card mb-4 bg-light shadow-sm">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-4"><i class="bi bi-cart4 me-4"></i>Sales Management</h5>
+                <div class="row my-4">
+                    <div class="col-lg-3">
+                        <ul class="list-group list-group-flush mb-4">
+                            <a class="list-group-item list-group-item-action" href="{% url 'sales:sales-order-create' %}">Create Sales Order</a>
+                            <a class="list-group-item list-group-item-action" href="{% url 'sales:sales-order-list' %}">View Sales Orders</a>
+                            <a class="list-group-item list-group-item-action" href="{% url 'sales:sales-order-ship-list' %}">Shipping Orders</a>
+                            <a class="list-group-item list-group-item-action" href="{% url 'sales:customer-list' %}">View Customers</a>
+                            <a class="list-group-item list-group-item-action" href="{% url 'sales:customer-create' %}">Create Customer</a>
+                        </ul>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="row">
+                            <div class="col">
+                                <div class="card text-center shadow-sm">
+                                    <div class="card-body">
+                                        <i class="bi bi-cart4 text-primary"></i>
+                                        <h5 class="card-title mt-2">Total Orders</h5>
+                                        <p class="card-text h2">{{ total_orders|default:'—' }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="card text-center shadow-sm">
+                                    <div class="card-body">
+                                        <i class="bi bi-truck text-success"></i>
+                                        <h5 class="card-title mt-2">Shipped</h5>
+                                        <p class="card-text h2">{{ shipped_orders|default:'—' }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="card text-center shadow-sm">
+                                    <div class="card-body">
+                                        <i class="bi bi-hourglass-split text-info"></i>
+                                        <h5 class="card-title mt-2">Pending Shipping</h5>
+                                        <p class="card-text h2">{{ pending_shipping|default:'—' }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col">
+                                <div class="card text-center shadow-sm">
+                                    <div class="card-body">
+                                        <i class="bi bi-people-fill text-warning"></i>
+                                        <h5 class="card-title mt-2">Customers</h5>
+                                        <p class="card-text h2">{{ total_customers|default:'—' }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-md-4 col-lg-3">
-        <div class="card text-center shadow-sm">
-            <div class="card-body">
-                <i class="bi bi-truck text-success"></i>
-                <h5 class="card-title mt-2">Shipped</h5>
-                <p class="card-text h2">{{ shipped_orders|default:'—' }}</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-md-4 col-lg-3">
-        <div class="card text-center shadow-sm">
-            <div class="card-body">
-                <i class="bi bi-hourglass-split text-info"></i>
-                <h5 class="card-title mt-2">Pending Shipping</h5>
-                <p class="card-text h2">{{ pending_shipping|default:'—' }}</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-md-4 col-lg-3">
-        <div class="card text-center shadow-sm">
-            <div class="card-body">
-                <i class="bi bi-people-fill text-warning"></i>
-                <h5 class="card-title mt-2">Customers</h5>
-                <p class="card-text h2">{{ total_customers|default:'—' }}</p>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- action cards -->
-<div class="row">
-    <div class="col-md-6">
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body py-4">
-                <h5 class="card-title"><i class="bi bi-cart-plus me-2"></i>Sales Order Management</h5>
-                <p class="card-text">Create and manage sales orders, track their status, and ensure timely fulfillment.</p>
-                <ul class="list-group list-group-flush">
-                    <a class="list-group-item list-group-item-action" href="{% url 'sales:sales-order-list' %}">View Sales Orders</a>
-                    <a class="list-group-item list-group-item-action" href="{% url 'sales:sales-order-create' %}">Create Sales Order</a>
-                </ul>
-            </div>
-        </div>
+    <!-- action cards -->
+    <div class="row">
+        <!-- additional actions can be placed here if needed -->
     </div>
-    <div class="col-md-6">
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body py-4">
-                <h5 class="card-title"><i class="bi bi-box-seam me-2"></i>Shipping</h5>
-                <p class="card-text">Ship orders, update inventory, and track customer shipments.</p>
-                <ul class="list-group list-group-flush">
-                    <a class="list-group-item list-group-item-action" href="{% url 'sales:sales-order-ship-list' %}">Shipping Orders</a>
-                </ul>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body py-4">
-                <h5 class="card-title"><i class="bi bi-people-fill me-2"></i>Customer Management</h5>
-                <p class="card-text">View and manage your customers, their contact information, and the products they purchase.</p>
-                <ul class="list-group list-group-flush">
-                    <a class="list-group-item list-group-item-action" href="{% url 'sales:customer-list' %}">View Customers</a>
-                    <a class="list-group-item list-group-item-action" href="{% url 'sales:customer-create' %}">Create Customer</a>
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
+</div>{% endif %}
 {% endblock %}
