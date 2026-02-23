@@ -6,8 +6,8 @@
 {% block dashboard_links %}
 <a class="list-group-item list-group-item-action" href="{% url 'sales:sales-order-create' %}">Create Sales Order</a>
 <a class="list-group-item list-group-item-action" href="{% url 'sales:sales-order-list' %}">View Sales Orders</a>
-<a class="list-group-item list-group-item-action" href="{% url 'sales:customer-list' %}">View Customers</a>
 <a class="list-group-item list-group-item-action" href="{% url 'sales:customer-create' %}">Create Customer</a>
+<a class="list-group-item list-group-item-action" href="{% url 'sales:customer-list' %}">View Customers</a>
 {% endblock %}
 
 {% block dashboard_metrics %}
