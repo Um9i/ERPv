@@ -1,73 +1,22 @@
-{% extends "base.html" %}
-{% block content %}
-{% if user.is_authenticated %}
+{% extends "dashboard_base.html" %}
 
-<!-- summary metrics -->
-<div class="row dashboard-summary mb-4">
-    <div class="col">
-        <div class="card mb-4 bg-light shadow-sm">
-            <div class="card-body p-4">
-                <h5 class="card-title mb-4"><i class="bi bi-cart4 me-4"></i>Sales Management</h5>
-                <div class="row my-4">
-                    <div class="col-lg-3">
-                        <ul class="list-group list-group-flush mb-4">
-                            <a class="list-group-item list-group-item-action" href="{% url 'sales:sales-order-create' %}">Create Sales Order</a>
-                            <a class="list-group-item list-group-item-action" href="{% url 'sales:sales-order-list' %}">View Sales Orders</a>
-                            <a class="list-group-item list-group-item-action" href="{% url 'sales:sales-order-ship-list' %}">Shipping Orders</a>
-                            <a class="list-group-item list-group-item-action" href="{% url 'sales:customer-list' %}">View Customers</a>
-                            <a class="list-group-item list-group-item-action" href="{% url 'sales:customer-create' %}">Create Customer</a>
-                        </ul>
-                    </div>
-                    <div class="col-lg-6">
-                        <div class="row">
-                            <div class="col">
-                                <div class="card text-center shadow-sm">
-                                    <div class="card-body">
-                                        <i class="bi bi-cart4 text-primary"></i>
-                                        <h5 class="card-title mt-2">Total Orders</h5>
-                                        <p class="card-text h2">{{ total_orders|default:'—' }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="card text-center shadow-sm">
-                                    <div class="card-body">
-                                        <i class="bi bi-truck text-success"></i>
-                                        <h5 class="card-title mt-2">Shipped</h5>
-                                        <p class="card-text h2">{{ shipped_orders|default:'—' }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="card text-center shadow-sm">
-                                    <div class="card-body">
-                                        <i class="bi bi-hourglass-split text-info"></i>
-                                        <h5 class="card-title mt-2">Pending Shipping</h5>
-                                        <p class="card-text h2">{{ pending_shipping|default:'—' }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mt-3">
-                            <div class="col">
-                                <div class="card text-center shadow-sm">
-                                    <div class="card-body">
-                                        <i class="bi bi-people-fill text-warning"></i>
-                                        <h5 class="card-title mt-2">Customers</h5>
-                                        <p class="card-text h2">{{ total_customers|default:'—' }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+{% block dashboard_icon %}bi-cart4{% endblock %}
+{% block dashboard_title %}Sales Management{% endblock %}
 
-    <!-- action cards -->
-    <div class="row">
-        <!-- additional actions can be placed here if needed -->
-    </div>
-</div>{% endif %}
+{% block dashboard_links %}
+<a class="list-group-item list-group-item-action" href="{% url 'sales:sales-order-create' %}">Create Sales Order</a>
+<a class="list-group-item list-group-item-action" href="{% url 'sales:sales-order-list' %}">View Sales Orders</a>
+<a class="list-group-item list-group-item-action" href="{% url 'sales:customer-list' %}">View Customers</a>
+<a class="list-group-item list-group-item-action" href="{% url 'sales:customer-create' %}">Create Customer</a>
+{% endblock %}
+
+{% block dashboard_metrics %}
+<div class="row">
+    {% include "includes/metric_card.html" with icon="bi-cart4" color="info" label="Total Sales Orders" value=total_orders|default:'—' %}
+    {% include "includes/metric_card.html" with icon="bi-truck" color="success" label="Orders Shipped" value=shipped_orders|default:'—' %}
+    {% include "includes/metric_card.html" with icon="bi-people-fill" color="info" label="Customers" value=total_customers|default:'—' %}
+</div>
+<div class="row mt-3">
+    {% include "includes/metric_card.html" with icon="bi-truck" color="warning" label="Orders Pending Shipping" value=pending_shipping|default:'—' %}
+</div>
 {% endblock %}

@@ -41,6 +41,29 @@ class Product(models.Model):
             total += item.quantity * item.product.unit_cost
         return total
 
+    @property
+    def can_produce(self):
+        """Return ``True`` if there is sufficient inventory of every component
+        required for a single unit of this product's bill of materials.
+
+        Products without a BOM are not producible.  If a BOM item refers to a
+        component that has no inventory record we treat it as unavailable.
+        """
+        try:
+            bom = self.billofmaterials
+        except Product.billofmaterials.RelatedObjectDoesNotExist:
+            return False
+        # lazy-import to avoid circular import
+        from .models import Inventory
+        for item in bom.bom_items.select_related("product").all():
+            try:
+                inv = item.product.product_inventory
+            except Inventory.DoesNotExist:
+                return False
+            if inv.quantity < item.quantity:
+                return False
+        return True
+
     class Meta:
         ordering = ["name"]
         verbose_name_plural = "Inventory Management"
@@ -88,6 +111,7 @@ class Inventory(models.Model):
         # compute shortage relative to current stock
         short = self.quantity - allocated - sales_orders
         return abs(short) if short < 0 else 0
+
 
     def update_required_cached(self):
         """Recompute and persist the cached required quantity."""

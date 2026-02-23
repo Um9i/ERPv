@@ -1,14 +1,62 @@
-{% extends "base.html" %}
+{% extends "includes/card.html" %}
 {% load crispy_forms_tags %}
-{% block content %}
-{% if form.instance.pk %}
-<h1>Edit BOM</h1>
-{% else %}
-<h1>New Bill of Materials</h1>
-{% endif %}
-<form method="post">
+{% block card_icon %}bi-gear-fill{% endblock %}
+{% block card_title %}{% if form.instance.pk %}Edit BOM{% else %}New Bill of Materials{% endif %}{% endblock %}
+{% block card_body %}
+<form method="post" id="bom-form">
     {% csrf_token %}
     {{ form|crispy }}
+
+    <h3>Components</h3>
+    {{ lines_formset.management_form }}
+    <div id="lines-container">
+    {% for line_form in lines_formset %}
+    <div class="card mb-3 p-3 line-form">
+        {{ line_form|crispy }}
+        {% if line_form.instance.pk %}
+        <hr>
+        {% endif %}
+    </div>
+    {% endfor %}
+    </div>
+
+    <button type="button" class="btn btn-secondary" id="add-line">Add another component</button>
     <button type="submit" class="btn btn-success">Save</button>
 </form>
+
+<script>
+// formset helper: clone last form and update indexes
+(function() {
+    const addBtn = document.getElementById('add-line');
+    const container = document.getElementById('lines-container');
+    addBtn.addEventListener('click', function() {
+        // totalForms may not be inside the container, so look at document
+        const totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
+        if (!totalForms) {
+            // nothing to update; bail out and avoid exception
+            return;
+        }
+        let formCount = parseInt(totalForms.value, 10);
+        // pick a template row; if none exists bail out gracefully
+        const prototype = container.querySelector('.line-form');
+        if (!prototype) {
+            // no existing form to clone; nothing we can do without rendering a
+            // hidden prototype server‑side, so just return.
+            return;
+        }
+        const emptyForm = prototype.cloneNode(true);
+        emptyForm.querySelectorAll('input, select, textarea').forEach(function(el) {
+            if (el.name) {
+                el.name = el.name.replace(/-(\d+)-/, `-${formCount}-`);
+                el.id = 'id_' + el.name;
+                if (el.type !== 'hidden') el.value = '';
+                // uncheck delete box if present
+                if (el.type === 'checkbox') el.checked = false;
+            }
+        });
+        container.appendChild(emptyForm);
+        totalForms.value = formCount + 1;
+    });
+})();
+</script>
 {% endblock %}

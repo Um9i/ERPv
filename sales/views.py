@@ -24,7 +24,9 @@ class CustomerCreateView(CreateView):
     model = Customer
     template_name = "sales/customer_form.html"
     fields = ["name", "address", "phone", "email", "website"]
-    success_url = reverse_lazy("sales:customer-list")
+
+    def get_success_url(self):
+        return reverse_lazy("sales:customer-detail", args=[self.object.pk])
 
 
 class CustomerUpdateView(UpdateView):
@@ -235,7 +237,7 @@ class SalesOrderCreateView(CreateView):
             SalesOrderLine,
             fields=["product", "quantity"],
             extra=1,
-            can_delete=False,
+            can_delete=True,  # permitting deletion via checkbox
         )
         if self.request.POST:
             context["lines_formset"] = LineFormset(self.request.POST)
@@ -321,36 +323,9 @@ class SalesOrderDetailView(DetailView):
         context["lines"] = sales_order.sales_order_lines.select_related(
             "product"
         ).all()
-        context["can_close"] = sales_order.status == "Open"
         return context
 
 
-class SalesOrderShipListView(ListView):
-    model = SalesOrder
-    template_name = "sales/sales_order_ship_list.html"
-    context_object_name = "sales_orders"
-
-    def get_queryset(self):
-        qs = SalesOrder.objects.filter(
-            sales_order_lines__complete=False
-        ).distinct().order_by("-created_at")
-        q = self.request.GET.get("q", "").strip()
-        if q:
-            from django.db.models import Q
-
-            qs = qs.filter(Q(customer__name__icontains=q) | Q(pk__icontains=q))
-        return qs
-
-    def get_context_data(self, **kwargs):
-        from django.core.paginator import Paginator
-
-        context = super().get_context_data(**kwargs)
-        qs = self.get_queryset()
-        page = self.request.GET.get("page")
-        paginator = Paginator(qs, 10)
-        context["sales_orders"] = paginator.get_page(page)
-        context["q"] = self.request.GET.get("q", "")
-        return context
 
 
 class SalesOrderShipView(DetailView):
@@ -437,7 +412,8 @@ class SalesOrderShipView(DetailView):
         return redirect(self.get_success_url())
 
     def get_success_url(self):
-        return reverse_lazy("sales:sales-order-ship-list")
+        # after shipping redirect back to the main list (shipping list removed)
+        return reverse_lazy("sales:sales-order-list")
 
 
 class SalesDashboardView(TemplateView):

@@ -86,7 +86,7 @@ class Production(models.Model):
         return "Open"
 
     class Meta:
-        ordering = ["-pk"]
+        ordering = ["-closed", "-pk"]
         verbose_name_plural = "Production Planning"
         verbose_name = "planned production"
         indexes = [
@@ -109,6 +109,29 @@ class Production(models.Model):
             return bom
         except AttributeError:
             return None
+
+    @property
+    def materials_available(self):
+        """Return ``True`` if current inventory can cover the full job quantity.
+
+        Previously the list view showed ``product.can_produce`` which only
+        checked materials for a *single* unit; a job of quantity 40 could show
+        a green check when only enough components for one unit existed.  We
+        need a job‑level predicate that scales the component requirements by
+        ``self.quantity``.
+        """
+        if self.bom() is None:
+            return False
+        # lazy import Inventory to avoid cycle at module import time
+        from inventory.models import Inventory
+        for item in self.bom():
+            try:
+                inv = Inventory.objects.get(product=item.product)
+            except Inventory.DoesNotExist:
+                return False
+            if inv.quantity < item.quantity * self.quantity:
+                return False
+        return True
 
     def clean(self):
         if self.bom() == None:

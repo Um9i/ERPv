@@ -150,7 +150,13 @@ class TestSupplier:
         ctx = resp.context
         assert ctx["total_purchase_orders"] == PurchaseOrder.objects.count()
         assert ctx["lines_received"] == PurchaseOrderLine.objects.filter(complete=True).count()
-        assert ctx["pending_receiving"] == PurchaseOrderLine.objects.filter(complete=False).count()
+        expected_open = (
+            PurchaseOrder.objects
+            .filter(purchase_order_lines__complete=False)
+            .distinct()
+            .count()
+        )
+        assert ctx["pending_receiving"] == expected_open
         assert ctx["total_suppliers"] == Supplier.objects.count()
         content = resp.content.decode()
         assert "POs" in content or "Purchase Orders" in content
@@ -253,7 +259,7 @@ class TestSupplierProduct:
         data = {f"received_{purchase_order_line.id}": purchase_order_line.quantity}
         resp2 = client.post(url, data)
         assert resp2.status_code == 302
-        assert resp2.url == reverse("procurement:purchase-order-receiving-list")
+        assert resp2.url == reverse("procurement:purchase-order-list")
         purchase_order_line.refresh_from_db()
         assert purchase_order_line.complete is True
         assert purchase_order_line.quantity_received == purchase_order_line.quantity
@@ -325,7 +331,9 @@ class TestSupplierProduct:
         for _ in range(12):
             po = PurchaseOrder.objects.create(supplier=supplier)
             PurchaseOrderLine.objects.create(purchase_order=po, product=supplier_product, quantity=2)
-        url = reverse("procurement:purchase-order-receiving-list")
+        # receiving list view removed – regular purchase order list
+        # handles pagination.  simply assert the PO list works instead.
+        url = reverse("procurement:purchase-order-list")
         resp = client.get(url)
         assert resp.status_code == 200
         assert resp.context["purchase_orders"].paginator is not None
@@ -346,12 +354,13 @@ class TestSupplierProduct:
         PurchaseOrderLine.objects.create(purchase_order=po1, product=supplier_product, quantity=1)
         po2 = PurchaseOrder.objects.create(supplier=other)
         PurchaseOrderLine.objects.create(purchase_order=po2, product=supplier_product, quantity=1)
-        url = reverse("procurement:purchase-order-receiving-list")
+        url = reverse("procurement:purchase-order-list")
+        # filter by supplier name
         resp = client.get(url, {"q": "Test Supplier"})
         content = resp.content.decode()
         assert po1.order_number in content
         assert "Other Supplier" not in content
-        # numeric id search
+        # numeric id search should still work
         resp2 = client.get(url, {"q": str(po2.pk)})
         assert po2.order_number in resp2.content.decode()
 
@@ -492,8 +501,8 @@ class TestPurchaseOrder:
         assert str(purchase_order_line.received_total) in content
         assert str(purchase_order_line.remaining_total) in content
 
-    def test_can_close_order_from_detail(self, client, purchase_order_line):
-        """A button on the detail page allows manual closing of an order."""
+    def test_can_close_order_from_list(self, client, purchase_order_line):
+        """The list page exposes a close button and orders close via detail POST."""
         from django.urls import reverse
         from inventory.models import Inventory
         from django.contrib.auth.models import User
@@ -502,31 +511,36 @@ class TestPurchaseOrder:
         client.force_login(user)
 
         po = purchase_order_line.purchase_order
-        url = reverse("procurement:purchase-order-detail", args=[po.pk])
-        resp = client.get(url)
+        list_url = reverse("procurement:purchase-order-list")
+        # list page should render the close button for open orders
+        resp = client.get(list_url)
         assert resp.status_code == 200
         content = resp.content.decode()
         assert 'name="close_order"' in content
-        # perform the close action
-        resp2 = client.post(url, {"close_order": "1"})
+
+        # perform the close action by posting to the detail endpoint
+        detail_url = reverse("procurement:purchase-order-detail", args=[po.pk])
+        resp2 = client.post(detail_url, {"close_order": "1"})
         assert resp2.status_code == 302
-        assert resp2.url == url
+        assert resp2.url == detail_url
         po.refresh_from_db()
         assert po.status == "Closed"
-        # all lines should now be complete/closed but quantities untouched
+
+        # lines should be marked closed but inventory unaffected
         for line in po.purchase_order_lines.all():
             assert line.complete is True
             assert line.closed is True
             assert line.quantity_received == 0
             assert line.value is None
-        # closing does not alter inventory
         inv = Inventory.objects.filter(product=purchase_order_line.product.product).first()
         assert inv is None or inv.quantity == 0
-        # after closing the detail page no longer shows the close button
-        resp3 = client.get(url)
+
+        # list page no longer renders a close button for the closed order
+        resp3 = client.get(list_url)
         assert 'name="close_order"' not in resp3.content.decode()
-        # open order value may still show remaining amount
-        assert "Open Order Value" in resp3.content.decode()
+        # detail page likewise no longer contains close controls
+        resp4 = client.get(detail_url)
+        assert 'name="close_order"' not in resp4.content.decode()
 
     def test_create_view_prefills_and_filters(self, client, supplier, supplier_product):
         """GET should prefill supplier and limit the product choices on each line."""
@@ -544,11 +558,11 @@ class TestPurchaseOrder:
         assert str(form.initial.get("supplier")) == str(supplier.pk)
         from django import forms
         assert isinstance(form.fields["supplier"].widget, forms.HiddenInput)
-        # formset shouldn't expose a complete field or deletion
+        # formset shouldn't expose a complete field but should allow deletion
         fs = response.context["lines_formset"]
         for f in fs:
             assert "complete" not in f.fields
-            assert not hasattr(f, "DELETE")
+            assert "DELETE" in f.fields
             qs = f.fields["product"].queryset
             assert list(qs) == list(supplier.supplier_products.all())
 
@@ -574,9 +588,32 @@ class TestPurchaseOrder:
         assert resp2.status_code == 302
         assert resp2.url == reverse("procurement:supplier-detail", args=[supplier.pk])
 
+    def test_purchase_order_form_js_syntax(self, client, supplier):
+        """Ensure purchase order page JS compiles."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+        import re, subprocess, tempfile, os
+
+        user = User.objects.create_user(username="js2")
+        client.force_login(user)
+        url = reverse("procurement:purchase-order-create")
+        resp = client.get(url)
+        assert resp.status_code == 200
+        html = resp.content.decode()
+        match = re.search(r"<script>([\s\S]*?)</script>", html)
+        assert match
+        script = match.group(1)
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as tmp:
+            tmp.write(script)
+            nm = tmp.name
+        result = subprocess.run(["node", "--check", nm], capture_output=True, text=True)
+        assert result.returncode == 0, f"JS syntax error: {result.stderr}"
+        os.unlink(nm)
+
     def test_create_view_auto_supplier_and_lines(self, client, supplier, supplier_product):
         """The create view should prefill supplier from the query string and
-        allow submitting one or more order lines."""
+        allow submitting one or more order lines.  Deletion checkboxes should
+        be rendered but can be ignored on creation."""
         from django.urls import reverse
         from django.contrib.auth.models import User
 

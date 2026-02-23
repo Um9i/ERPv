@@ -69,9 +69,15 @@ class TestInventory:
         assert "X1" in content
         # result should not include other product rows; look for the name inside tags
         assert ">X3<" not in content
+        # list styling should match supplier list: right‑aligned actions and delete confirmation
+        assert 'class="text-end"' in content
+        assert "Are you sure you want to delete this product?" in content
         # pagination should still work when multiple pages are needed
         resp2 = client.get(url + "?page=2")
         assert resp2.status_code == 200
+        content2 = resp2.content.decode()
+        # any documentation comment should not be rendered in the HTML
+        assert "This include renders simple bootstrap pagination" not in content2
 
     def test_inventory_detail_ledger_and_last_updated(self, client, product):
         from inventory.models import Inventory, InventoryLedger
@@ -114,6 +120,13 @@ class TestInventory:
         assert len(ctx["history_qty"]) >= 2
         # final total should equal net change of adjustments (5 + -2)
         assert ctx["history_qty"][-1] == 3
+        # monthly breakdown keys also returned (may be empty)
+        assert "monthly_dates" in ctx and isinstance(ctx["monthly_dates"], list)
+        assert "monthly_sales" in ctx and isinstance(ctx["monthly_sales"], list)
+        assert "monthly_purchases" in ctx and isinstance(ctx["monthly_purchases"], list)
+        assert "monthly_production" in ctx and isinstance(ctx["monthly_production"], list)
+        # all monthly lists should have same length
+        assert len(ctx["monthly_dates"]) == len(ctx["monthly_sales"] ) == len(ctx["monthly_purchases"]) == len(ctx["monthly_production"])
 
     def test_last_updated_changes_on_inventory_operations(self, product):
         from inventory.models import Inventory
@@ -166,7 +179,10 @@ class TestInventory:
         resp = client.get(url)
         assert resp.status_code == 200
         content = resp.content.decode()
-        assert "Inventory Dashboard" in content
+        # title now uses 'Inventory Management' to match new layout
+        assert "Inventory Management" in content
+        # heading icon should be present now that block is used
+        assert '<i class="bi bi-box-seam' in content
         assert "View Inventory" in content
         # summary cards should appear
         assert "Products" in content
@@ -198,6 +214,38 @@ class TestInventory:
         assert '<table' in content_l
         entry = resp2.context['required_items'][0]
         assert entry['product'].name in content_l
+
+    def test_low_stock_pagination(self, client, product):
+        """More than one page of shortages should show pagination controls."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+        from inventory.models import Inventory
+        # create many inventory rows with required shortage
+        Inventory.objects.all().delete()
+        Product = product.__class__
+        # clear out existing products so new ones get fresh ids
+        Product.objects.all().delete()
+        # make 25 brand‑new products to avoid collisions
+        products = [Product.objects.create(name=f"prod{i}") for i in range(25)]
+        # inventories are automatically created via post-save signal when
+        # we make each product, so no need to add them ourselves
+        # force at least one sales order per item to make required>0
+        from sales.models import Customer, CustomerProduct, SalesOrder, SalesOrderLine
+        cust = Customer.objects.create(name="Cpage")
+        for inv in Inventory.objects.all():
+            cp = CustomerProduct.objects.create(customer=cust, product=inv.product, price=1)
+            so = SalesOrder.objects.create(customer=cust)
+            SalesOrderLine.objects.create(sales_order=so, product=cp, quantity=1)
+        user = User.objects.create_user(username="dashpage")
+        client.force_login(user)
+        resp = client.get(reverse('inventory:inventory-low-stock'))
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        # should include a pagination link to page 2
+        assert '?page=2' in content
+        # page object in context should report multiple pages
+        page_obj = resp.context['required_items']
+        assert page_obj.paginator.num_pages > 1
 
     def test_low_stock_po_action_and_prefill(self, client, product, supplier, supplier_product):
         """Items with suppliers should expose a PO link and it should prefill.

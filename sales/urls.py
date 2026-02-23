@@ -17,7 +17,6 @@ from .views import (
     CustomerProductDeleteView,
     SalesOrderCreateView,
     SalesOrderDetailView,
-    SalesOrderShipListView,
     SalesOrderShipView,
     SalesOrderListView,
     SalesDashboardView,
@@ -44,6 +43,5 @@ urlpatterns = [
     path("sales-orders/", SalesOrderListView.as_view(), name="sales-order-list"),
     path("sales-orders/create/", SalesOrderCreateView.as_view(), name="sales-order-create"),
     path("sales-orders/<int:pk>/", SalesOrderDetailView.as_view(), name="sales-order-detail"),
-    path("sales-orders/shipping/", SalesOrderShipListView.as_view(), name="sales-order-ship-list"),
     path("sales-orders/<int:pk>/ship/", SalesOrderShipView.as_view(), name="sales-order-ship"),
 ]

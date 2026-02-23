@@ -8,7 +8,7 @@ class DashboardView(TemplateView):
     def get_context_data(self, **kwargs):
         from inventory.models import Inventory, Product
         from sales.models import SalesOrderLine
-        from procurement.models import PurchaseOrderLine, SupplierProduct
+        from procurement.models import PurchaseOrder, PurchaseOrderLine, SupplierProduct
         from production.models import Production, BillOfMaterials
 
         context = super().get_context_data(**kwargs)
@@ -99,13 +99,28 @@ class DashboardView(TemplateView):
 
         # open counts for orders and jobs
         context["open_sales_count"] = SalesOrderLine.objects.filter(complete=False).count()
-        context["open_purchase_count"] = PurchaseOrderLine.objects.filter(complete=False).count()
+        # we want the number of distinct purchase orders that still have
+        # at least one open line. previous implementation counted lines
+        # which exaggerated the metric; the dashboard label and tests expect
+        # order count.
+        context["open_purchase_count"] = (
+            PurchaseOrder.objects
+            .filter(purchase_order_lines__complete=False)
+            .distinct()
+            .count()
+        )
         context["open_production_count"] = Production.objects.filter(closed=False).count()
 
         # procurement metrics
         from procurement.models import PurchaseOrder, Supplier
         context["total_purchase_orders"] = PurchaseOrder.objects.count()
-        context["pending_receiving"] = PurchaseOrderLine.objects.filter(complete=False).count()
+        # align with procurement dashboard semantics: count orders not lines
+        context["pending_receiving"] = (
+            PurchaseOrder.objects
+            .filter(purchase_order_lines__complete=False)
+            .distinct()
+            .count()
+        )
         context["lines_received"] = PurchaseOrderLine.objects.filter(complete=True).count()
         context["total_suppliers"] = Supplier.objects.count()
 
@@ -305,11 +320,11 @@ class DashboardView(TemplateView):
             }
             for inv in required_items[:5]
         ]
-        # now that required_list exists update attention low_stock and detail list
-        context["attention"]["low_stock"] = len(context["required_list"])
+        # now that required_items exists compute attention and low_stock_items
+        context["attention"]["low_stock"] = len(required_items)
         context["low_stock_items"] = [
-            {"id": item["inventory"].product.pk, "name": item["inventory"].product.name, "required": item["inventory"].required_cached}
-            for item in context["required_list"]
+            {"id": inv.product.pk, "name": inv.product.name, "required": inv.required_cached}
+            for inv in required_items
         ]
         # low_stock_target no longer needed; dropdown will list all items
         # (context["low_stock_items"] already computed above)

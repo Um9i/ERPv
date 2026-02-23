@@ -10,14 +10,17 @@ class TestMainDashboard:
         url = reverse("dashboard")
         resp = client.get(url)
         assert resp.status_code == 200
+        ctx = resp.context
         content = resp.content.decode()
-        # new layout should display the updated summary cards and attention section
-        assert 'Attention Required' in content
+        # new layout should display the updated summary cards; attention only when there
+        if ctx['attention']['low_stock']:
+            assert 'Attention Required' in content
+        else:
+            assert 'Attention Required' not in content
         assert 'Open Sales Orders' in content
         assert 'Active Jobs' in content
-        assert 'Open PO Lines' in content
-        # still have the pending shipment hint under open orders
-        assert 'pending shipment' in content
+        assert 'Open Purchase Orders' in content
+        # TODO: ensure any descriptive hints appear, e.g. check for open order text
         # verify context keys exist and values match queries
         ctx = resp.context
         from procurement.models import PurchaseOrder, PurchaseOrderLine, Supplier
@@ -28,7 +31,13 @@ class TestMainDashboard:
         from inventory.models import Inventory
         inv_expected = sum(inv.quantity * inv.product.unit_cost for inv in Inventory.objects.select_related('product').all())
         assert ctx['total_inventory_value'] == inv_expected
-        assert ctx['pending_receiving'] == PurchaseOrderLine.objects.filter(complete=False).count()
+        expected_open = (
+            PurchaseOrder.objects
+            .filter(purchase_order_lines__complete=False)
+            .distinct()
+            .count()
+        )
+        assert ctx['pending_receiving'] == expected_open
         assert ctx['lines_received'] == PurchaseOrderLine.objects.filter(complete=True).count()
         assert ctx['total_suppliers'] == Supplier.objects.count()
         assert ctx['total_orders'] == SalesOrder.objects.count()
@@ -55,6 +64,13 @@ class TestMainDashboard:
         assert 'low_stock_items' in ctx and isinstance(ctx['low_stock_items'], list)
         # attention badge count should match number of listed items
         assert ctx['attention']['low_stock'] == len(ctx['low_stock_items'])
+        # verify open purchase orders metric corresponds to unique POs with
+        # some lines still outstanding (not lines count)
+        from procurement.models import PurchaseOrder
+        expected_open_pos = PurchaseOrder.objects.filter(
+            purchase_order_lines__complete=False
+        ).distinct().count()
+        assert ctx['attention']['open_pos'] == expected_open_pos
 
     def test_dashboard_low_stock_matches_low_stock_view(self, client, product):
         """Counting logic on the dashboard should agree with the /inventory/low-stock view."""

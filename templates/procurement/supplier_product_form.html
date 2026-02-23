@@ -1,6 +1,8 @@
-{% extends "base.html" %}
+{% extends "includes/card.html" %}
 {% load crispy_forms_tags %}
-{% block content %}
+{% block card_icon %}bi-truck{% endblock %}
+{% block card_title %}{% if form.instance.pk %}Edit Supplier Product{% else %}New Supplier Product{% endif %}{% endblock %}
+{% block card_body %}
 {% if form.errors %}
 <div class="alert alert-danger">
     <ul>

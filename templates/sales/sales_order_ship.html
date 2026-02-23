@@ -1,6 +1,7 @@
-{% extends "base.html" %}
-{% block content %}
-<h1>Sales Order Shipping - {{ sales_order.order_number }}</h1>
+{% extends "includes/card.html" %}
+{% block card_icon %}bi-cart4{% endblock %}
+{% block card_title %}Sales Order Shipping - {{ sales_order.order_number }}{% endblock %}
+{% block card_body %}
 <p><strong>Customer:</strong> {{ sales_order.customer.name }}</p>
 <p><strong>Order Number:</strong> {{ sales_order.order_number }}</p>
 <p><strong>Created At:</strong> {{ sales_order.created_at }}</p>
@@ -50,3 +51,4 @@
     </button>
 </form>
 {% endblock %}
+

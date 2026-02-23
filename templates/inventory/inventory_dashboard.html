@@ -1,65 +1,17 @@
-{% extends "base.html" %}
-{% block content %}
-{% if user.is_authenticated %}
+{% extends "dashboard_base.html" %}
 
-<!-- summary metrics -->
-<div class="row dashboard-summary mb-4">
-    <div class="col">
-        <div class="card mb-4 bg-light shadow-sm">
-            <div class="card-body p-4">
-                <h5 class="card-title mb-4"><i class="bi bi-box-seam me-4"></i>Inventory Management</h5>
-                <div class="row my-4">
-                    <div class="col-lg-3">
-                        <ul class="list-group list-group-flush mb-4">
-                            <a class="list-group-item list-group-item-action"
-                                href="{% url 'inventory:product-create' %}">Create
-                                Product</a>
-                            <a class="list-group-item list-group-item-action"
-                                href="{% url 'inventory:inventory-list' %}">View
-                                Inventory</a>
-                        </ul>
-                    </div>
-                
-                    <div class="col-lg-6">
-                        <div class="row">
-                            <div class="col">
-                                <div class="card text-center shadow-sm">
-                                    <div class="card-body">
-                                        <i class="bi bi-box-seam text-primary"></i>
-                                        <h5 class="card-title mt-2">Products</h5>
-                                        <p class="card-text h2">{{ total_products|default:'—' }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="card text-center shadow-sm">
-                                    <div class="card-body">
-                                        <i class="bi bi-stack text-success"></i>
-                                        <h5 class="card-title mt-2">Total Quantity</h5>
-                                        <p class="card-text h2">{{ total_quantity|default:'—' }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="card text-center shadow-sm">
-                                    <div class="card-body">
-                                        <i class="bi bi-currency-dollar text-warning"></i>
-                                        <h5 class="card-title mt-2">Stock Value</h5>
-                                        <p class="card-text h2">{{ stock_value|floatformat:2|default:'—' }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+{% block dashboard_icon %}bi-box-seam{% endblock %}
+{% block dashboard_title %}Inventory Management{% endblock %}
 
-                </div>
-            </div>
-        </div>
-    </div>
+{% block dashboard_links %}
+<a class="list-group-item list-group-item-action" href="{% url 'inventory:product-create' %}">Create Product</a>
+<a class="list-group-item list-group-item-action" href="{% url 'inventory:inventory-list' %}">View Inventory</a>
+{% endblock %}
 
-    <!-- action cards -->
-    <div class="row">
-
-    </div>
-    {% endif %}
-    {% endblock %}
+{% block dashboard_metrics %}
+<div class="row">
+    {% include "includes/metric_card.html" with icon="bi-box-seam" color="info" label="Products" value=total_products|default:'—' %}
+    {% include "includes/metric_card.html" with icon="bi-stack" color="info" label="Total Quantity" value=total_quantity|default:'—' %}
+    {% include "includes/metric_card.html" with icon="bi-currency-dollar" color="warning" label="Stock Value" value=stock_value|floatformat:2|default:'—' %}
+</div>
+{% endblock %}

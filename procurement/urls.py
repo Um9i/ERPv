@@ -17,9 +17,9 @@ from .views import (
     SupplierProductDeleteView,
     PurchaseOrderCreateView,
     PurchaseOrderDetailView,
-    PurchaseOrderReceivingListView,
     PurchaseOrderReceiveView,
     PurchaseOrderListView,
+    PurchaseOrderDeleteView,
     ProcurementDashboardView,
 )
 
@@ -44,6 +44,6 @@ urlpatterns = [
     path("purchase-orders/", PurchaseOrderListView.as_view(), name="purchase-order-list"),
     path("purchase-orders/create/", PurchaseOrderCreateView.as_view(), name="purchase-order-create"),
     path("purchase-orders/<int:pk>/", PurchaseOrderDetailView.as_view(), name="purchase-order-detail"),
-    path("purchase-orders/receiving/", PurchaseOrderReceivingListView.as_view(), name="purchase-order-receiving-list"),
     path("purchase-orders/<int:pk>/receive/", PurchaseOrderReceiveView.as_view(), name="purchase-order-receive"),
+    path("purchase-orders/<int:pk>/delete/", PurchaseOrderDeleteView.as_view(), name="purchase-order-delete"),
 ]

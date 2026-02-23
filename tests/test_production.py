@@ -114,11 +114,38 @@ class TestProduction:
         resp = client.get(url)
         assert resp.status_code == 200
         content = resp.content.decode()
-        assert "Production Dashboard" in content
-        # links for completion and job log should be present
-        assert reverse("production:production-receiving-list") in content
-        assert "Job Completion" in content
-        assert "Job Log" in content
+        # title updated when using base template
+        assert "Production Management" in content
+        # job log link should be present; wording changed to "View Jobs"
+        assert reverse("production:production-list") in content
+
+    def test_bom_list_actions(self, client, bom):
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        url = reverse("production:bom-list")
+        resp = client.get(url)
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        # view/edit/delete links should appear for our fixture BOM
+        assert f'href="{reverse("production:bom-detail", args=[bom.pk])}"' in content
+        assert f'href="{reverse("production:bom-update", args=[bom.pk])}"' in content
+        assert f'href="{reverse("production:bom-delete", args=[bom.pk])}"' in content
+
+    def test_production_dashboard_metrics(self, client, product):
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+        from production.models import BillOfMaterials, Production
+
+        user = User.objects.create_user(username="tester2")
+        client.force_login(user)
+        url = reverse("production:production-dashboard")
+        resp = client.get(url)
+        assert resp.status_code == 200
+        content = resp.content.decode()
         # metrics cards should appear
         assert "BOMs" in content
         assert "Active Jobs" in content
@@ -145,6 +172,118 @@ class TestProduction:
         # and must not include the complete field
         assert "name=\"complete\"" not in html
 
+    def test_bom_create_formset_present(self, client, product):
+        """BOM create page should render component formset and add button."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="bomuser")
+        client.force_login(user)
+        url = reverse("production:bom-create")
+        resp = client.get(url)
+        assert resp.status_code == 200
+        html = resp.content.decode()
+        assert "Components" in html
+        assert "id=\"add-line\"" in html
+        # management form must be present (uses related_name prefix)
+        assert "bom_items-TOTAL_FORMS" in html
+
+    def test_bom_create_with_lines(self, client, product):
+        """Submitting the BOM create form with multiple lines saves them."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+        from production.models import BillOfMaterials
+
+        # create two extra component products
+        comp1 = product.__class__.objects.create(name="comp1")
+        comp2 = product.__class__.objects.create(name="comp2")
+
+        user = User.objects.create_user(username="bomuser2")
+        client.force_login(user)
+        url = reverse("production:bom-create")
+        data = {
+            'product': product.pk,
+            'bom_items-TOTAL_FORMS': '2',
+            'bom_items-INITIAL_FORMS': '0',
+            'bom_items-MIN_NUM_FORMS': '0',
+            'bom_items-MAX_NUM_FORMS': '1000',
+            'bom_items-0-product': comp1.pk,
+            'bom_items-0-quantity': '5',
+            'bom_items-1-product': comp2.pk,
+            'bom_items-1-quantity': '7',
+        }
+        resp = client.post(url, data)
+        # expect redirect to detail
+        assert resp.status_code in (302, 303)
+        bom = BillOfMaterials.objects.get(product=product)
+        items = list(bom.bom_items.order_by('product'))
+        assert len(items) == 2
+        assert items[0].product == comp1 and items[0].quantity == 5
+        assert items[1].product == comp2 and items[1].quantity == 7
+
+    def test_bom_update_can_modify_lines(self, client, product, bom):
+        """Editing an existing BOM lets us change quantities and add new line."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        # current bom fixture has two components; we'll change one and add a third
+        existing = list(bom.bom_items.all())
+        comp_new = product.__class__.objects.create(name="comp new")
+
+        user = User.objects.create_user(username="bomuser3")
+        client.force_login(user)
+        url = reverse("production:bom-update", args=[bom.pk])
+        # prepare initial data reflecting existing items
+        data = {
+            'product': product.pk,
+            'bom_items-TOTAL_FORMS': '3',
+            'bom_items-INITIAL_FORMS': '2',
+            'bom_items-MIN_NUM_FORMS': '0',
+            'bom_items-MAX_NUM_FORMS': '1000',
+        }
+        for idx, itm in enumerate(existing):
+            data[f'bom_items-{idx}-id'] = itm.pk
+            data[f'bom_items-{idx}-product'] = itm.product.pk
+            data[f'bom_items-{idx}-quantity'] = str(itm.quantity + 1)
+        # add new component
+        data['bom_items-2-product'] = comp_new.pk
+        data['bom_items-2-quantity'] = '3'
+        resp = client.post(url, data)
+        assert resp.status_code in (302, 303)
+        bom.refresh_from_db()
+        items = list(bom.bom_items.order_by('product'))
+        assert any(i.product == comp_new for i in items)
+        # existing ones should have updated quantities
+        for itm in existing:
+            updated = bom.bom_items.get(pk=itm.pk)
+            assert updated.quantity == itm.quantity + 1
+
+    def test_bom_form_js_syntax(self, client, product):
+        """Inline script in BOM create page should be valid JS syntax."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+        import re, subprocess, tempfile
+
+        user = User.objects.create_user(username="jsuser")
+        client.force_login(user)
+        url = reverse("production:bom-create")
+        resp = client.get(url)
+        assert resp.status_code == 200
+        html = resp.content.decode()
+        # extract script content between <script> tags
+        match = re.search(r"<script>([\s\S]*?)</script>", html)
+        assert match, "No script found on BOM form"
+        script = match.group(1)
+        # write to temp file and run node --check
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as tmp:
+            tmp.write(script)
+            nm = tmp.name
+        result = subprocess.run(["node", "--check", nm], capture_output=True, text=True)
+        assert result.returncode == 0, f"JS syntax error: {result.stderr}"
+        # cleanup
+        import os
+        os.unlink(nm)
+
     def test_receiving_views(self, client, product, bom, bom_item):
         """Open jobs appear in the completion list and can be completed, even partially."""
         from django.urls import reverse
@@ -155,8 +294,8 @@ class TestProduction:
         client.force_login(user)
 
         job = Production.objects.create(product=product, quantity=3)
-        # list should include our job and show remaining (completion list)
-        url = reverse("production:production-receiving-list")
+        # production list should contain the job regardless of completion
+        url = reverse("production:production-list")
         resp = client.get(url)
         assert resp.status_code == 200
         content = resp.content.decode()
@@ -195,17 +334,11 @@ class TestProduction:
         fin = Inventory.objects.get(product=product)
         assert fin.quantity == 100 + 3
         # component quantity may now be zero after manual drain; do not assert
-        # after completing, job should disappear from receiving list
-        resp2 = client.get(reverse("production:production-receiving-list"))
-        assert job.order_number not in resp2.content.decode()
         # complete the rest with receive_all
         resp3 = client.post(url, {"receive_all": "1"})
         assert resp3.status_code == 302
         job.refresh_from_db()
         assert job.complete
-        # job should now disappear from list
-        resp4 = client.get(reverse("production:production-receiving-list"))
-        assert job.order_number not in resp4.content.decode()
 
     def test_bom_views(self, client, product):
         from django.urls import reverse
@@ -214,9 +347,17 @@ class TestProduction:
         # must be logged in because middleware enforces auth
         user = User.objects.create_user(username="test")
         client.force_login(user)
-        # create bom
+        # create bom - supply an empty components formset so validation
+        # passes (the new form requires management data even if no lines).
         url = reverse("production:bom-create")
-        resp = client.post(url, {"product": product.pk})
+        data = {
+            "product": product.pk,
+            "bom_items-TOTAL_FORMS": "0",
+            "bom_items-INITIAL_FORMS": "0",
+            "bom_items-MIN_NUM_FORMS": "0",
+            "bom_items-MAX_NUM_FORMS": "1000",
+        }
+        resp = client.post(url, data)
         assert resp.status_code == 302
         bom = BillOfMaterials.objects.first()
         assert bom.product == product
@@ -256,15 +397,27 @@ class TestProduction:
         assert resp.status_code == 302
         job = Production.objects.first()
         assert job.product == product
-        # list view
+        # list view – should include the materials indicator column
         url = reverse("production:production-list")
         resp = client.get(url)
         assert resp.status_code == 200
-        assert job.order_number in resp.content.decode()
+        html = resp.content.decode()
+        assert job.order_number in html
+        assert "Sufficient Materials" in html
+        # flag should reflect job‑level availability rather than single unit
+        expected_flag = "✓" if job.materials_available else "✗"
+        assert expected_flag in html
+        # create a second job that exceeds inventory to ensure the flag goes
+        # false for larger quantities
+        job2 = Production.objects.create(product=product, quantity=1000)
+        resp3 = client.get(url)
+        assert "✗" in resp3.content.decode()
         # detail and complete
         url = reverse("production:production-detail", args=[job.pk])
         resp = client.get(url)
         assert resp.status_code == 200
+        # detail page should show remaining quantity
+        assert str(job.remaining) in resp.content.decode()
         # complete via POST
         resp2 = client.post(url, {"complete_production": "1"})
         assert resp2.status_code == 302

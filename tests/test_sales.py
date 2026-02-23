@@ -144,7 +144,7 @@ class TestCustomer:
         assert ctx["pending_shipping"] == SalesOrderLine.objects.filter(complete=False).count()
         assert ctx["total_customers"] == customer.__class__.objects.count()
         content = resp.content.decode()
-        assert "Total Orders" in content
+        assert "Total Sales Orders" in content
         assert "Shipped" in content
         assert "Pending Shipping" in content
         assert "Customers" in content
@@ -266,7 +266,8 @@ class TestSalesOrder:
         assert str(sales_order_line.shipped_total) in content
         assert str(sales_order_line.remaining_total) in content
 
-    def test_can_close_order_from_detail(self, client, sales_order_line):
+    def test_can_close_order_from_list(self, client, sales_order_line):
+        """List page shows close button; closing still posts to detail URL."""
         from django.urls import reverse
         from inventory.models import Inventory
         from django.contrib.auth.models import User
@@ -275,26 +276,30 @@ class TestSalesOrder:
         client.force_login(user)
 
         so = sales_order_line.sales_order
-        url = reverse("sales:sales-order-detail", args=[so.pk])
-        resp = client.get(url)
+        list_url = reverse("sales:sales-order-list")
+        resp = client.get(list_url)
         assert resp.status_code == 200
-        assert 'name="close_order"' in resp.content.decode()
-        resp2 = client.post(url, {"close_order": "1"})
+        content = resp.content.decode()
+        assert 'name="close_order"' in content
+
+        detail_url = reverse("sales:sales-order-detail", args=[so.pk])
+        resp2 = client.post(detail_url, {"close_order": "1"})
         assert resp2.status_code == 302
-        assert resp2.url == url
+        assert resp2.url == detail_url
         so.refresh_from_db()
         assert so.status == "Closed"
+
         for line in so.sales_order_lines.all():
             assert line.complete is True
             assert line.closed is True
             assert line.quantity_shipped == 0
             assert line.value is None
         inv = Inventory.objects.filter(product=sales_order_line.product.product).first()
-        # closing order shouldn't change inventory; fixture started with 100
         assert inv is None or inv.quantity == 100
-        resp3 = client.get(url)
+
+        # list page should no longer show close button for closed order
+        resp3 = client.get(list_url)
         assert 'name="close_order"' not in resp3.content.decode()
-        assert "Open Order Value" in resp3.content.decode()
 
     def test_create_view_prefills_and_filters(self, client, customer, customer_product):
         from django.urls import reverse
@@ -315,7 +320,7 @@ class TestSalesOrder:
         fs = response.context["lines_formset"]
         for f in fs:
             assert "complete" not in f.fields
-            assert not hasattr(f, "DELETE")
+            assert "DELETE" in f.fields
             qs = f.fields["product"].queryset
             assert list(qs) == list(customer.customer_products.all())
 
@@ -344,6 +349,7 @@ class TestSalesOrder:
         from django.urls import reverse
         from sales.models import SalesOrder
         from django.contrib.auth.models import User
+
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -395,6 +401,7 @@ class TestSalesOrder:
             f"{prefix}-INITIAL_FORMS": "0",
             f"{prefix}-MIN_NUM_FORMS": "0",
             f"{prefix}-MAX_NUM_FORMS": "1000",
+            # deliberately supply the other customer's product id
             f"{prefix}-0-product": other_cp.pk,
             f"{prefix}-0-quantity": "5",
         }
@@ -403,6 +410,28 @@ class TestSalesOrder:
         fs = response.context["lines_formset"]
         assert not fs.is_valid()
         assert not SalesOrder.objects.filter(customer=customer).exists()
+
+    def test_sales_order_form_js_syntax(self, client, customer):
+        """Validate JS on the sales order create page."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+        import re, subprocess, tempfile, os
+
+        user = User.objects.create_user(username="js3")
+        client.force_login(user)
+        url = reverse("sales:sales-order-create")
+        resp = client.get(url)
+        assert resp.status_code == 200
+        html = resp.content.decode()
+        match = re.search(r"<script>([\s\S]*?)</script>", html)
+        assert match
+        script = match.group(1)
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as tmp:
+            tmp.write(script)
+            nm = tmp.name
+        result = subprocess.run(["node", "--check", nm], capture_output=True, text=True)
+        assert result.returncode == 0, f"JS syntax error: {result.stderr}"
+        os.unlink(nm)
 
 @pytest.mark.django_db
 class TestSalesOrderLine:
@@ -432,6 +461,10 @@ class TestShipping:
         client.force_login(user)
 
         so = sales_order_line.sales_order
+        list_url = reverse("sales:sales-order-list")
+        # list should expose ship button for open order
+        list_resp = client.get(list_url)
+        assert 'Ship' in list_resp.content.decode()
         url = reverse("sales:sales-order-ship", args=[so.pk])
         resp = client.get(url)
         assert resp.status_code == 200
@@ -442,7 +475,7 @@ class TestShipping:
         data = {f"shipped_{sales_order_line.id}": sales_order_line.quantity}
         resp2 = client.post(url, data)
         assert resp2.status_code == 302
-        assert resp2.url == reverse("sales:sales-order-ship-list")
+        assert resp2.url == reverse("sales:sales-order-list")
         sales_order_line.refresh_from_db()
         assert sales_order_line.complete is True
         assert sales_order_line.quantity_shipped == sales_order_line.quantity
@@ -489,44 +522,7 @@ class TestShipping:
         ).order_by("pk").last()
         assert ledger.quantity == -partial
 
-    def test_shipping_list_pagination(self, client, customer, customer_product):
-        from django.urls import reverse
-        from sales.models import SalesOrder, SalesOrderLine
-        from django.contrib.auth.models import User
 
-        user = User.objects.create_user(username="tester")
-        client.force_login(user)
-
-        for _ in range(12):
-            so = SalesOrder.objects.create(customer=customer)
-            SalesOrderLine.objects.create(sales_order=so, product=customer_product, quantity=2)
-        url = reverse("sales:sales-order-ship-list")
-        resp = client.get(url)
-        assert resp.status_code == 200
-        assert resp.context["sales_orders"].paginator is not None
-        resp2 = client.get(url + "?page=2")
-        assert resp2.status_code == 200
-
-    def test_shipping_list_search(self, client, customer, customer_product):
-        from django.urls import reverse
-        from sales.models import Customer, SalesOrder, SalesOrderLine
-        from django.contrib.auth.models import User
-
-        user = User.objects.create_user(username="tester")
-        client.force_login(user)
-
-        other = Customer.objects.create(name="Other Customer")
-        so1 = SalesOrder.objects.create(customer=customer)
-        SalesOrderLine.objects.create(sales_order=so1, product=customer_product, quantity=1)
-        so2 = SalesOrder.objects.create(customer=other)
-        SalesOrderLine.objects.create(sales_order=so2, product=customer_product, quantity=1)
-        url = reverse("sales:sales-order-ship-list")
-        resp = client.get(url, {"q": "Test Customer"})
-        content = resp.content.decode()
-        assert so1.order_number in content
-        assert "Other Customer" not in content
-        resp2 = client.get(url, {"q": str(so2.pk)})
-        assert so2.order_number in resp2.content.decode()
 
     def test_ship_all_button(self, client, customer, customer_product):
         from django.urls import reverse

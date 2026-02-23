@@ -18,6 +18,9 @@ class ProductCreateView(CreateView):
     fields = ["name"]
     success_url = reverse_lazy("inventory:inventory-list")
 
+    def get_success_url(self):
+        return reverse_lazy("inventory:inventory-detail", args=[self.object.pk])
+
 
 class ProductUpdateView(UpdateView):
     model = Product
@@ -89,6 +92,53 @@ class InventoryDetailView(DetailView):
             history.append(total)
         context["history_dates"] = dates
         context["history_qty"] = history
+
+        # monthly activity summaries for charts
+        from django.db.models.functions import TruncMonth
+        # sales by month
+        sales_months = (
+            SalesOrderLine.objects.filter(product__product=inv.product)
+            .annotate(month=TruncMonth('sales_order__created_at'))
+            .values('month')
+            .annotate(total=Sum('quantity'))
+            .order_by('month')
+        )
+        # purchases by month
+        purchase_months = (
+            PurchaseOrderLine.objects.filter(product__product=inv.product)
+            .annotate(month=TruncMonth('purchase_order__created_at'))
+            .values('month')
+            .annotate(total=Sum('quantity'))
+            .order_by('month')
+        )
+        # production by month
+        production_months = (
+            Production.objects.filter(product=inv.product)
+            .annotate(month=TruncMonth('created_at'))
+            .values('month')
+            .annotate(total=Sum('quantity'))
+            .order_by('month')
+        )
+        # convert to parallel lists (months as YYYY-MM format)
+        m_dates = []
+        m_sales = []
+        m_purch = []
+        m_prod = []
+        # build mapping for each type for easier access
+        sales_map = {entry['month']: entry['total'] or 0 for entry in sales_months}
+        purch_map = {entry['month']: entry['total'] or 0 for entry in purchase_months}
+        prod_map = {entry['month']: entry['total'] or 0 for entry in production_months}
+        # unify all month keys
+        all_months = sorted(set(list(sales_map.keys()) + list(purch_map.keys()) + list(prod_map.keys())))
+        for m in all_months:
+            m_dates.append(m.strftime("%Y-%m"))
+            m_sales.append(sales_map.get(m, 0))
+            m_purch.append(purch_map.get(m, 0))
+            m_prod.append(prod_map.get(m, 0))
+        context['monthly_dates'] = m_dates
+        context['monthly_sales'] = m_sales
+        context['monthly_purchases'] = m_purch
+        context['monthly_production'] = m_prod
         # compute pending amounts for this product
         # sales pending: sum of quantities not yet shipped
         sales_qs = SalesOrderLine.objects.filter(
@@ -284,6 +334,8 @@ class LowStockListView(TemplateView):
                 "order_qty": order_qty,
                 "po_order_qty": needed_po,
             })
+        # sort items by requirement descending so highest shortages appear first
+        items.sort(key=lambda ent: ent["required"], reverse=True)
         # generate purchase-order URLs for each entry that has a supplier
         from django.urls import reverse
         for entry in items:
@@ -294,7 +346,12 @@ class LowStockListView(TemplateView):
                 entry["po_url"] = f"{reverse('procurement:purchase-order-create')}?supplier={sid}&{qs}"
             else:
                 entry["po_url"] = None
-        context["required_items"] = items
+
+        # paginate the results
+        from django.core.paginator import Paginator
+        page = self.request.GET.get("page")
+        paginator = Paginator(items, 20)
+        context["required_items"] = paginator.get_page(page)
         return context
 
     def form_valid(self, form):

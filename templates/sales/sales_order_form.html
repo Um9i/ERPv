@@ -1,7 +1,8 @@
-{% extends "base.html" %}
+{% extends "includes/card.html" %}
 {% load crispy_forms_tags %}
-{% block content %}
-<h1>Create Sales Order</h1>
+{% block card_icon %}bi-cart4{% endblock %}
+{% block card_title %}Create Sales Order{% endblock %}
+{% block card_body %}
 <form method="post" id="so-form">
     {% csrf_token %}
     {{ form|crispy }}
@@ -38,6 +39,9 @@
                 el.name = el.name.replace(/-(\d+)-/, `-${formCount}-`);
                 el.id = 'id_' + el.name;
                 if (el.type !== 'hidden') el.value = '';
+                if (el.name.endsWith('-DELETE')) {
+                    el.checked = false;
+                }
             }
         });
         container.appendChild(emptyForm);
@@ -76,3 +80,4 @@
 })();
 </script>
 {% endblock %}
+

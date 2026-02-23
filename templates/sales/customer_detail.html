@@ -1,7 +1,9 @@
-{% extends "base.html" %}
-{% block content %}
+{% extends "includes/card.html" %}
+{% block card_icon %}bi-people-fill{% endblock %}
+{% block card_title %}{{ customer.name }}{% endblock %}
+{% block card_body %}
 <div class="mb-5">
-    <h1>{{ customer.name }}</h1>
+    
     <p>Phone: {{ customer.phone }}</p>
     <p>Email: {{ customer.email }}</p>
     <p>Address: {{ customer.address }}</p>
@@ -128,22 +130,8 @@
         {% endfor %}
     </tbody>
 </table>
-{% if customer_products.has_other_pages %}
-<nav>
-    <ul class="pagination">
-        {% if customer_products.has_previous %}
-        <li class="page-item"><a class="page-link"
-                href="?cp_page={{ customer_products.previous_page_number }}">Previous</a></li>
-        {% endif %}
-        <li class="page-item disabled"><span class="page-link">Page {{ customer_products.number }} of {{
-                customer_products.paginator.num_pages }}</span></li>
-        {% if customer_products.has_next %}
-        <li class="page-item"><a class="page-link" href="?cp_page={{ customer_products.next_page_number }}">Next</a>
-        </li>
-        {% endif %}
-    </ul>
-</nav>
-{% endif %}
+{% include "includes/pagination.html" with page_obj=customer_products page_param="cp_page" %}
 <a class="btn btn-link" href="{% url 'sales:customer-products' customer.id %}">See all</a>
 {% endif %}
 {% endblock %}
+

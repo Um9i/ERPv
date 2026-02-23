@@ -25,7 +25,10 @@ class SupplierCreateView(CreateView):
     model = Supplier
     template_name = "procurement/supplier_form.html"
     fields = ["name", "address", "phone", "email", "website"]
-    success_url = reverse_lazy("procurement:supplier-list")
+
+    def get_success_url(self):
+        # after creating a supplier return to that supplier's detail
+        return reverse_lazy("procurement:supplier-detail", args=[self.object.pk])
 
 
 class SupplierUpdateView(UpdateView):
@@ -245,6 +248,12 @@ class PurchaseOrderCreateView(CreateView):
     success_url = reverse_lazy("procurement:supplier-list")
 
 
+class PurchaseOrderDeleteView(DeleteView):
+    model = PurchaseOrder
+    template_name = "procurement/purchase_order_confirm_delete.html"
+    success_url = reverse_lazy("procurement:supplier-list")
+
+
 class ProcurementDashboardView(TemplateView):
     template_name = "procurement/procurement_dashboard.html"
 
@@ -257,9 +266,16 @@ class ProcurementDashboardView(TemplateView):
         context["lines_received"] = PurchaseOrderLine.objects.filter(
             complete=True
         ).count()
-        context["pending_receiving"] = PurchaseOrderLine.objects.filter(
-            complete=False
-        ).count()
+        # pending_receiving now measures the number of *purchase orders*
+        # that still have open lines rather than raw line count.  the card
+        # label remains "Pending Receiving" for now, but the underlying
+        # value aligns with the executive/main dashboard semantics.
+        context["pending_receiving"] = (
+            PurchaseOrder.objects
+            .filter(purchase_order_lines__complete=False)
+            .distinct()
+            .count()
+        )
         context["total_suppliers"] = Supplier.objects.count()
         return context
 
@@ -297,7 +313,7 @@ class PurchaseOrderCreateView(CreateView):
                 PurchaseOrderLine,
                 fields=["product", "quantity"],
                 extra=extra,
-                can_delete=False,
+                can_delete=True,  # allow deleting lines on create
             )
 
         # handle inline formset initialisation
@@ -430,36 +446,9 @@ class PurchaseOrderDetailView(DetailView):
         return context
 
 
-class PurchaseOrderReceivingListView(ListView):
-    model = PurchaseOrder
-    template_name = "procurement/purchase_order_receiving_list.html"
-    context_object_name = "purchase_orders"
-
-    def get_queryset(self):
-        # show only purchase orders that have unreceived lines
-        qs = (
-            PurchaseOrder.objects.filter(purchase_order_lines__complete=False)
-            .distinct()
-            .order_by("-created_at")
-        )
-        q = self.request.GET.get("q", "").strip()
-        if q:
-            from django.db.models import Q
-
-            qs = qs.filter(Q(supplier__name__icontains=q) | Q(pk__icontains=q))
-        return qs
-
-    def get_context_data(self, **kwargs):
-        from django.core.paginator import Paginator
-
-        context = super().get_context_data(**kwargs)
-        qs = self.get_queryset()
-        page = self.request.GET.get("page")
-        paginator = Paginator(qs, 10)
-        context["purchase_orders"] = paginator.get_page(page)
-        context["q"] = self.request.GET.get("q", "")
-        return context
-
+# PurchaseOrderReceivingListView removed – functionality overlaps
+# with PurchaseOrderListView which already provides access to open orders.
+# The dedicated template and URL have been deleted as well.
 
 class PurchaseOrderReceiveView(DetailView):
     model = PurchaseOrder
@@ -538,4 +527,6 @@ class PurchaseOrderReceiveView(DetailView):
         return redirect(self.get_success_url())
 
     def get_success_url(self):
-        return reverse_lazy("procurement:purchase-order-receiving-list")
+        # after receiving, go back to the full PO list (no standalone
+        # receiving page exists any longer)
+        return reverse_lazy("procurement:purchase-order-list")

@@ -1,7 +1,9 @@
-{% extends "base.html" %}
-{% block content %}
+{% extends "includes/card.html" %}
+{% block card_icon %}bi-people-fill{% endblock %}
+{% block card_title %}{{ supplier.name }}{% endblock %}
+{% block card_body %}
 <div class="mb-5">
-    <h1>{{ supplier.name }}</h1>
+    
     <p>Phone: {{ supplier.phone }}</p>
     <p>Email: {{ supplier.email }}</p>
     <p>Address: {{ supplier.address }}</p>
@@ -39,19 +41,7 @@
         {% endfor %}
     </tbody>
 </table>
-{% if supplier_contacts.has_other_pages %}
-<nav>
-    <ul class="pagination">
-        {% if supplier_contacts.has_previous %}
-        <li class="page-item"><a class="page-link" href="?ct_page={{ supplier_contacts.previous_page_number }}">Previous</a></li>
-        {% endif %}
-        <li class="page-item disabled"><span class="page-link">Page {{ supplier_contacts.number }} of {{ supplier_contacts.paginator.num_pages }}</span></li>
-        {% if supplier_contacts.has_next %}
-        <li class="page-item"><a class="page-link" href="?ct_page={{ supplier_contacts.next_page_number }}">Next</a></li>
-        {% endif %}
-    </ul>
-</nav>
-{% endif %}
+{% include "includes/pagination.html" with page_obj=supplier_contacts page_param="ct_page" %}
 {% endif %}
 
 <h2>Purchase Orders</h2>
@@ -128,22 +118,7 @@
         {% endfor %}
     </tbody>
 </table>
-{% if supplier_products.has_other_pages %}
-<nav>
-    <ul class="pagination">
-        {% if supplier_products.has_previous %}
-        <li class="page-item"><a class="page-link"
-                href="?sp_page={{ supplier_products.previous_page_number }}">Previous</a></li>
-        {% endif %}
-        <li class="page-item disabled"><span class="page-link">Page {{ supplier_products.number }} of {{
-                supplier_products.paginator.num_pages }}</span></li>
-        {% if supplier_products.has_next %}
-        <li class="page-item"><a class="page-link" href="?sp_page={{ supplier_products.next_page_number }}">Next</a>
-        </li>
-        {% endif %}
-    </ul>
-</nav>
-{% endif %}
+{% include "includes/pagination.html" with page_obj=supplier_products page_param="sp_page" %}
 <a class="btn btn-link" href="{% url 'procurement:supplier-products' supplier.id %}">See all</a>
 {% endif %}
 {% endblock %}

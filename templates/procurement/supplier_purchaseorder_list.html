@@ -1,6 +1,7 @@
-{% extends "base.html" %}
-{% block content %}
-<h1>Purchase Orders for {{ view.kwargs.pk }}</h1>
+{% extends "includes/card.html" %}
+{% block card_icon %}bi-truck{% endblock %}
+{% block card_title %}Purchase Orders for {{ view.kwargs.pk }}{% endblock %}
+{% block card_body %}
 <table class="table">
   <thead>
     <tr><th>Order #</th><th>Date</th><th>Status</th><th>Total</th></tr>
@@ -18,17 +19,5 @@
   {% endfor %}
   </tbody>
 </table>
-{% if purchase_orders.has_other_pages %}
-<nav>
-  <ul class="pagination">
-    {% if purchase_orders.has_previous %}
-    <li class="page-item"><a class="page-link" href="?po_page={{ purchase_orders.previous_page_number }}">Previous</a></li>
-    {% endif %}
-    <li class="page-item disabled"><span class="page-link">Page {{ purchase_orders.number }} of {{ purchase_orders.paginator.num_pages }}</span></li>
-    {% if purchase_orders.has_next %}
-    <li class="page-item"><a class="page-link" href="?po_page={{ purchase_orders.next_page_number }}">Next</a></li>
-    {% endif %}
-  </ul>
-</nav>
-{% endif %}
+{% include "includes/pagination.html" with page_obj=purchase_orders page_param="po_page" %}
 {% endblock %}

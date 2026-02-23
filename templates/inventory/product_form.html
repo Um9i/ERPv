@@ -1,7 +1,13 @@
-{% extends "base.html" %}
+{% extends "includes/card.html" %}
 {% load crispy_forms_tags %}
-{% block content %}
-<h1>{% if form.instance.pk %}Update{% else %}Create{% endif %} Product</h1>
+{% block card_icon %}bi-box-seam{% endblock %}
+{% block card_title %}{% if form.instance.pk %}Update Product{% else %}New Product{% endif %}{% endblock %}
+{% block card_body %}
+{% if form.instance.pk %}
+<h1>Update Product</h1>
+{% else %}
+<h1>Create Product</h1>
+{% endif %}
 <form method="post">
     {% csrf_token %}
     {{ form|crispy }}

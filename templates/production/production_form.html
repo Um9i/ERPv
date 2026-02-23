@@ -1,6 +1,8 @@
-{% extends "base.html" %}
+{% extends "includes/card.html" %}
 {% load crispy_forms_tags %}
-{% block content %}
+{% block card_icon %}bi-wrench-adjustable-circle{% endblock %}
+{% block card_title %}{% if form.instance.pk %}Edit Production Job{% else %}New Production Job{% endif %}{% endblock %}
+{% block card_body %}
 {% if form.errors %}
 <div class="alert alert-danger">
     <ul>
@@ -14,11 +16,6 @@
         {% endfor %}
     </ul>
 </div>
-{% endif %}
-{% if form.instance.pk %}
-<h1>Edit Production Job</h1>
-{% else %}
-<h1>New Production Job</h1>
 {% endif %}
 <form method="post">
     {% csrf_token %}

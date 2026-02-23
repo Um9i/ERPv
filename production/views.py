@@ -11,10 +11,11 @@ from django.views.generic import (
     DeleteView,
     TemplateView,
 )
+from django.forms.models import inlineformset_factory
 from django.urls import reverse_lazy
 from django.shortcuts import redirect
 from django import forms
-from django.db.models import F
+from django.db.models import F, Q
 from django.http import JsonResponse
 
 
@@ -24,14 +25,104 @@ class BOMCreateView(CreateView):
     model = BillOfMaterials
     template_name = "production/bom_form.html"
     fields = ["product"]
-    success_url = reverse_lazy("production:bom-list")
+    # we'll redirect to the detail once created
+
+    def get_success_url(self):
+        return reverse_lazy("production:bom-detail", args=[self.object.pk])
+
+    def get_initial(self):
+        # allow preselecting product via GET as before
+        initial = super().get_initial()
+        product_id = self.request.GET.get("product")
+        if product_id:
+            initial["product"] = product_id
+        return initial
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        product_id = self.request.GET.get("product")
+        if product_id:
+            form.fields["product"].widget = forms.HiddenInput()
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # inline formset for BOM items
+        LineFormset = inlineformset_factory(
+            BillOfMaterials,
+            BOMItem,
+            fields=["product", "quantity"],
+            extra=1,
+            can_delete=True,
+        )
+        if self.request.POST:
+            # when rendering after a POST we want the formset bound to the
+            # parent instance (even if unsaved) so that child validation can
+            # access the `product` attribute.  kwargs may contain `form`
+            # when called via form_invalid.
+            parent = None
+            if "form" in kwargs:
+                parent = kwargs["form"].instance
+            if parent is None:
+                parent = BillOfMaterials()
+            context["lines_formset"] = LineFormset(self.request.POST, instance=parent)
+        else:
+            context["lines_formset"] = LineFormset()
+        return context
+
+    def form_valid(self, form):
+        # build an unsaved BOM instance so that the inline forms have access to
+        # its `product` value during validation.  similar to the standard
+        # pattern used elsewhere, but we avoid saving the parent until the
+        # lines are confirmed valid to prevent orphan BOMs on error.
+        context = self.get_context_data(form=form)
+        lines_formset = context.get("lines_formset")
+        # create instance without committing to DB yet
+        self.object = form.save(commit=False)
+        # bind the formset to this (unsaved) instance for validation
+        lines_formset.instance = self.object
+        if lines_formset.is_valid():
+            # now that both parent and children are valid we can persist
+            self.object.save()
+            lines_formset.save()
+            return super().form_valid(form)
+        else:
+            return self.form_invalid(form)
 
 
 class BOMUpdateView(UpdateView):
     model = BillOfMaterials
     template_name = "production/bom_form.html"
     fields = ["product"]
-    success_url = reverse_lazy("production:bom-list")
+
+    def get_success_url(self):
+        return reverse_lazy("production:bom-detail", args=[self.object.pk])
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        LineFormset = inlineformset_factory(
+            BillOfMaterials,
+            BOMItem,
+            fields=["product", "quantity"],
+            extra=1,
+            can_delete=True,
+        )
+        if self.request.POST:
+            context["lines_formset"] = LineFormset(self.request.POST, instance=self.object)
+        else:
+            context["lines_formset"] = LineFormset(instance=self.object)
+        return context
+
+    def form_valid(self, form):
+        context = self.get_context_data(form=form)
+        lines_formset = context.get("lines_formset")
+        if lines_formset.is_valid():
+            self.object = form.save()
+            lines_formset.instance = self.object
+            lines_formset.save()
+            return super().form_valid(form)
+        else:
+            return self.form_invalid(form)
 
 
 class BOMDeleteView(DeleteView):
@@ -186,11 +277,9 @@ class ProductionListView(ListView):
     context_object_name = "productions"
 
     def get_queryset(self):
-        qs = Production.objects.all().order_by("-created_at")
+        qs = Production.objects.all().order_by("-created_at").select_related("product")
         q = self.request.GET.get("q", "").strip()
         if q:
-            from django.db.models import Q
-
             qs = qs.filter(Q(product__name__icontains=q) | Q(pk__icontains=q))
         return qs
 
@@ -211,8 +300,6 @@ class ProductionListApiView(TemplateView):
         qs = Production.objects.all().order_by("-created_at").filter(complete=False)
         q = self.request.GET.get("q", "").strip()
         if q:
-            from django.db.models import Q
-
             qs = qs.filter(Q(product__name__icontains=q) | Q(pk__icontains=q))
         data = []
         for prod in qs:
@@ -250,33 +337,6 @@ class ProductionDetailView(DetailView):
         return context
 
 
-class ProductionReceivingListView(ListView):
-    model = Production
-    template_name = "production/production_receiving_list.html"
-    context_object_name = "productions"
-
-    def get_queryset(self):
-        # show only jobs that have not yet been marked complete
-        qs = Production.objects.filter(complete=False).order_by("-created_at")
-        q = self.request.GET.get("q", "").strip()
-        if q:
-            from django.db.models import Q
-
-            qs = qs.filter(Q(product__name__icontains=q) | Q(pk__icontains=q))
-        return qs
-
-    def get_context_data(self, **kwargs):
-        from django.core.paginator import Paginator
-
-        context = super().get_context_data(**kwargs)
-        qs = self.get_queryset()
-        page = self.request.GET.get("page")
-        paginator = Paginator(qs, 15)
-        context["productions"] = paginator.get_page(page)
-        context["q"] = self.request.GET.get("q", "")
-        return context
-
-
 class ProductionReceiveView(DetailView):
     model = Production
     template_name = "production/production_receive.html"
@@ -311,7 +371,9 @@ class ProductionReceiveView(DetailView):
         return redirect(self.get_success_url())
 
     def get_success_url(self):
-        return reverse_lazy("production:production-receiving-list")
+        # after receiving we no longer have a dedicated list; return to
+        # the main job log so the updated status is visible.
+        return reverse_lazy("production:production-list")
 
 
 class ProductionDashboardView(TemplateView):

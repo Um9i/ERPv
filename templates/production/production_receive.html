@@ -1,6 +1,7 @@
-{% extends "base.html" %}
-{% block content %}
-<h1>Production Job Completion - {{ production.order_number }}</h1>
+{% extends "includes/card.html" %}
+{% block card_icon %}bi-gear-fill{% endblock %}
+{% block card_title %}Production Job Completion - {{ production.order_number }}{% endblock %}
+{% block card_body %}
 {% if form.errors %}
 <div class="alert alert-danger">
     <ul>

@@ -20,9 +20,12 @@ Supports bill‑of‑materials (BOM) management and tracking of production jobs.
 
 * CRUD views for BOMs and BOM items.  List views offer search and pagination,
   detail pages show component lists with their own pagination.
-* The BOM `create/update` forms are simple and allow selecting the finished
-  product; a hidden field can be pre‑populated from query parameters when
-  creating items.
+* The BOM `create/update` forms now embed an inline formset for
+  `BOMItem` lines, allowing multiple components to be added or edited directly
+  on the same page.  A small Javascript helper replicates the last row so the
+  user can click "Add another component" to generate a new blank line.  The
+  finished product field may still be pre‑populated/hidden via query
+  parameters as before.
 
 ### Production Jobs
 

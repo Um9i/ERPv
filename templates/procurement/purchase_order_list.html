@@ -1,6 +1,7 @@
-{% extends "base.html" %}
-{% block content %}
-<h1>Purchase Orders</h1>
+{% extends "includes/card.html" %}
+{% block card_icon %}bi-cart-plus{% endblock %}
+{% block card_title %}Purchase Orders{% endblock %}
+{% block card_body %}
 <form method="get" class="mb-3">
     <div class="input-group">
         <input type="text" name="q" class="form-control" placeholder="Search orders" value="{{ request.GET.q }}">
@@ -14,7 +15,7 @@
             <th>Supplier</th>
             <th>Status</th>
             <th>Created At</th>
-            <th>Actions</th>
+            <th class="text-end">Actions</th>
         </tr>
     </thead>
     <tbody>
@@ -24,24 +25,26 @@
             <td>{{ order.supplier.name }}</td>
             <td>{{ order.status }}</td>
             <td>{{ order.created_at }}</td>
-            <td>
-                <a href="{% url 'procurement:purchase-order-detail' order.id %}" class="btn btn-primary btn-sm">View</a>
+            <td class="text-end">
+                {% if order.status != 'Closed' %}
+                <a href="{% url 'procurement:purchase-order-receive' order.id %}"
+                    class="btn btn-sm btn-success">Receive</a>
+                {% endif %}
+                <a href="{% url 'procurement:purchase-order-detail' order.id %}"
+                    class="btn btn-secondary btn-sm">View</a>
+                {% if order.status == 'Open' %}
+                <form method="post" action="{% url 'procurement:purchase-order-detail' order.id %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" name="close_order" value="1" class="btn btn-danger btn-sm"
+                            onclick="return confirm('Are you sure you want to close this order?');">
+                        Close
+                    </button>
+                </form>
+                {% endif %}
             </td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
-{% if purchase_orders.has_other_pages %}
-<nav>
-  <ul class="pagination">
-    {% if purchase_orders.has_previous %}
-    <li class="page-item"><a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}page={{ purchase_orders.previous_page_number }}">Previous</a></li>
-    {% endif %}
-    <li class="page-item disabled"><span class="page-link">Page {{ purchase_orders.number }} of {{ purchase_orders.paginator.num_pages }}</span></li>
-    {% if purchase_orders.has_next %}
-    <li class="page-item"><a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}page={{ purchase_orders.next_page_number }}">Next</a></li>
-    {% endif %}
-  </ul>
-</nav>
-{% endif %}
+{% include "includes/pagination.html" with page_obj=purchase_orders %}
 {% endblock %}

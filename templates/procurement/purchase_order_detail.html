@@ -1,21 +1,14 @@
-{% extends "base.html" %}
-{% block content %}
-<h1>Purchase Order {{ purchase_order.order_number }}</h1>
+{% extends "includes/card.html" %}
+{% block card_icon %}bi-cart-plus{% endblock %}
+{% block card_title %}Purchase Order {{ purchase_order.order_number }}{% endblock %}
+{% block card_body %}
 <p><strong>Supplier:</strong> {{ purchase_order.supplier.name }}</p>
 <p><strong>Created At:</strong> {{ purchase_order.created_at }}</p>
 <p><strong>Updated At:</strong> {{ purchase_order.updated_at }}</p>
 <p><strong>Status:</strong> {{ purchase_order.status }}</p>
 <p><strong>Total Order Value:</strong> {{ purchase_order.total_amount }}</p>
 <p><strong>Open Order Value:</strong> {{ purchase_order.remaining_total }}</p>
-{% if can_close %}
-<form method="post" class="d-inline">
-    {% csrf_token %}
-    <button type="submit" name="close_order" value="1" class="btn btn-warning"
-            onclick="return confirm('Are you sure you want to close this order?');">
-        Close Order
-    </button>
-</form>
-{% endif %}
+
 <h3>Order Lines</h3>
 <table class="table">
     <thead>

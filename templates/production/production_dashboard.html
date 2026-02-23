@@ -1,62 +1,19 @@
-{% extends "base.html" %}
-{% block content %}
-{% if user.is_authenticated %}
+{% extends "dashboard_base.html" %}
 
-<!-- summary metrics -->
-<div class="row dashboard-summary mb-4">
-    <div class="col">
-        <div class="card mb-4 bg-light shadow-sm">
-            <div class="card-body p-4">
-                <h5 class="card-title mb-4"><i class="bi bi-gear-fill me-4"></i>Production Management</h5>
-                <div class="row my-4">
-                    <div class="col-lg-3">
-                        <ul class="list-group list-group-flush mb-4">
-                            <a class="list-group-item list-group-item-action" href="{% url 'production:bom-create' %}">Create BOM</a>
-                            <a class="list-group-item list-group-item-action" href="{% url 'production:bom-list' %}">View BOMs</a>
-                            <a class="list-group-item list-group-item-action" href="{% url 'production:production-create' %}">Create Job</a>
-                            <a class="list-group-item list-group-item-action" href="{% url 'production:production-receiving-list' %}">Complete Jobs</a>
-                            <a class="list-group-item list-group-item-action" href="{% url 'production:production-list' %}">View Job Log</a>
-                        </ul>
-                    </div>
-                    <div class="col-lg-6">
-                        <div class="row">
-                            <div class="col">
-                                <div class="card text-center shadow-sm">
-                                    <div class="card-body">
-                                        <i class="bi bi-gear-fill text-primary"></i>
-                                        <h5 class="card-title mt-2">BOMs</h5>
-                                        <p class="card-text h2">{{ total_boms|default:'—' }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="card text-center shadow-sm">
-                                    <div class="card-body">
-                                        <i class="bi bi-play-circle text-success"></i>
-                                        <h5 class="card-title mt-2">Active Jobs</h5>
-                                        <p class="card-text h2">{{ active_jobs|default:'—' }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="card text-center shadow-sm">
-                                    <div class="card-body">
-                                        <i class="bi bi-check-circle text-warning"></i>
-                                        <h5 class="card-title mt-2">Completed</h5>
-                                        <p class="card-text h2">{{ completed_jobs|default:'—' }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+{% block dashboard_icon %}bi-gear-fill{% endblock %}
+{% block dashboard_title %}Production Management{% endblock %}
 
-    <!-- action cards -->
-    <div class="row">
-        <!-- additional actions can be placed here if needed -->
-    </div>
-</div>{% endif %}
+{% block dashboard_links %}
+<a class="list-group-item list-group-item-action" href="{% url 'production:bom-create' %}">Create BOM</a>
+<a class="list-group-item list-group-item-action" href="{% url 'production:bom-list' %}">View BOMs</a>
+<a class="list-group-item list-group-item-action" href="{% url 'production:production-create' %}">Create Job</a>
+<a class="list-group-item list-group-item-action" href="{% url 'production:production-list' %}">View Jobs</a>
+{% endblock %}
+
+{% block dashboard_metrics %}
+<div class="row">
+    {% include "includes/metric_card.html" with icon="bi-gear-fill" color="primary" label="BOMs" value=total_boms|default:'—' %}
+    {% include "includes/metric_card.html" with icon="bi-wrench-adjustable-circle" color="warning" label="Active Jobs" value=active_jobs|default:'—' %}
+    {% include "includes/metric_card.html" with icon="bi-check-circle" color="success" label="Completed" value=completed_jobs|default:'—' %}
+</div>
 {% endblock %}

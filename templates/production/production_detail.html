@@ -1,31 +1,38 @@
-{% extends "base.html" %}
-{% block content %}
-<h1>Production Job {{ production.order_number }}</h1>
+{% extends "includes/card.html" %}
+{% block card_icon %}bi-wrench-adjustable-circle{% endblock %}
+{% block card_title %}Production Job {{ production.order_number }}{% endblock %}
+{% block card_body %}
 <p><strong>Product:</strong> {{ production.product.name }}</p>
 <p><strong>Quantity:</strong> {{ production.quantity }}</p>
+<p><strong>Qty Remaining:</strong> {{ production.remaining }}</p>
 <p><strong>Status:</strong> {{ production.status }}</p>
 <p><strong>Created:</strong> {{ production.created_at }}</p>
 <p><strong>Updated:</strong> {{ production.updated_at }}</p>
-{% if production.status != "Closed" %}
-<form method="post" class="d-inline">
-    {% csrf_token %}
-    <button name="complete_production" value="1" class="btn btn-warning"
-            onclick="return confirm('Mark this job complete?');">Complete</button>
-</form>
-{% endif %}
 <h3>Bill of Materials</h3>
 {% if bom %}
 <table class="table">
-    <thead><tr><th>Component</th><th>Qty per unit</th></tr></thead>
+    <thead>
+        <tr>
+            <th>Component</th>
+            <th>Component Stock</th>
+            <th>Qty per unit</th>
+            <th>Required for Job</th>
+        </tr>
+    </thead>
     <tbody>
-    {% for item in bom %}
-    <tr>
-        <td>{{ item.product.name }}</td>
-        <td>{{ item.quantity }}</td>
-    </tr>
-    {% endfor %}
+        {% for item in bom %}
+        <tr>
+            <td>{{ item.product.name }}</td>
+            <td>{{ item.product.product_inventory.quantity }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>{% widthratio production.remaining 1 item.quantity %}</td>
+        </tr>
+        {% endfor %}
     </tbody>
 </table>
+{% if production.status != 'Closed' %}
+<a href="{% url 'production:production-receive' production.id %}" class="btn btn-success">Complete Job</a>
+{% endif %}
 {% else %}
 <p>No BOM defined for product.</p>
 {% endif %}

@@ -1,6 +1,7 @@
-{% extends "base.html" %}
-{% block content %}
-<h1>{{ inventory.product.name }}</h1>
+{% extends "includes/card.html" %}
+{% block card_icon %}bi-box-seam{% endblock %}
+{% block card_title %}{{ inventory.product.name }}{% endblock %}
+{% block card_body %}
 <div class="mb-2">
     <a class="btn btn-sm btn-secondary" href="{% url 'inventory:product-update' inventory.product.pk %}">Edit Name</a>
     <a class="btn btn-sm btn-warning ms-2" href="{% url 'inventory:inventory-adjust' inventory.pk %}">Adjust Quantity</a>
@@ -32,6 +33,10 @@
     <canvas id="history-chart" height="60"></canvas>
 </div>
 
+<div class="mb-4">
+    <canvas id="monthly-chart" height="60"></canvas>
+</div>
+
 <h3>Inventory Ledger</h3>
 {% if ledger %}
 <table class="table table-striped">
@@ -47,19 +52,7 @@
     {% endfor %}
     </tbody>
 </table>
-{% if ledger.has_other_pages %}
-<nav>
-  <ul class="pagination">
-    {% if ledger.has_previous %}
-    <li class="page-item"><a class="page-link" href="?page={{ ledger.previous_page_number }}">Previous</a></li>
-    {% endif %}
-    <li class="page-item disabled"><span class="page-link">Page {{ ledger.number }} of {{ ledger.paginator.num_pages }}</span></li>
-    {% if ledger.has_next %}
-    <li class="page-item"><a class="page-link" href="?page={{ ledger.next_page_number }}">Next</a></li>
-    {% endif %}
-  </ul>
-</nav>
-{% endif %}
+{% include "includes/pagination.html" with page_obj=ledger %}
 {% else %}
 <p>No ledger entries.</p>
 {% endif %}
@@ -108,6 +101,21 @@ new Chart(ctx3, {
             borderColor: '#4e73df',
             fill: false
         }]
+    },
+    options: { responsive: true, scales: { y: { beginAtZero: true } } }
+});
+
+// monthly activity bar chart
+const ctx4 = document.getElementById('monthly-chart').getContext('2d');
+new Chart(ctx4, {
+    type: 'bar',
+    data: {
+        labels: {{ monthly_dates|safe }},
+        datasets: [
+            { label: 'Sales', backgroundColor: '#1cc88a', data: {{ monthly_sales|safe }} },
+            { label: 'Purchases', backgroundColor: '#36b9cc', data: {{ monthly_purchases|safe }} },
+            { label: 'Production', backgroundColor: '#f6c23e', data: {{ monthly_production|safe }} }
+        ]
     },
     options: { responsive: true, scales: { y: { beginAtZero: true } } }
 });

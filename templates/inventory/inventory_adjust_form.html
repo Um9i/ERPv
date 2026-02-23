@@ -1,7 +1,9 @@
-{% extends "base.html" %}
+{% extends "includes/card.html" %}
 {% load crispy_forms_tags %}
-{% block content %}
-<h1>Adjust Inventory</h1>
+
+{% block card_icon %}bi-gear-fill{% endblock %}
+{% block card_title %}Adjust Inventory{% endblock %}
+{% block card_body %}
 {% if form.errors %}
 <div class="alert alert-danger">
     <ul>

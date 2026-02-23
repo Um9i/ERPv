@@ -1,0 +1,6 @@
+{% extends "confirm_delete_base.html" %}
+
+{% block delete_title %}Confirm Delete Purchase Order{% endblock %}
+{% block delete_message %}Are you sure you want to delete the purchase order "{{ purchase_order.order_number }}"?{% endblock %}
+{% block delete_form_action %} action="{% url 'procurement:purchase-order-delete' purchaseorder.id %}"{% endblock %}
+{% block delete_cancel_url %}{% url 'procurement:purchase-order-detail' purchaseorder.id %}{% endblock %}
