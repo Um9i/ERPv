@@ -12,8 +12,12 @@
     <h1 class="display-4">ERPv</h1>
     <p class="lead">Professional ERP software engineered for inventory, procurement, sales and production workflows.</p>
     <div class="my-4">
+        {% if request.user.is_authenticated %}
+        {% else %}
         <a href="{% url 'login' %}" class="btn btn-lg btn-primary me-2">View Demo</a>
-        <a href="/docs/" class="btn btn-lg btn-secondary me-2">Documentation</a>
+        <a href="{% url 'django_registration_register' %}" class="btn btn-lg btn-outline-primary">Get Started</a>
+        {% endif %}
+        <a href="/docs/" class="btn btn-lg btn-secondary me-2 disabled">Documentation</a>
     </div>
 </section>
 
@@ -75,10 +79,10 @@
 <!-- How it works/installation section -->
 <section class="container py-5" id="how-it-works">
     <h2 class="mb-4 text-center">How it Works</h2>
-    <p class="text-center">Install from source or use the Docker image. Full instructions are available in the <a href="/docs/" target="_blank">documentation</a>.</p>
+    <p class="text-center">Install from source or use the Docker image. Full instructions are available in the <a class="btn btn-sm btn-outline-secondary disabled" href="/docs/" target="_blank">documentation</a></p>
     <div class="text-center mt-3">
-        <a href="/docs/" class="btn btn-primary me-2">Installation Guide</a>
-        <a href="/demo/" class="btn btn-outline-secondary">Live Demo</a>
+        <a href="/docs/" class="btn btn-primary me-2 disabled">Installation Guide</a>
+        <a href="/demo/" class="btn btn-outline-secondary disabled">Live Demo</a>
     </div>
 </section>
 
@@ -87,7 +91,7 @@
     <h2 class="mb-4 text-center">Community &amp; Contributing</h2>
     <p class="text-center">Questions, feature ideas or code fixes? Join the conversation on GitHub or send a pull request.</p>
     <div class="text-center">
-        <a href="https://github.com/your-repo/erpv" class="btn btn-lg btn-secondary" target="_blank">Contribute</a>
+        <a href="https://github.com/your-repo/erpv" class="btn btn-lg btn-secondary disabled" target="_blank">Contribute</a>
     </div>
 </section>
 

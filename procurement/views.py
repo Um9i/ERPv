@@ -258,14 +258,23 @@ class ProcurementDashboardView(TemplateView):
     template_name = "procurement/procurement_dashboard.html"
 
     def get_context_data(self, **kwargs):
-        from django.db.models import Count
+        from django.db.models import Count, Q, F
 
         context = super().get_context_data(**kwargs)
         context["total_purchase_orders"] = PurchaseOrder.objects.count()
-        # how many individual order lines have already been received
-        context["lines_received"] = PurchaseOrderLine.objects.filter(
-            complete=True
-        ).count()
+        # how many purchase orders are fully received (all lines complete)
+        context["orders_received"] = (
+            PurchaseOrder.objects
+            .annotate(
+                total_lines=Count("purchase_order_lines"),
+                complete_lines=Count(
+                    "purchase_order_lines",
+                    filter=Q(purchase_order_lines__complete=True),
+                ),
+            )
+            .filter(total_lines__gt=0, total_lines=F("complete_lines"))
+            .count()
+        )
         # pending_receiving now measures the number of *purchase orders*
         # that still have open lines rather than raw line count.  the card
         # label remains "Pending Receiving" for now, but the underlying
@@ -401,13 +410,30 @@ class PurchaseOrderListView(ListView):
     context_object_name = "purchase_orders"
 
     def get_queryset(self):
+        from django.db.models import Count, Q, F
+
         qs = PurchaseOrder.objects.all().order_by("-created_at")
+
+        filter_value = self.request.GET.get("filter", "").strip()
+        if filter_value == "received":
+            qs = (
+                qs.annotate(
+                    total_lines=Count("purchase_order_lines"),
+                    complete_lines=Count(
+                        "purchase_order_lines",
+                        filter=Q(purchase_order_lines__complete=True),
+                    ),
+                )
+                .filter(total_lines__gt=0, total_lines=F("complete_lines"))
+            )
+        elif filter_value == "pending_receiving":
+            qs = qs.filter(purchase_order_lines__complete=False).distinct()
+
         q = self.request.GET.get("q", "").strip()
         if q:
             # allow searching by supplier name or order primary key
-            from django.db.models import Q
-
             qs = qs.filter(Q(supplier__name__icontains=q) | Q(pk__icontains=q))
+
         return qs
 
     def get_context_data(self, **kwargs):

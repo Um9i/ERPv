@@ -141,6 +141,7 @@ class TestSupplier:
         from django.urls import reverse
         from django.contrib.auth.models import User
         from procurement.models import PurchaseOrder, PurchaseOrderLine, Supplier
+        from django.db.models import Count, Q, F
 
         user = User.objects.create_user(username="dashuser")
         client.force_login(user)
@@ -149,7 +150,19 @@ class TestSupplier:
         assert resp.status_code == 200
         ctx = resp.context
         assert ctx["total_purchase_orders"] == PurchaseOrder.objects.count()
-        assert ctx["lines_received"] == PurchaseOrderLine.objects.filter(complete=True).count()
+        expected_received = (
+            PurchaseOrder.objects
+            .annotate(
+                total_lines=Count("purchase_order_lines"),
+                complete_lines=Count(
+                    "purchase_order_lines",
+                    filter=Q(purchase_order_lines__complete=True),
+                ),
+            )
+            .filter(total_lines__gt=0, total_lines=F("complete_lines"))
+            .count()
+        )
+        assert ctx["orders_received"] == expected_received
         expected_open = (
             PurchaseOrder.objects
             .filter(purchase_order_lines__complete=False)
@@ -161,7 +174,7 @@ class TestSupplier:
         content = resp.content.decode()
         assert "POs" in content or "Purchase Orders" in content
         assert "Pending Receiving" in content
-        assert "Lines Received" in content
+        assert "Orders Received" in content
         assert "Suppliers" in content
 
     def test_supplier_product_ids_api(self, client, supplier, supplier_product):
@@ -444,6 +457,70 @@ class TestPurchaseOrder:
         # search by numeric ID should still work
         resp2 = client.get(url, {"q": str(purchase_order.pk)})
         assert purchase_order.order_number in resp2.content.decode()
+
+    def test_purchase_order_list_filter_received(self, client, supplier, supplier_product):
+        """Filter=received should show only fully received purchase orders."""
+        from django.urls import reverse
+        from procurement.models import PurchaseOrder, PurchaseOrderLine
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        received_po = PurchaseOrder.objects.create(supplier=supplier)
+        PurchaseOrderLine.objects.create(
+            purchase_order=received_po,
+            product=supplier_product,
+            quantity=1,
+            quantity_received=1,
+            complete=True,
+        )
+        open_po = PurchaseOrder.objects.create(supplier=supplier)
+        PurchaseOrderLine.objects.create(
+            purchase_order=open_po,
+            product=supplier_product,
+            quantity=1,
+            complete=False,
+        )
+
+        url = reverse("procurement:purchase-order-list")
+        resp = client.get(url, {"filter": "received"})
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert received_po.order_number in content
+        assert open_po.order_number not in content
+
+    def test_purchase_order_list_filter_pending_receiving(self, client, supplier, supplier_product):
+        """Filter=pending_receiving should show orders with open lines."""
+        from django.urls import reverse
+        from procurement.models import PurchaseOrder, PurchaseOrderLine
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        open_po = PurchaseOrder.objects.create(supplier=supplier)
+        PurchaseOrderLine.objects.create(
+            purchase_order=open_po,
+            product=supplier_product,
+            quantity=2,
+            complete=False,
+        )
+        received_po = PurchaseOrder.objects.create(supplier=supplier)
+        PurchaseOrderLine.objects.create(
+            purchase_order=received_po,
+            product=supplier_product,
+            quantity=1,
+            quantity_received=1,
+            complete=True,
+        )
+
+        url = reverse("procurement:purchase-order-list")
+        resp = client.get(url, {"filter": "pending_receiving"})
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert open_po.order_number in content
+        assert received_po.order_number not in content
 
     def test_purchase_order_properties(self, purchase_order, purchase_order_line):
         # Ensure computed fields work
