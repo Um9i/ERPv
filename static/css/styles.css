@@ -139,6 +139,33 @@ body {
     font-size: 3rem;
 }
 
+/* keep search icons small despite the global icon sizing above */
+.search-icon-btn i {
+    font-size: 1rem;
+}
+
+/* polished filter bars on list pages */
+.list-filter {
+    background: #fff;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.list-filter .form-select,
+.list-filter .form-control {
+    border-radius: 10px;
+}
+
+.list-filter .btn {
+    border-radius: 10px;
+}
+
+.list-filter .input-group {
+    gap: 0;
+}
+
 /* polish from design suggestions */
 .card {
   border-radius: 0;

@@ -237,7 +237,7 @@ class LowStockListView(TemplateView):
 
         context = super().get_context_data(**kwargs)
 
-        # gather low-stock inventories using the cached shortage value
+        # gather low-stock inventories; use cached shortage for the broad query
         inv_list = list(
             Inventory.objects
             .select_related("product")
@@ -254,7 +254,10 @@ class LowStockListView(TemplateView):
         supplier_items: dict[int, list[tuple[int, int]]] = {}
 
         for inv in inv_list:
-            required_qty = inv.required_cached if inv.required_cached is not None else inv.required
+            # compute live required to ensure current stock is reflected
+            required_qty = inv.required
+            if required_qty <= 0:
+                continue
             prod_amount = job_map.get(inv.product_id, 0)
             po_amount = po_map.get(inv.product_id, 0)
             needed_po = max(required_qty - po_amount, 0)

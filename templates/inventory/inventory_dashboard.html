@@ -10,8 +10,7 @@
 
 {% block dashboard_metrics %}
 <div class="row">
-    {% include "includes/metric_card.html" with icon="bi-box-seam" color="info" label="Products" value=total_products|default:'—' %}
-    {% include "includes/metric_card.html" with icon="bi-stack" color="info" label="Total Quantity" value=total_quantity|default:'—' %}
-    {% include "includes/metric_card.html" with icon="bi-currency-dollar" color="warning" label="Stock Value" value=stock_value|floatformat:2|default:'—' %}
+    {% url 'inventory:inventory-list' as product_list_url %}
+    {% include "includes/metric_card.html" with icon="bi-box-seam" color="dark" label="Products" value=total_products|default:'—' url=product_list_url %}
 </div>
 {% endblock %}

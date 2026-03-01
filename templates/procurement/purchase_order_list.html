@@ -2,10 +2,24 @@
 {% block card_icon %}bi-cart-plus{% endblock %}
 {% block card_title %}Purchase Orders{% endblock %}
 {% block card_body %}
-<form method="get" class="mb-3">
-    <div class="input-group">
-        <input type="text" name="q" class="form-control" placeholder="Search orders" value="{{ request.GET.q }}">
-        <button class="btn btn-outline-secondary" type="submit">Search</button>
+<form method="get" class="mb-3 list-filter">
+    <div class="row g-2 align-items-center">
+        <div class="col-md-4 col-lg-3 d-flex gap-2">
+            <select name="status" class="form-select">
+                <option value="" {% if not status %}selected{% endif %}>All statuses</option>
+                <option value="open" {% if status == 'open' %}selected{% endif %}>Open</option>
+                <option value="closed" {% if status == 'closed' %}selected{% endif %}>Closed</option>
+            </select>
+            <button class="btn btn-outline-secondary" type="submit">Apply</button>
+        </div>
+        <div class="col-md-6 col-lg-5 ms-auto">
+            <div class="input-group">
+                <input type="text" name="q" class="form-control" placeholder="Search orders" value="{{ request.GET.q }}">
+                <button class="btn btn-outline-secondary d-flex align-items-center justify-content-center px-3 search-icon-btn" type="submit" aria-label="Search">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+        </div>
     </div>
 </form>
 <table class="table">

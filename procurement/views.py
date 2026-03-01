@@ -286,29 +286,37 @@ class ProcurementDashboardView(TemplateView):
             .count()
         )
         context["total_suppliers"] = Supplier.objects.count()
-        # count products that have a shortage AND have a supplier (can be purchased)
-        # AND are not already fully covered by open purchase orders
+        # count products that have a live shortage, have a supplier, and are not
+        # fully covered by open purchase orders.  Use live ``required`` to avoid
+        # stale cache discrepancies with the low-stock list.
         from inventory.models import Inventory
         from procurement.models import SupplierProduct
-        from django.db.models import Sum, F, OuterRef, Subquery, IntegerField
-        from django.db.models.functions import Coalesce
-        purchasable_ids = set(
-            SupplierProduct.objects.values_list("product_id", flat=True)
-        )
-        po_subquery = (
-            PurchaseOrderLine.objects
-            .filter(product__product_id=OuterRef("product_id"), complete=False)
-            .values("product__product_id")
-            .annotate(total=Sum(F("quantity") - F("quantity_received")))
-            .values("total")
-        )
-        context["purchasable_low_stock"] = (
+        from procurement.services import pending_po_by_product
+
+        inv_list = list(
             Inventory.objects
-            .filter(required_cached__gt=0, product_id__in=purchasable_ids)
-            .annotate(pending_po=Coalesce(Subquery(po_subquery, output_field=IntegerField()), 0))
-            .filter(pending_po__lt=F("required_cached"))
-            .count()
+            .select_related("product")
+            .filter(required_cached__gt=0)
         )
+        product_ids = [inv.product_id for inv in inv_list]
+        po_map = pending_po_by_product(product_ids)
+        purchasable_ids = set(
+            SupplierProduct.objects
+            .filter(product_id__in=product_ids)
+            .values_list("product_id", flat=True)
+        )
+
+        purchasable_short = 0
+        for inv in inv_list:
+            if inv.product_id not in purchasable_ids:
+                continue
+            required_qty = inv.required
+            if required_qty <= 0:
+                continue
+            po_amount = po_map.get(inv.product_id, 0)
+            if po_amount < required_qty:
+                purchasable_short += 1
+        context["purchasable_low_stock"] = purchasable_short
         return context
 
 
@@ -415,6 +423,22 @@ class PurchaseOrderListView(ListView):
         qs = PurchaseOrder.objects.all().order_by("-created_at")
 
         filter_value = self.request.GET.get("filter", "").strip()
+        status_value = self.request.GET.get("status", "").strip().lower()
+
+        if status_value == "open":
+            qs = qs.filter(purchase_order_lines__complete=False).distinct()
+        elif status_value == "closed":
+            qs = (
+                qs.annotate(
+                    total_lines=Count("purchase_order_lines"),
+                    complete_lines=Count(
+                        "purchase_order_lines",
+                        filter=Q(purchase_order_lines__complete=True),
+                    ),
+                )
+                .filter(total_lines=F("complete_lines"))
+            )
+
         if filter_value == "received":
             qs = (
                 qs.annotate(
@@ -446,6 +470,7 @@ class PurchaseOrderListView(ListView):
         paginator = Paginator(qs, 15)
         context["purchase_orders"] = paginator.get_page(page)
         context["q"] = self.request.GET.get("q", "")
+        context["status"] = self.request.GET.get("status", "").strip().lower()
         return context
 
 
