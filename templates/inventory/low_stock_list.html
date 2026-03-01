@@ -1,6 +1,6 @@
 {% extends "includes/card.html" %}
 {% block card_icon %}bi-exclamation-triangle{% endblock %}
-{% block card_title %}Low Stock Items{% endblock %}
+{% block card_title %}{% if filter_by == 'purchasable' %}Items to Reorder{% elif filter_by == 'producible' %}Items to Produce{% else %}Low Stock Items{% endif %}{% endblock %}
 {% block card_body %}
 {% if required_items %}
 <div class="table-responsive">
@@ -44,19 +44,19 @@
       <ul class="pagination mb-0">
         {% if required_items.has_previous %}
         <li class="page-item">
-          <a class="page-link" href="?page={{ required_items.previous_page_number }}">Previous</a>
+          <a class="page-link" href="?{% if filter_by %}filter={{ filter_by }}&{% endif %}page={{ required_items.previous_page_number }}">Previous</a>
         </li>
         {% else %}
         <li class="page-item disabled"><span class="page-link">Previous</span></li>
         {% endif %}
         {% for num in required_items.paginator.page_range %}
         <li class="page-item{% if required_items.number == num %} active{% endif %}">
-          <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+          <a class="page-link" href="?{% if filter_by %}filter={{ filter_by }}&{% endif %}page={{ num }}">{{ num }}</a>
         </li>
         {% endfor %}
         {% if required_items.has_next %}
         <li class="page-item">
-          <a class="page-link" href="?page={{ required_items.next_page_number }}">Next</a>
+          <a class="page-link" href="?{% if filter_by %}filter={{ filter_by }}&{% endif %}page={{ required_items.next_page_number }}">Next</a>
         </li>
         {% else %}
         <li class="page-item disabled"><span class="page-link">Next</span></li>

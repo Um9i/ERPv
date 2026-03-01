@@ -16,4 +16,10 @@
     {% include "includes/metric_card.html" with icon="bi-wrench-adjustable-circle" color="warning" label="Active Jobs" value=active_jobs|default:'—' %}
     {% include "includes/metric_card.html" with icon="bi-check-circle" color="success" label="Completed" value=completed_jobs|default:'—' %}
 </div>
+{% if producible_low_stock %}
+<div class="row mt-3">
+    {% url 'inventory:inventory-low-stock' as low_stock_url %}
+    {% include "includes/metric_card.html" with icon="bi-exclamation-triangle" color="danger" label="Items to Produce" value=producible_low_stock url=low_stock_url|add:'?filter=producible' %}
+</div>
+{% endif %}
 {% endblock %}

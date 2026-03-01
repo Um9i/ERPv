@@ -18,5 +18,9 @@
 </div>
 <div class="row mt-3">
     {% include "includes/metric_card.html" with icon="bi-cart-plus" color="warning" label="Orders Pending Receiving" value=pending_receiving|default:'—' %}
+    {% if purchasable_low_stock %}
+    {% url 'inventory:inventory-low-stock' as low_stock_url %}
+    {% include "includes/metric_card.html" with icon="bi-exclamation-triangle" color="danger" label="Items to Reorder" value=purchasable_low_stock url=low_stock_url|add:'?filter=purchasable' %}
+    {% endif %}
 </div>
 {% endblock %}

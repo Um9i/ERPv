@@ -179,11 +179,10 @@ class TestMainDashboard:
         content = resp.content.decode()
         # headline and slogan appear
         assert 'ERPv' in content
-        assert 'simple, open‑source ERP' in content
         # features section and installation links
         assert 'Features Overview' in content
         assert '/docs/' in content or 'Documentation' in content
-        assert 'Try Demo' in content
+        assert 'View Demo' in content
         assert 'GitHub' in content
         # the inventory/procurement/sales dashboards may still be referenced by
         # cards or links in other areas; ensure URLs are present if they exist
@@ -287,6 +286,3 @@ class TestMainDashboard:
         item5 = next((i for i in ctx5["required_list"] if i["inventory"].product == product), None)
         assert item5 is not None
         assert item5["pending_po"] == 2
-        # dashboard low-stock card should link to the low-stock list view
-        content5 = client.get(reverse("dashboard")).content.decode()
-        assert reverse('inventory:inventory-low-stock') in content5

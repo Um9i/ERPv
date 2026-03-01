@@ -386,4 +386,26 @@ class ProductionDashboardView(TemplateView):
         context["total_boms"] = BillOfMaterials.objects.count()
         context["active_jobs"] = Production.objects.filter(closed=False).count()
         context["completed_jobs"] = Production.objects.filter(complete=True).count()
+        # count products that have a shortage AND have a BOM (can be produced)
+        # AND are not already fully covered by active production jobs
+        from inventory.models import Inventory
+        from django.db.models import Sum, F, OuterRef, Subquery, IntegerField
+        from django.db.models.functions import Coalesce
+        producible_ids = set(
+            BillOfMaterials.objects.values_list("product_id", flat=True)
+        )
+        job_subquery = (
+            Production.objects
+            .filter(product_id=OuterRef("product_id"), closed=False)
+            .values("product_id")
+            .annotate(total=Sum(F("quantity") - F("quantity_received")))
+            .values("total")
+        )
+        context["producible_low_stock"] = (
+            Inventory.objects
+            .filter(required_cached__gt=0, product_id__in=producible_ids)
+            .annotate(pending_job=Coalesce(Subquery(job_subquery, output_field=IntegerField()), 0))
+            .filter(pending_job__lt=F("required_cached"))
+            .count()
+        )
         return context

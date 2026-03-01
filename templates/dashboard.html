@@ -1,23 +1,5 @@
 {% extends "dashboard_base.html" %}
 
-{% block dashboard_attention %}
-{% if attention.low_stock %}
-  <div class="card border-0 shadow-sm mb-4 bg-danger">
-    <div class="card-body text-white">
-      <div class="row">
-        <div class="col">
-          <a href="{% url 'inventory:inventory-low-stock' %}" class="text-decoration-none">
-            <div class="pt-2 ps-4 bg-white shadow-sm">
-              <h6 class="text-dark"><i class="bi bi-exclamation-triangle text-danger me-3"></i> {{ attention.low_stock }} Low Stock Items</h6>
-            </div>
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
-{% endif %}
-{% endblock %}
-
 {% block dashboard_icon %}bi-speedometer2{% endblock %}
 {% block dashboard_title %}Executive Overview{% endblock %}
 

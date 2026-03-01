@@ -334,6 +334,15 @@ class LowStockListView(TemplateView):
                 "order_qty": order_qty,
                 "po_order_qty": needed_po,
             })
+        # apply filter: 'purchasable' = has a supplier and not fully covered by open POs
+        # 'producible' = has a BOM and not fully covered by active production jobs
+        filter_by = self.request.GET.get("filter", "")
+        if filter_by == "purchasable":
+            items = [e for e in items if e["supplier_id"] is not None and e["po_amount"] < e["required"]]
+        elif filter_by == "producible":
+            items = [e for e in items if e["has_bom"] and e["production_amount"] < e["required"]]
+        context["filter_by"] = filter_by
+
         # sort items by requirement descending so highest shortages appear first
         items.sort(key=lambda ent: ent["required"], reverse=True)
         # generate purchase-order URLs for each entry that has a supplier

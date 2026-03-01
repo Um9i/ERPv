@@ -277,6 +277,29 @@ class ProcurementDashboardView(TemplateView):
             .count()
         )
         context["total_suppliers"] = Supplier.objects.count()
+        # count products that have a shortage AND have a supplier (can be purchased)
+        # AND are not already fully covered by open purchase orders
+        from inventory.models import Inventory
+        from procurement.models import SupplierProduct
+        from django.db.models import Sum, F, OuterRef, Subquery, IntegerField
+        from django.db.models.functions import Coalesce
+        purchasable_ids = set(
+            SupplierProduct.objects.values_list("product_id", flat=True)
+        )
+        po_subquery = (
+            PurchaseOrderLine.objects
+            .filter(product__product_id=OuterRef("product_id"), complete=False)
+            .values("product__product_id")
+            .annotate(total=Sum(F("quantity") - F("quantity_received")))
+            .values("total")
+        )
+        context["purchasable_low_stock"] = (
+            Inventory.objects
+            .filter(required_cached__gt=0, product_id__in=purchasable_ids)
+            .annotate(pending_po=Coalesce(Subquery(po_subquery, output_field=IntegerField()), 0))
+            .filter(pending_po__lt=F("required_cached"))
+            .count()
+        )
         return context
 
 
