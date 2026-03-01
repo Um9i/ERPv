@@ -3,10 +3,10 @@
 {% block dashboard_title %}Finance Overview{% endblock %}
 
 {% block dashboard_links %}
-<li class="list-group-item px-0 border-0"><a href="{% url 'finance:sales-ledger-archive' %}">Sales ledger</a></li>
-<li class="list-group-item px-0 border-0"><a href="{% url 'finance:purchase-ledger-archive' %}">Purchase ledger</a></li>
-<li class="list-group-item px-0 border-0"><a href="{% url 'finance:customer-invoices-month' year=now|date:'Y' month=now|date:'m' %}">Customer invoices (this month)</a></li>
-<li class="list-group-item px-0 border-0"><a href="{% url 'finance:supplier-bills-month' year=now|date:'Y' month=now|date:'m' %}">Supplier bills (this month)</a></li>
+<a class="list-group-item list-group-item-action" href="{% url 'finance:sales-ledger-archive' %}">Sales ledger</a>
+<a class="list-group-item list-group-item-action" href="{% url 'finance:purchase-ledger-archive' %}">Purchase ledger</a>
+<a class="list-group-item list-group-item-action" href="{% url 'finance:customer-invoices-month' year=now|date:'Y' month=now|date:'m' %}">Customer invoices (this month)</a>
+<a class="list-group-item list-group-item-action" href="{% url 'finance:supplier-bills-month' year=now|date:'Y' month=now|date:'m' %}">Supplier bills (this month)</a>
 {% endblock %}
 
 {% block dashboard_metrics %}

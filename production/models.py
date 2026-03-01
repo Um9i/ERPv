@@ -157,6 +157,8 @@ class Production(models.Model):
         if should_validate:
             self.full_clean()
 
+        affected_product_ids = set()
+
         # handle allocation
         if self.bom() is not None and self.bom_allocated == False:
             for item in self.bom():
@@ -190,6 +192,7 @@ class Production(models.Model):
             prod_obj = Inventory.objects.select_for_update().get(product=self.product)
             prod_obj.quantity = prod_obj.quantity + delta
             prod_obj.save()
+            affected_product_ids.add(self.product_id)
 
             if self.bom() is not None:
                 for item in self.bom():
@@ -208,6 +211,7 @@ class Production(models.Model):
                         action="Production",
                         transaction_id=self.pk,
                     )
+                    affected_product_ids.add(item.product_id)
                 InventoryLedger.objects.create(
                     product=self.product,
                     quantity=delta,
@@ -220,3 +224,8 @@ class Production(models.Model):
                 self.complete = True
 
         super().save(*args, **kwargs)
+
+        if affected_product_ids:
+            from inventory.services import refresh_required_cache_for_products
+
+            refresh_required_cache_for_products(affected_product_ids)

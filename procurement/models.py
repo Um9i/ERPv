@@ -257,6 +257,10 @@ class PurchaseOrderLine(models.Model):
                 value=self.value or 0,
                 transaction_id=self.purchase_order.pk,
             )
+            # keep inventory shortage cache in sync when stock increases
+            from inventory.services import refresh_required_cache_for_products
+
+            refresh_required_cache_for_products([self.product.product_id])
             self.closed = True
         super().save(*args, **kwargs)
 

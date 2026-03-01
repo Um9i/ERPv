@@ -229,109 +229,53 @@ class LowStockListView(TemplateView):
     template_name = "inventory/low_stock_list.html"
 
     def get_context_data(self, **kwargs):
-        # collect all inventories where a shortage is present
-        from procurement.models import PurchaseOrderLine
-        from production.models import Production
+        from django.core.paginator import Paginator
+        from django.urls import reverse
+
+        from procurement.services import best_supplier_products, pending_po_by_product
+        from production.services import bom_product_ids, pending_jobs_by_product
 
         context = super().get_context_data(**kwargs)
+
+        # gather low-stock inventories using the cached shortage value
+        inv_list = list(
+            Inventory.objects
+            .select_related("product")
+            .filter(required_cached__gt=0)
+        )
+        product_ids = [inv.product_id for inv in inv_list]
+
+        po_map = pending_po_by_product(product_ids)
+        job_map = pending_jobs_by_product(product_ids)
+        bom_ids = bom_product_ids(product_ids)
+        supplier_map = best_supplier_products(product_ids)
+
         items = []
-        from django.db.models import Sum, F
-
-        from production.models import BillOfMaterials
-
-        # mapping suppliers to the items we could order from them
         supplier_items: dict[int, list[tuple[int, int]]] = {}
 
-        # compute a tie-breaker ranking: total cost of all products a supplier offers
-        from procurement.models import SupplierProduct
-        total_cost_by_supplier = (
-            SupplierProduct.objects
-            .values('supplier')
-            .annotate(total=Sum('cost'))
-            .order_by('supplier')
-        )
-        supplier_total = {entry['supplier']: entry['total'] for entry in total_cost_by_supplier}
-
-        # retrieve all inventories once and build helper maps to avoid N+1
-        inv_list = list(
-            Inventory.objects.select_related("product")
-            .prefetch_related("product__production_allocated")
-            .all()
-        )
-        prod_ids = [inv.product_id for inv in inv_list]
-
-        # supplier-products grouped by product id, sorted by cost
-        sp_qs = SupplierProduct.objects.filter(product_id__in=prod_ids).order_by("product_id","cost")
-        sp_map: dict[int, list[SupplierProduct]] = {}
-        for sp in sp_qs:
-            sp_map.setdefault(sp.product_id, []).append(sp)
-
-        # which products have BOMs
-        bom_ids = set(
-            BillOfMaterials.objects.filter(product_id__in=prod_ids)
-            .values_list('product_id', flat=True)
-        )
-
-        # aggregate pending PO and production quantities per product
-        po_vals = (
-            PurchaseOrderLine.objects.filter(product__product_id__in=prod_ids, complete=False)
-            .annotate(rem=F('quantity') - F('quantity_received'))
-            .values('product__product_id')
-            .annotate(total=Sum('rem'))
-        )
-        po_map = {v['product__product_id']: v['total'] or 0 for v in po_vals}
-
-        job_vals = (
-            Production.objects.filter(product_id__in=prod_ids, closed=False)
-            .annotate(rem=F('quantity') - F('quantity_received'))
-            .values('product_id')
-            .annotate(total=Sum('rem'))
-        )
-        # values() returns dicts with a "product_id" key, not "product"
-        job_map = {v['product_id']: v['total'] or 0 for v in job_vals}
-
-        # now build items list using the precomputed maps
-        stale_resets = []
         for inv in inv_list:
-            req_amount = inv.required
-            if req_amount <= 0:
-                # reset stale cache so dashboard counts stay accurate
-                if inv.required_cached != 0:
-                    stale_resets.append(inv.pk)
-                continue
-            # keep cache in sync with live value
-            if inv.required_cached != req_amount:
-                inv.required_cached = req_amount
-                inv.save(update_fields=["required_cached"])
-
+            required_qty = inv.required_cached if inv.required_cached is not None else inv.required
             prod_amount = job_map.get(inv.product_id, 0)
             po_amount = po_map.get(inv.product_id, 0)
-            needed_po = max(inv.required - po_amount, 0)
+            needed_po = max(required_qty - po_amount, 0)
 
-            has_bom = inv.product_id in bom_ids
-            can_start = has_bom and prod_amount < inv.required
-
-            supplier_id = None
-            supplierproduct_id = None
-            candidates = sp_map.get(inv.product_id, [])
-            if candidates:
-                lowest_cost = candidates[0].cost
-                ties = [sp for sp in candidates if sp.cost == lowest_cost]
-                if len(ties) > 1:
-                    ties.sort(key=lambda sp: supplier_total.get(sp.supplier_id, 0))
-                sp = ties[0]
-                supplier_id = sp.supplier_id
-                supplierproduct_id = sp.pk
+            supplierproduct = supplier_map.get(inv.product_id)
+            supplier_id = supplierproduct.supplier_id if supplierproduct else None
+            supplierproduct_id = supplierproduct.pk if supplierproduct else None
+            if supplier_id and needed_po > 0:
                 supplier_items.setdefault(supplier_id, []).append(
                     (supplierproduct_id, needed_po)
                 )
 
+            has_bom = inv.product_id in bom_ids
+            can_start = has_bom and prod_amount < required_qty
+
             can_order = supplier_id is not None and needed_po > 0
-            order_qty = max(inv.required - prod_amount, 0)
+            order_qty = max(required_qty - prod_amount, 0)
 
             items.append({
                 "product": inv.product,
-                "required": inv.required,
+                "required": required_qty,
                 "quantity": inv.quantity,
                 "production_amount": prod_amount,
                 "po_amount": po_amount,
@@ -343,9 +287,6 @@ class LowStockListView(TemplateView):
                 "order_qty": order_qty,
                 "po_order_qty": needed_po,
             })
-        # bulk-reset stale required_cached values
-        if stale_resets:
-            Inventory.objects.filter(pk__in=stale_resets).update(required_cached=0)
 
         # apply filter: 'purchasable' = has a supplier and not fully covered by open POs
         # 'producible' = has a BOM and not fully covered by active production jobs
@@ -359,7 +300,6 @@ class LowStockListView(TemplateView):
         # sort items by requirement descending so highest shortages appear first
         items.sort(key=lambda ent: ent["required"], reverse=True)
         # generate purchase-order URLs for each entry that has a supplier
-        from django.urls import reverse
         for entry in items:
             sid = entry.get("supplier_id")
             if sid is not None and entry.get("can_order", False):
@@ -370,7 +310,6 @@ class LowStockListView(TemplateView):
                 entry["po_url"] = None
 
         # paginate the results
-        from django.core.paginator import Paginator
         page = self.request.GET.get("page")
         paginator = Paginator(items, 20)
         context["required_items"] = paginator.get_page(page)
