@@ -133,6 +133,22 @@ class Production(models.Model):
                 return False
         return True
 
+    @property
+    def materials_available_for_remaining(self):
+        """Return ``True`` if inventory can cover the remaining job quantity."""
+        if self.bom() is None:
+            return False
+        from inventory.models import Inventory
+
+        for item in self.bom():
+            try:
+                inv = Inventory.objects.get(product=item.product)
+            except Inventory.DoesNotExist:
+                return False
+            if inv.quantity < item.quantity * self.remaining:
+                return False
+        return True
+
     def clean(self):
         if self.bom() == None:
             raise ValidationError(_("Product has no Bill of Materials."))
@@ -148,10 +164,10 @@ class Production(models.Model):
                     )
 
     @transaction.atomic
-    def save(self, *args, **kwargs):
+    def save(self, *args, skip_allocation=False, **kwargs):
         # run validation when allocating or if any quantity_received change
         should_validate = (
-            (self.bom() is not None and self.bom_allocated == False)
+            (self.bom() is not None and self.bom_allocated == False and not skip_allocation)
             or (self.quantity_received > 0 and self.closed == False)
         )
         if should_validate:
@@ -160,7 +176,7 @@ class Production(models.Model):
         affected_product_ids = set()
 
         # handle allocation
-        if self.bom() is not None and self.bom_allocated == False:
+        if self.bom() is not None and self.bom_allocated == False and not skip_allocation:
             for item in self.bom():
                 # accumulate across jobs rather than overwriting existing
                 product = ProductionAllocated.objects.select_for_update().get(
@@ -224,6 +240,37 @@ class Production(models.Model):
                 self.complete = True
 
         super().save(*args, **kwargs)
+
+        if affected_product_ids:
+            from inventory.services import refresh_required_cache_for_products
+
+            refresh_required_cache_for_products(affected_product_ids)
+
+    @transaction.atomic
+    def cancel(self):
+        """Cancel a job and release any remaining allocated materials."""
+        if self.closed:
+            return
+
+        outstanding_qty = max((self.bom_allocated_amount or 0) - self.quantity_received, 0)
+        affected_product_ids = {self.product_id}
+
+        if self.bom() is not None and outstanding_qty > 0:
+            for item in self.bom():
+                qty_change = item.quantity * outstanding_qty
+                alloc = ProductionAllocated.objects.select_for_update().get(product=item.product)
+                alloc.quantity = max((alloc.quantity or 0) - qty_change, 0)
+                alloc.save(update_fields=["quantity"])
+                affected_product_ids.add(item.product_id)
+
+        self.bom_allocated = False
+        self.bom_allocated_amount = None
+        self.closed = True
+        self.complete = False
+        self.save(
+            skip_allocation=True,
+            update_fields=["bom_allocated", "bom_allocated_amount", "closed", "complete", "updated_at"],
+        )
 
         if affected_product_ids:
             from inventory.services import refresh_required_cache_for_products

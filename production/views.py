@@ -330,6 +330,9 @@ class ProductionDetailView(DetailView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+        if "cancel_production" in request.POST:
+            self.object.cancel()
+            return redirect(reverse_lazy("production:production-list"))
         if "complete_production" in request.POST:
             self.object.complete = True
             self.object.save()

@@ -31,7 +31,17 @@
     </tbody>
 </table>
 {% if production.status != 'Closed' %}
-<a href="{% url 'production:production-receive' production.id %}" class="btn btn-success">Complete Job</a>
+    {% if production.materials_available_for_remaining %}
+    <a href="{% url 'production:production-receive' production.id %}" class="btn btn-success">Complete Job</a>
+    {% else %}
+    <button class="btn btn-success" disabled title="Insufficient materials to complete remaining quantity">Complete Job</button>
+    {% endif %}
+    <form method="post" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" name="cancel_production" value="1" class="btn btn-outline-danger" onclick="return confirm('Cancel this job and release its allocations?');">
+            Cancel Job
+        </button>
+    </form>
 {% endif %}
 {% else %}
 <p>No BOM defined for product.</p>
