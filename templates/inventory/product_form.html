@@ -3,10 +3,19 @@
 {% block card_icon %}bi-box-seam{% endblock %}
 {% block card_title %}{% if form.instance.pk %}Update Product{% else %}New Product{% endif %}{% endblock %}
 {% block card_body %}
-{% if form.instance.pk %}
-<h1>Update Product</h1>
-{% else %}
-<h1>Create Product</h1>
+{% if form.errors %}
+<div class="alert alert-danger">
+    <ul class="mb-0">
+    {% for field in form %}
+        {% for error in field.errors %}
+            <li>{{ error }}</li>
+        {% endfor %}
+    {% endfor %}
+    {% for error in form.non_field_errors %}
+        <li>{{ error }}</li>
+    {% endfor %}
+    </ul>
+</div>
 {% endif %}
 <form method="post">
     {% csrf_token %}

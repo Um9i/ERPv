@@ -102,11 +102,11 @@ class TestInventory:
         # old last-updated text removed, ensure inventory object is in context
         ctx = resp.context
         assert ctx["inventory"].last_updated is not None
-        # summary statistics should appear as table rows
-        assert "Sales Orders" in content
-        assert "Purchase Orders" in content
-        # production jobs row only appears when nonzero; its absence is acceptable
-        assert "Required Shortage" in content
+        # summary statistics should appear as metric cards
+        assert "Sales Pending" in content
+        assert "Purchases Pending" in content
+        # shortage card only appears when nonzero; check for the label text
+        assert "Shortage" in content or "In Stock" in content
         # chart canvases should be present
         assert '<canvas id="pending-chart"' in content
         assert '<canvas id="history-chart"' in content

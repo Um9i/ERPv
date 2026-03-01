@@ -164,7 +164,7 @@ class TestCustomerProduct:
         url = reverse("sales:customer-product-create")
         resp = client.get(url)
         assert resp.status_code == 200
-        assert "<h1>New Customer Product</h1>" in resp.content.decode()
+        assert "New Customer Product" in resp.content.decode()
 
     def test_customer_product_update_title(self, client, customer_product):
         from django.urls import reverse
@@ -176,7 +176,7 @@ class TestCustomerProduct:
         url = reverse("sales:customer-product-update", args=[customer_product.pk])
         resp = client.get(url)
         assert resp.status_code == 200
-        assert "<h1>Edit Customer Product</h1>" in resp.content.decode()
+        assert "Edit Customer Product" in resp.content.decode()
 
     def test_on_sales_order(self, customer_product, sales_order_line):
         assert customer_product.on_sales_order() == 5
@@ -412,10 +412,12 @@ class TestSalesOrder:
         assert not SalesOrder.objects.filter(customer=customer).exists()
 
     def test_sales_order_form_js_syntax(self, client, customer):
-        """Validate JS on the sales order create page."""
+        """Validate the order_form.js static file is referenced and compiles."""
         from django.urls import reverse
         from django.contrib.auth.models import User
-        import re, subprocess, tempfile, os
+        import subprocess
+        from pathlib import Path
+        from django.conf import settings
 
         user = User.objects.create_user(username="js3")
         client.force_login(user)
@@ -423,15 +425,10 @@ class TestSalesOrder:
         resp = client.get(url)
         assert resp.status_code == 200
         html = resp.content.decode()
-        match = re.search(r"<script>([\s\S]*?)</script>", html)
-        assert match
-        script = match.group(1)
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as tmp:
-            tmp.write(script)
-            nm = tmp.name
-        result = subprocess.run(["node", "--check", nm], capture_output=True, text=True)
+        assert "order_form.js" in html
+        js_path = Path(settings.BASE_DIR) / "static" / "js" / "order_form.js"
+        result = subprocess.run(["node", "--check", str(js_path)], capture_output=True, text=True)
         assert result.returncode == 0, f"JS syntax error: {result.stderr}"
-        os.unlink(nm)
 
 @pytest.mark.django_db
 class TestSalesOrderLine:

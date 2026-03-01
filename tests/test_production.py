@@ -259,10 +259,12 @@ class TestProduction:
             assert updated.quantity == itm.quantity + 1
 
     def test_bom_form_js_syntax(self, client, product):
-        """Inline script in BOM create page should be valid JS syntax."""
+        """Static order_form.js used by BOM page should be valid JS syntax."""
         from django.urls import reverse
         from django.contrib.auth.models import User
-        import re, subprocess, tempfile
+        import subprocess
+        from pathlib import Path
+        from django.conf import settings
 
         user = User.objects.create_user(username="jsuser")
         client.force_login(user)
@@ -270,19 +272,10 @@ class TestProduction:
         resp = client.get(url)
         assert resp.status_code == 200
         html = resp.content.decode()
-        # extract script content between <script> tags
-        match = re.search(r"<script>([\s\S]*?)</script>", html)
-        assert match, "No script found on BOM form"
-        script = match.group(1)
-        # write to temp file and run node --check
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as tmp:
-            tmp.write(script)
-            nm = tmp.name
-        result = subprocess.run(["node", "--check", nm], capture_output=True, text=True)
+        assert "order_form.js" in html, "order_form.js not referenced on BOM form"
+        js_path = Path(settings.BASE_DIR) / "static" / "js" / "order_form.js"
+        result = subprocess.run(["node", "--check", str(js_path)], capture_output=True, text=True)
         assert result.returncode == 0, f"JS syntax error: {result.stderr}"
-        # cleanup
-        import os
-        os.unlink(nm)
 
     def test_receiving_views(self, client, product, bom, bom_item):
         """Open jobs appear in the completion list and can be completed, even partially."""

@@ -161,6 +161,19 @@ class InventoryDetailView(DetailView):
         context["production_pending"] = prod_qs.aggregate(total=Sum(F("quantity") - F("quantity_received")))["total"] or 0
         # shortage required field
         context["required_qty"] = inv.required
+        # bundle all chart data for json_script (consumed by static JS)
+        context["chart_data"] = {
+            "sales_pending": context["sales_pending"],
+            "purchase_pending": context["purchase_pending"],
+            "production_pending": context["production_pending"],
+            "required_qty": context["required_qty"],
+            "history_dates": context["history_dates"],
+            "history_qty": context["history_qty"],
+            "monthly_dates": context["monthly_dates"],
+            "monthly_sales": context["monthly_sales"],
+            "monthly_purchases": context["monthly_purchases"],
+            "monthly_production": context["monthly_production"],
+        }
         return context
 
 

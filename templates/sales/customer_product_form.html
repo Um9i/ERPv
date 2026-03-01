@@ -1,9 +1,11 @@
-{% extends "base.html" %}
+{% extends "includes/card.html" %}
 {% load crispy_forms_tags %}
-{% block content %}
+{% block card_icon %}bi-box{% endblock %}
+{% block card_title %}{% if form.instance.pk %}Edit Customer Product{% else %}New Customer Product{% endif %}{% endblock %}
+{% block card_body %}
 {% if form.errors %}
 <div class="alert alert-danger">
-    <ul>
+    <ul class="mb-0">
     {% for field in form %}
         {% for error in field.errors %}
             <li>{{ error }}</li>
@@ -14,11 +16,6 @@
     {% endfor %}
     </ul>
 </div>
-{% endif %}
-{% if form.instance.pk %}
-<h1>Edit Customer Product</h1>
-{% else %}
-<h1>New Customer Product</h1>
 {% endif %}
 <form method="post">
     {% csrf_token %}

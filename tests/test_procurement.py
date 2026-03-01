@@ -220,10 +220,10 @@ class TestSupplierProduct:
         url = reverse("procurement:supplier-product-create")
         resp = client.get(url)
         assert resp.status_code == 200
-        assert "<h1>New Supplier Product</h1>" in resp.content.decode()
+        assert "New Supplier Product" in resp.content.decode()
 
     def test_supplier_product_update_title(self, client, supplier_product):
-        """Editing an existing product uses the "Edit" heading."""
+        """Editing an existing product uses the \"Edit\" heading."""
         from django.urls import reverse
         from django.contrib.auth.models import User
 
@@ -233,7 +233,7 @@ class TestSupplierProduct:
         url = reverse("procurement:supplier-product-update", args=[supplier_product.pk])
         resp = client.get(url)
         assert resp.status_code == 200
-        assert "<h1>Edit Supplier Product</h1>" in resp.content.decode()
+        assert "Edit Supplier Product" in resp.content.decode()
 
     def test_on_purchase_order(self, supplier_product, purchase_order_line):
         assert supplier_product.on_purchase_order() == 5
@@ -666,10 +666,12 @@ class TestPurchaseOrder:
         assert resp2.url == reverse("procurement:supplier-detail", args=[supplier.pk])
 
     def test_purchase_order_form_js_syntax(self, client, supplier):
-        """Ensure purchase order page JS compiles."""
+        """Ensure the order_form.js static file compiles and is referenced."""
         from django.urls import reverse
         from django.contrib.auth.models import User
-        import re, subprocess, tempfile, os
+        import subprocess
+        from pathlib import Path
+        from django.conf import settings
 
         user = User.objects.create_user(username="js2")
         client.force_login(user)
@@ -677,15 +679,10 @@ class TestPurchaseOrder:
         resp = client.get(url)
         assert resp.status_code == 200
         html = resp.content.decode()
-        match = re.search(r"<script>([\s\S]*?)</script>", html)
-        assert match
-        script = match.group(1)
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as tmp:
-            tmp.write(script)
-            nm = tmp.name
-        result = subprocess.run(["node", "--check", nm], capture_output=True, text=True)
+        assert "order_form.js" in html
+        js_path = Path(settings.BASE_DIR) / "static" / "js" / "order_form.js"
+        result = subprocess.run(["node", "--check", str(js_path)], capture_output=True, text=True)
         assert result.returncode == 0, f"JS syntax error: {result.stderr}"
-        os.unlink(nm)
 
     def test_create_view_auto_supplier_and_lines(self, client, supplier, supplier_product):
         """The create view should prefill supplier from the query string and

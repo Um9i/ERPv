@@ -62,10 +62,6 @@ class BOMCreateView(CreateView):
             can_delete=True,
         )
         if self.request.POST:
-            # when rendering after a POST we want the formset bound to the
-            # parent instance (even if unsaved) so that child validation can
-            # access the `product` attribute.  kwargs may contain `form`
-            # when called via form_invalid.
             parent = None
             if "form" in kwargs:
                 parent = kwargs["form"].instance
@@ -74,6 +70,10 @@ class BOMCreateView(CreateView):
             context["lines_formset"] = LineFormset(self.request.POST, instance=parent)
         else:
             context["lines_formset"] = LineFormset()
+        # hide DELETE checkboxes — JS remove buttons handle this
+        for f in context["lines_formset"]:
+            if "DELETE" in f.fields:
+                f.fields["DELETE"].widget = forms.HiddenInput()
         return context
 
     def form_valid(self, form):
@@ -117,6 +117,10 @@ class BOMUpdateView(UpdateView):
             context["lines_formset"] = LineFormset(self.request.POST, instance=self.object)
         else:
             context["lines_formset"] = LineFormset(instance=self.object)
+        # hide DELETE checkboxes — JS remove buttons handle this
+        for f in context["lines_formset"]:
+            if "DELETE" in f.fields:
+                f.fields["DELETE"].widget = forms.HiddenInput()
         return context
 
     def form_valid(self, form):

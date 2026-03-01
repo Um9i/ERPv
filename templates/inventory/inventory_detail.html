@@ -1,124 +1,138 @@
 {% extends "includes/card.html" %}
+{% load static %}
 {% block card_icon %}bi-box-seam{% endblock %}
 {% block card_title %}{{ inventory.product.name }}{% endblock %}
 {% block card_body %}
-<div class="mb-2">
-    <a class="btn btn-sm btn-secondary" href="{% url 'inventory:product-update' inventory.product.pk %}">Edit Name</a>
-    <a class="btn btn-sm btn-warning ms-2" href="{% url 'inventory:inventory-adjust' inventory.pk %}">Adjust Quantity</a>
+
+{# ── Key metrics ── #}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-boxes"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-value">{{ inventory.quantity }}</span>
+                <span class="metric-card-label">In Stock</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-cart-check"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-value">{{ sales_pending }}</span>
+                <span class="metric-card-label">Sales Pending</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--dark"><i class="bi bi-truck"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-value">{{ purchase_pending }}</span>
+                <span class="metric-card-label">Purchases Pending</span>
+            </div>
+        </div>
+    </div>
+    {% if production_pending > 0 %}
+    <div class="col-6 col-md-3">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--warning"><i class="bi bi-gear"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-value">{{ production_pending }}</span>
+                <span class="metric-card-label">In Production</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if required_qty > 0 %}
+    <div class="col-6 col-md-3">
+        <div class="metric-card" style="border-color: var(--color-danger);">
+            <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-exclamation-triangle"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-value" style="color: var(--color-danger);">{{ required_qty }}</span>
+                <span class="metric-card-label">Shortage</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
-<div class="row">
-    <div class="col">
-        <table class="table table-bordered mt-4">
-            <tr>
-                <th>Quantity</th>
-                <td>{{ inventory.quantity }}</td>
-            </tr>
-            <tr><th>Sales Orders</th><td>{{ sales_pending }}</td></tr>
-            <tr><th>Purchase Orders</th><td>{{ purchase_pending }}</td></tr>
-            {% if production_pending > 0 %}
-            <tr><th>Production Jobs</th><td>{{ production_pending }}</td></tr>
-        {% endif %}
-            <tr><th>Required Shortage</th><td>{{ required_qty }}</td></tr>
-        </table>
+{# ── Action buttons ── #}
+<div class="detail-actions mb-2">
+    <a class="btn btn-outline-primary" href="{% url 'inventory:product-update' inventory.product.pk %}"><i class="bi bi-pencil me-1"></i>Edit Product</a>
+    <a class="btn btn-warning" href="{% url 'inventory:inventory-adjust' inventory.pk %}"><i class="bi bi-sliders me-1"></i>Adjust Quantity</a>
+</div>
+
+{# ── Demand overview chart ── #}
+<div class="detail-section">
+    <div class="detail-section-header">
+        <h2 class="detail-section-title">Demand Overview</h2>
     </div>
-    <div class="col">
-        <div class="mb-4">
-            <canvas id="pending-chart" height="60"></canvas>
+    <div class="row g-4">
+        <div class="col-md-5">
+            <div style="max-width:320px; margin:0 auto;">
+                <canvas id="pending-chart"></canvas>
+            </div>
+        </div>
+        <div class="col-md-7">
+            <canvas id="history-chart" height="200"></canvas>
         </div>
     </div>
 </div>
 
-<div class="mb-4">
-    <canvas id="history-chart" height="60"></canvas>
+{# ── Monthly activity chart ── #}
+<div class="detail-section">
+    <div class="detail-section-header">
+        <h2 class="detail-section-title">Monthly Activity</h2>
+    </div>
+    <canvas id="monthly-chart" height="120"></canvas>
 </div>
 
-<div class="mb-4">
-    <canvas id="monthly-chart" height="60"></canvas>
+{# ── Inventory Ledger ── #}
+<div class="detail-section">
+    <div class="detail-section-header">
+        <h2 class="detail-section-title">Inventory Ledger</h2>
+    </div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Quantity</th>
+                <th>Action</th>
+                <th>Transaction</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in ledger %}
+            <tr>
+                <td>{{ entry.date }}</td>
+                <td>
+                    {% if entry.quantity > 0 %}
+                        <span style="color: var(--color-success); font-weight:600;">+{{ entry.quantity }}</span>
+                    {% else %}
+                        <span style="color: var(--color-danger); font-weight:600;">{{ entry.quantity }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ entry.action }}</td>
+                <td>{{ entry.transaction_id }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="text-muted">No ledger entries.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% include "includes/pagination.html" with page_obj=ledger %}
 </div>
-
-<h3>Inventory Ledger</h3>
-{% if ledger %}
-<table class="table table-striped">
-    <thead><tr><th>Date</th><th>Quantity</th><th>Action</th><th>Txn</th></tr></thead>
-    <tbody>
-    {% for entry in ledger %}
-    <tr>
-        <td>{{ entry.date }}</td>
-        <td>{{ entry.quantity }}</td>
-        <td>{{ entry.action }}</td>
-        <td>{{ entry.transaction_id }}</td>
-    </tr>
-    {% endfor %}
-    </tbody>
-</table>
-{% include "includes/pagination.html" with page_obj=ledger %}
-{% else %}
-<p>No ledger entries.</p>
-{% endif %}
 
 {% if user.is_authenticated %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-const ctx2 = document.getElementById('pending-chart').getContext('2d');
-new Chart(ctx2, {
-    type: 'bar',
-    data: {
-        labels: [
-            'Sales',
-            'Purchases',
-            {% if production_pending > 0 %}'Production',{% endif %}
-            'Required'
-        ],
-        datasets: [{
-            label: 'Pending Qty',
-            backgroundColor: [
-                '#1cc88a',
-                '#36b9cc',
-                {% if production_pending > 0 %}'#f6c23e',{% endif %}
-                '#e74a3b'
-            ],
-            data: [
-                {{ sales_pending }},
-                {{ purchase_pending }},
-                {% if production_pending > 0 %}{{ production_pending }},{% endif %}
-                {{ required_qty }}
-            ]
-        }]
-    },
-    options: { responsive: true, scales: { y: { beginAtZero: true } } }
-});
+{{ chart_data|json_script:"chart-data" }}
+{% endif %}
+{% endblock %}
 
-// history time series chart
-const ctx3 = document.getElementById('history-chart').getContext('2d');
-new Chart(ctx3, {
-    type: 'line',
-    data: {
-        labels: {{ history_dates|safe }},
-        datasets: [{
-            label: 'Quantity',
-            data: {{ history_qty|safe }},
-            borderColor: '#4e73df',
-            fill: false
-        }]
-    },
-    options: { responsive: true, scales: { y: { beginAtZero: true } } }
-});
-
-// monthly activity bar chart
-const ctx4 = document.getElementById('monthly-chart').getContext('2d');
-new Chart(ctx4, {
-    type: 'bar',
-    data: {
-        labels: {{ monthly_dates|safe }},
-        datasets: [
-            { label: 'Sales', backgroundColor: '#1cc88a', data: {{ monthly_sales|safe }} },
-            { label: 'Purchases', backgroundColor: '#36b9cc', data: {{ monthly_purchases|safe }} },
-            { label: 'Production', backgroundColor: '#f6c23e', data: {{ monthly_production|safe }} }
-        ]
-    },
-    options: { responsive: true, scales: { y: { beginAtZero: true } } }
-});
-</script>
+{% block extra_js %}
+{% if user.is_authenticated %}
+<script src="{% static 'js/inventory_detail.js' %}"></script>
 {% endif %}
 {% endblock %}

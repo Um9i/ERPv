@@ -2,123 +2,175 @@
 {% block card_icon %}bi-people-fill{% endblock %}
 {% block card_title %}{{ supplier.name }}{% endblock %}
 {% block card_body %}
-<div class="mb-5">
-    
-    <p>Phone: {{ supplier.phone }}</p>
-    <p>Email: {{ supplier.email }}</p>
-    {% if supplier.full_address %}<p>Address: {{ supplier.full_address }}</p>{% endif %}
-    <p>
-    <a href="{% url 'procurement:supplier-update' supplier.id %}" class="btn btn-secondary">Edit Supplier</a>
-    <a href="{% url 'procurement:supplier-delete' supplier.id %}" class="btn btn-danger">Delete Supplier</a>
-    </p>
+<div class="detail-info">
+    <div class="detail-info-item">
+        <span class="detail-info-label">Phone</span>
+        <span class="detail-info-value">{{ supplier.phone|default:"—" }}</span>
+    </div>
+    <div class="detail-info-item">
+        <span class="detail-info-label">Email</span>
+        <span class="detail-info-value">{{ supplier.email|default:"—" }}</span>
+    </div>
+    {% if supplier.website %}
+    <div class="detail-info-item">
+        <span class="detail-info-label">Website</span>
+        <span class="detail-info-value"><a href="{{ supplier.website }}" target="_blank" rel="noopener">{{ supplier.website }}</a></span>
+    </div>
+    {% endif %}
 </div>
-<h2>Contacts</h2>
-<p><a href="{% url 'procurement:supplier-contact-create' %}?supplier={{ supplier.id }}" class="btn btn-success">Add Contact</a></p>
-{% if supplier_contacts %}
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Phone</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for contact in supplier_contacts %}
-        <tr>
-            <td>{{ contact.name }}</td>
-            <td>{{ contact.email }}</td>
-            <td>{{ contact.phone }}</td>
-            <td>
-                <a href="{% url 'procurement:supplier-contact-update' contact.id %}" class="btn btn-sm btn-secondary">Edit</a>
-                <a href="{% url 'procurement:supplier-contact-delete' contact.id %}" class="btn btn-sm btn-danger">Delete</a>
-            </td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="3">No contacts found.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% include "includes/pagination.html" with page_obj=supplier_contacts page_param="ct_page" %}
+{% if supplier.address_line_1 or supplier.city or supplier.country %}
+<div class="detail-info" style="margin-top:-0.5rem">
+    {% if supplier.address_line_1 %}
+    <div class="detail-info-item">
+        <span class="detail-info-label">Address Line 1</span>
+        <span class="detail-info-value">{{ supplier.address_line_1 }}</span>
+    </div>
+    {% endif %}
+    {% if supplier.address_line_2 %}
+    <div class="detail-info-item">
+        <span class="detail-info-label">Address Line 2</span>
+        <span class="detail-info-value">{{ supplier.address_line_2 }}</span>
+    </div>
+    {% endif %}
+    {% if supplier.city %}
+    <div class="detail-info-item">
+        <span class="detail-info-label">City</span>
+        <span class="detail-info-value">{{ supplier.city }}</span>
+    </div>
+    {% endif %}
+    {% if supplier.state %}
+    <div class="detail-info-item">
+        <span class="detail-info-label">State / Region</span>
+        <span class="detail-info-value">{{ supplier.state }}</span>
+    </div>
+    {% endif %}
+    {% if supplier.postal_code %}
+    <div class="detail-info-item">
+        <span class="detail-info-label">Postal Code</span>
+        <span class="detail-info-value">{{ supplier.postal_code }}</span>
+    </div>
+    {% endif %}
+    {% if supplier.country %}
+    <div class="detail-info-item">
+        <span class="detail-info-label">Country</span>
+        <span class="detail-info-value">{{ supplier.country }}</span>
+    </div>
+    {% endif %}
+</div>
 {% endif %}
+<div class="detail-actions">
+    <a href="{% url 'procurement:supplier-update' supplier.id %}" class="btn btn-outline-primary"><i class="bi bi-pencil me-1"></i>Edit Supplier</a>
+    <a href="{% url 'procurement:supplier-delete' supplier.id %}" class="btn btn-outline-danger"><i class="bi bi-trash me-1"></i>Delete Supplier</a>
+</div>
 
-<h2>Purchase Orders</h2>
-<a href="{% url 'procurement:purchase-order-create' %}?supplier={{ supplier.id }}" class="btn btn-success">Create Purchase Order</a>
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Order Number</th>
-            <th>Date</th>
-            <th>Status</th>
-            <th>Total Amount</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for order in purchase_orders %}
-        <tr>
-            <td>{{ order.order_number }}</td>
-            <td>{{ order.date }}</td>
-            <td>{{ order.status }}</td>
-            <td>{{ order.total_amount }}</td>
-            <td><a href="{% url 'procurement:purchase-order-detail' order.id %}" class="btn btn-sm btn-primary">View</a></td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="5">No purchase orders found.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% if purchase_orders %}
-<a class="btn btn-link" href="{% url 'procurement:supplier-purchaseorders' supplier.id %}">See all</a>
-{% endif %}
-{% if purchase_orders.has_other_pages %}
-<nav>
-    <ul class="pagination">
-        {% if purchase_orders.has_previous %}
-        <li class="page-item"><a class="page-link"
-                href="?po_page={{ purchase_orders.previous_page_number }}">Previous</a></li>
-        {% endif %}
-        <li class="page-item disabled"><span class="page-link">Page {{ purchase_orders.number }} of {{
-                purchase_orders.paginator.num_pages }}</span></li>
-        {% if purchase_orders.has_next %}
-        <li class="page-item"><a class="page-link" href="?po_page={{ purchase_orders.next_page_number }}">Next</a></li>
-        {% endif %}
-    </ul>
-</nav>
-{% endif %}
-<h2 class="mt-5">Supplied Products</h2>
-<p><a href="{% url 'procurement:supplier-product-create' %}?supplier={{ supplier.id }}" class="btn btn-success">Add Supplier Products</a></p>
-{% if supplier_products %}
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Product</th>
-            <th>Cost</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for supplier_product in supplier_products %}
-        <tr>
-            <td>{{ supplier_product.product.name }}</td>
-            <td>{{ supplier_product.cost }}</td>
-            <td>
-                <a href="{% url 'procurement:supplier-product-update' supplier_product.id %}" class="btn btn-sm btn-secondary">Edit</a>
-                <a href="{% url 'procurement:supplier-product-delete' supplier_product.id %}" class="btn btn-sm btn-danger">Delete</a>
-            </td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="2">No supplier products found.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% include "includes/pagination.html" with page_obj=supplier_products page_param="sp_page" %}
-<a class="btn btn-link" href="{% url 'procurement:supplier-products' supplier.id %}">See all</a>
-{% endif %}
+{# ── Contacts ── #}
+<div class="detail-section">
+    <div class="detail-section-header">
+        <h2 class="detail-section-title">Contacts</h2>
+        <a href="{% url 'procurement:supplier-contact-create' %}?supplier={{ supplier.id }}" class="btn btn-sm btn-success"><i class="bi bi-plus-lg me-1"></i>Add Contact</a>
+    </div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for contact in supplier_contacts %}
+            <tr>
+                <td>{{ contact.name }}</td>
+                <td>{{ contact.email }}</td>
+                <td>{{ contact.phone }}</td>
+                <td>
+                    <a href="{% url 'procurement:supplier-contact-update' contact.id %}" class="btn btn-sm btn-secondary">Edit</a>
+                    <a href="{% url 'procurement:supplier-contact-delete' contact.id %}" class="btn btn-sm btn-danger">Delete</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="text-muted">No contacts found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% include "includes/pagination.html" with page_obj=supplier_contacts page_param="ct_page" %}
+</div>
+
+{# ── Purchase Orders ── #}
+<div class="detail-section">
+    <div class="detail-section-header">
+        <h2 class="detail-section-title">Purchase Orders</h2>
+        <a href="{% url 'procurement:purchase-order-create' %}?supplier={{ supplier.id }}" class="btn btn-sm btn-success"><i class="bi bi-plus-lg me-1"></i>Create Purchase Order</a>
+    </div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Order Number</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Total Amount</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in purchase_orders %}
+            <tr>
+                <td>{{ order.order_number }}</td>
+                <td>{{ order.date }}</td>
+                <td>{{ order.status }}</td>
+                <td>{{ order.total_amount }}</td>
+                <td><a href="{% url 'procurement:purchase-order-detail' order.id %}" class="btn btn-sm btn-primary">View</a></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-muted">No purchase orders found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% include "includes/pagination.html" with page_obj=purchase_orders page_param="po_page" %}
+    {% if purchase_orders %}
+    <a class="btn btn-link btn-sm" href="{% url 'procurement:supplier-purchaseorders' supplier.id %}">See all orders &rarr;</a>
+    {% endif %}
+</div>
+
+{# ── Supplied Products ── #}
+<div class="detail-section">
+    <div class="detail-section-header">
+        <h2 class="detail-section-title">Supplied Products</h2>
+        <a href="{% url 'procurement:supplier-product-create' %}?supplier={{ supplier.id }}" class="btn btn-sm btn-success"><i class="bi bi-plus-lg me-1"></i>Add Product</a>
+    </div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Cost</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for supplier_product in supplier_products %}
+            <tr>
+                <td>{{ supplier_product.product.name }}</td>
+                <td>{{ supplier_product.cost }}</td>
+                <td>
+                    <a href="{% url 'procurement:supplier-product-update' supplier_product.id %}" class="btn btn-sm btn-secondary">Edit</a>
+                    <a href="{% url 'procurement:supplier-product-delete' supplier_product.id %}" class="btn btn-sm btn-danger">Delete</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" class="text-muted">No supplier products found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% include "includes/pagination.html" with page_obj=supplier_products page_param="sp_page" %}
+    {% if supplier_products %}
+    <a class="btn btn-link btn-sm" href="{% url 'procurement:supplier-products' supplier.id %}">See all products &rarr;</a>
+    {% endif %}
+</div>
 {% endblock %}

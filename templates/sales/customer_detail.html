@@ -2,110 +2,176 @@
 {% block card_icon %}bi-people-fill{% endblock %}
 {% block card_title %}{{ customer.name }}{% endblock %}
 {% block card_body %}
-<div class="mb-5">
-    
-    <p>Phone: {{ customer.phone }}</p>
-    <p>Email: {{ customer.email }}</p>
-    {% if customer.full_address %}<p>Address: {{ customer.full_address }}</p>{% endif %}
-    <p>
-    <a href="{% url 'sales:customer-update' customer.id %}" class="btn btn-secondary">Edit Customer</a>
-    <a href="{% url 'sales:customer-delete' customer.id %}" class="btn btn-danger">Delete Customer</a>
-    </p>
+<div class="detail-info">
+    <div class="detail-info-item">
+        <span class="detail-info-label">Phone</span>
+        <span class="detail-info-value">{{ customer.phone|default:"—" }}</span>
+    </div>
+    <div class="detail-info-item">
+        <span class="detail-info-label">Email</span>
+        <span class="detail-info-value">{{ customer.email|default:"—" }}</span>
+    </div>
+    {% if customer.website %}
+    <div class="detail-info-item">
+        <span class="detail-info-label">Website</span>
+        <span class="detail-info-value"><a href="{{ customer.website }}" target="_blank" rel="noopener">{{ customer.website }}</a></span>
+    </div>
+    {% endif %}
 </div>
-<h2>Contacts</h2>
-<p><a href="{% url 'sales:customer-contact-create' %}?customer={{ customer.id }}" class="btn btn-success">Add Contact</a></p>
-{% if customer_contacts %}
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Phone</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for contact in customer_contacts %}
-        <tr>
-            <td>{{ contact.name }}</td>
-            <td>{{ contact.email }}</td>
-            <td>{{ contact.phone }}</td>
-            <td>
-                <a href="{% url 'sales:customer-contact-update' contact.id %}" class="btn btn-sm btn-secondary">Edit</a>
-                <a href="{% url 'sales:customer-contact-delete' contact.id %}" class="btn btn-sm btn-danger">Delete</a>
-            </td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="3">No contacts found.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% include "includes/pagination.html" with page_obj=customer_contacts page_param="ct_page" %}
+{% if customer.address_line_1 or customer.city or customer.country %}
+<div class="detail-info" style="margin-top:-0.5rem">
+    {% if customer.address_line_1 %}
+    <div class="detail-info-item">
+        <span class="detail-info-label">Address Line 1</span>
+        <span class="detail-info-value">{{ customer.address_line_1 }}</span>
+    </div>
+    {% endif %}
+    {% if customer.address_line_2 %}
+    <div class="detail-info-item">
+        <span class="detail-info-label">Address Line 2</span>
+        <span class="detail-info-value">{{ customer.address_line_2 }}</span>
+    </div>
+    {% endif %}
+    {% if customer.city %}
+    <div class="detail-info-item">
+        <span class="detail-info-label">City</span>
+        <span class="detail-info-value">{{ customer.city }}</span>
+    </div>
+    {% endif %}
+    {% if customer.state %}
+    <div class="detail-info-item">
+        <span class="detail-info-label">State / Region</span>
+        <span class="detail-info-value">{{ customer.state }}</span>
+    </div>
+    {% endif %}
+    {% if customer.postal_code %}
+    <div class="detail-info-item">
+        <span class="detail-info-label">Postal Code</span>
+        <span class="detail-info-value">{{ customer.postal_code }}</span>
+    </div>
+    {% endif %}
+    {% if customer.country %}
+    <div class="detail-info-item">
+        <span class="detail-info-label">Country</span>
+        <span class="detail-info-value">{{ customer.country }}</span>
+    </div>
+    {% endif %}
+</div>
 {% endif %}
+<div class="detail-actions">
+    <a href="{% url 'sales:customer-update' customer.id %}" class="btn btn-outline-primary"><i class="bi bi-pencil me-1"></i>Edit Customer</a>
+    <a href="{% url 'sales:customer-delete' customer.id %}" class="btn btn-outline-danger"><i class="bi bi-trash me-1"></i>Delete Customer</a>
+</div>
 
-<h2>Sales Orders</h2>
-<a href="{% url 'sales:sales-order-create' %}?customer={{ customer.id }}" class="btn btn-success">Create Sales Order</a>
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Order Number</th>
-            <th>Date</th>
-            <th>Status</th>
-            <th>Total Amount</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for order in sales_orders %}
-        <tr>
-            <td>{{ order.order_number }}</td>
-            <td>{{ order.date }}</td>
-            <td>{{ order.status }}</td>
-            <td>{{ order.total_amount }}</td>
-            <td><a href="{% url 'sales:sales-order-detail' order.id %}" class="btn btn-sm btn-primary">View</a></td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="5">No sales orders found.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% if sales_orders %}
-<a class="btn btn-link" href="{% url 'sales:customer-salesorders' customer.id %}">See all</a>
-{% endif %}
-{% include "includes/pagination.html" with page_obj=sales_orders page_param="order_page" %}
-<h2 class="mt-5">Customer Products</h2>
-<p><a href="{% url 'sales:customer-product-create' %}?customer={{ customer.id }}" class="btn btn-success">Add Customer Products</a></p>
-{% if customer_products %}
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Product</th>
-            <th>Price</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for customer_product in customer_products %}
-        <tr>
-            <td>{{ customer_product.product.name }}</td>
-            <td>{{ customer_product.price }}</td>
-            <td>
-                <a href="{% url 'sales:customer-product-update' customer_product.id %}" class="btn btn-sm btn-secondary">Edit</a>
-                <a href="{% url 'sales:customer-product-delete' customer_product.id %}" class="btn btn-sm btn-danger">Delete</a>
-            </td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="2">No customer products found.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% include "includes/pagination.html" with page_obj=customer_products page_param="cp_page" %}
-<a class="btn btn-link" href="{% url 'sales:customer-products' customer.id %}">See all</a>
-{% endif %}
+{# ── Contacts ── #}
+<div class="detail-section">
+    <div class="detail-section-header">
+        <h2 class="detail-section-title">Contacts</h2>
+        <a href="{% url 'sales:customer-contact-create' %}?customer={{ customer.id }}" class="btn btn-sm btn-success"><i class="bi bi-plus-lg me-1"></i>Add Contact</a>
+    </div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for contact in customer_contacts %}
+            <tr>
+                <td>{{ contact.name }}</td>
+                <td>{{ contact.email }}</td>
+                <td>{{ contact.phone }}</td>
+                <td>
+                    <a href="{% url 'sales:customer-contact-update' contact.id %}" class="btn btn-sm btn-secondary">Edit</a>
+                    <a href="{% url 'sales:customer-contact-delete' contact.id %}" class="btn btn-sm btn-danger">Delete</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="text-muted">No contacts found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% include "includes/pagination.html" with page_obj=customer_contacts page_param="ct_page" %}
+</div>
+
+{# ── Sales Orders ── #}
+<div class="detail-section">
+    <div class="detail-section-header">
+        <h2 class="detail-section-title">Sales Orders</h2>
+        <a href="{% url 'sales:sales-order-create' %}?customer={{ customer.id }}" class="btn btn-sm btn-success"><i class="bi bi-plus-lg me-1"></i>Create Sales Order</a>
+    </div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Order Number</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Total Amount</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in sales_orders %}
+            <tr>
+                <td>{{ order.order_number }}</td>
+                <td>{{ order.date }}</td>
+                <td>{{ order.status }}</td>
+                <td>{{ order.total_amount }}</td>
+                <td><a href="{% url 'sales:sales-order-detail' order.id %}" class="btn btn-sm btn-primary">View</a></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-muted">No sales orders found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% include "includes/pagination.html" with page_obj=sales_orders page_param="order_page" %}
+    {% if sales_orders %}
+    <a class="btn btn-link btn-sm" href="{% url 'sales:customer-salesorders' customer.id %}">See all orders &rarr;</a>
+    {% endif %}
+</div>
+
+{# ── Customer Products ── #}
+<div class="detail-section">
+    <div class="detail-section-header">
+        <h2 class="detail-section-title">Customer Products</h2>
+        <a href="{% url 'sales:customer-product-create' %}?customer={{ customer.id }}" class="btn btn-sm btn-success"><i class="bi bi-plus-lg me-1"></i>Add Product</a>
+    </div>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Price</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for customer_product in customer_products %}
+            <tr>
+                <td>{{ customer_product.product.name }}</td>
+                <td>{{ customer_product.price }}</td>
+                <td>
+                    <a href="{% url 'sales:customer-product-update' customer_product.id %}" class="btn btn-sm btn-secondary">Edit</a>
+                    <a href="{% url 'sales:customer-product-delete' customer_product.id %}" class="btn btn-sm btn-danger">Delete</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" class="text-muted">No customer products found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% include "includes/pagination.html" with page_obj=customer_products page_param="cp_page" %}
+    {% if customer_products %}
+    <a class="btn btn-link btn-sm" href="{% url 'sales:customer-products' customer.id %}">See all products &rarr;</a>
+    {% endif %}
+</div>
 {% endblock %}
 

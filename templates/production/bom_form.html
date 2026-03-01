@@ -1,62 +1,77 @@
 {% extends "includes/card.html" %}
 {% load crispy_forms_tags %}
+{% load static %}
 {% block card_icon %}bi-gear-fill{% endblock %}
 {% block card_title %}{% if form.instance.pk %}Edit BOM{% else %}New Bill of Materials{% endif %}{% endblock %}
 {% block card_body %}
-<form method="post" id="bom-form">
-    {% csrf_token %}
-    {{ form|crispy }}
-
-    <h3>Components</h3>
-    {{ lines_formset.management_form }}
-    <div id="lines-container">
-    {% for line_form in lines_formset %}
-    <div class="card mb-3 p-3 line-form">
-        {{ line_form|crispy }}
-        {% if line_form.instance.pk %}
-        <hr>
-        {% endif %}
-    </div>
+{% if form.errors or lines_formset.non_form_errors %}
+<div class="alert alert-danger">
+    <ul class="mb-0">
+    {% for field in form %}
+        {% for error in field.errors %}
+            <li>{{ error }}</li>
+        {% endfor %}
     {% endfor %}
+    {% for error in form.non_field_errors %}
+        <li>{{ error }}</li>
+    {% endfor %}
+    {% for error in lines_formset.non_form_errors %}
+        <li>{{ error }}</li>
+    {% endfor %}
+    </ul>
+</div>
+{% endif %}
+<form method="post" id="bom-form"
+      data-formset-prefix="bom_items">
+    {% csrf_token %}
+
+    {# ── Step 1: Select product ── #}
+    <div class="mb-4">
+        <h5 class="mb-3"><span class="badge bg-primary me-2">1</span> Select Product</h5>
+        {{ form|crispy }}
     </div>
 
-    <button type="button" class="btn btn-secondary" id="add-line">Add another component</button>
-    <button type="submit" class="btn btn-success">Save</button>
+    {# ── Step 2: Add components ── #}
+    <div>
+        <h5 class="mb-3"><span class="badge bg-primary me-2">2</span> Components</h5>
+        {{ lines_formset.management_form }}
+        <div id="lines-container">
+        {% for line_form in lines_formset %}
+            <div class="card mb-3 p-3 line-form">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        {{ line_form|crispy }}
+                    </div>
+                    <button type="button" class="btn btn-outline-danger btn-sm ms-2 mt-2 remove-line" title="Remove component">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                {% for error in line_form.non_field_errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-3 mb-4">
+            <button type="button" class="btn btn-outline-secondary" id="add-line">
+                <i class="bi bi-plus-circle me-1"></i> Add another component
+            </button>
+            <div class="text-end">
+                <span class="text-muted">Components: </span><strong id="line-count">0</strong>
+            </div>
+        </div>
+    </div>
+
+    {# ── Submit ── #}
+    <hr>
+    <button type="submit" class="btn btn-success">
+        <i class="bi bi-check-lg me-1"></i> {% if form.instance.pk %}Update BOM{% else %}Create BOM{% endif %}
+    </button>
 </form>
 
-<script>
-// formset helper: clone last form and update indexes
-(function() {
-    const addBtn = document.getElementById('add-line');
-    const container = document.getElementById('lines-container');
-    addBtn.addEventListener('click', function() {
-        // totalForms may not be inside the container, so look at document
-        const totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
-        if (!totalForms) {
-            // nothing to update; bail out and avoid exception
-            return;
-        }
-        let formCount = parseInt(totalForms.value, 10);
-        // pick a template row; if none exists bail out gracefully
-        const prototype = container.querySelector('.line-form');
-        if (!prototype) {
-            // no existing form to clone; nothing we can do without rendering a
-            // hidden prototype server‑side, so just return.
-            return;
-        }
-        const emptyForm = prototype.cloneNode(true);
-        emptyForm.querySelectorAll('input, select, textarea').forEach(function(el) {
-            if (el.name) {
-                el.name = el.name.replace(/-(\d+)-/, `-${formCount}-`);
-                el.id = 'id_' + el.name;
-                if (el.type !== 'hidden') el.value = '';
-                // uncheck delete box if present
-                if (el.type === 'checkbox') el.checked = false;
-            }
-        });
-        container.appendChild(emptyForm);
-        totalForms.value = formCount + 1;
-    });
-})();
-</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/order_form.js' %}"></script>
 {% endblock %}

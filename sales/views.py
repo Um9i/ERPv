@@ -263,6 +263,15 @@ class SalesOrderCreateView(CreateView):
             for f in context["lines_formset"]:
                 f.fields["product"].queryset = allowed
 
+        # hide the DELETE checkbox — removal is handled by the JS remove button
+        for f in context["lines_formset"]:
+            if "DELETE" in f.fields:
+                f.fields["DELETE"].widget = forms.HiddenInput()
+
+        # let the template know whether the customer is already chosen so it
+        # can show the line-items section immediately
+        context["customer_known"] = bool(customer_id)
+
         return context
 
     def form_valid(self, form):

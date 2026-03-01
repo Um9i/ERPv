@@ -5,7 +5,7 @@
 {% block card_body %}
 {% if form.errors %}
 <div class="alert alert-danger">
-    <ul>
+    <ul class="mb-0">
     {% for field in form %}
         {% for error in field.errors %}
             <li>{{ error }}</li>
@@ -16,11 +16,6 @@
     {% endfor %}
     </ul>
 </div>
-{% endif %}
-{% if form.instance.pk %}
-<h1>Edit Supplier Product</h1>
-{% else %}
-<h1>New Supplier Product</h1>
 {% endif %}
 <form method="post">
     {% csrf_token %}
