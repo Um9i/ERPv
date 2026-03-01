@@ -291,9 +291,18 @@ class LowStockListView(TemplateView):
         job_map = {v['product_id']: v['total'] or 0 for v in job_vals}
 
         # now build items list using the precomputed maps
+        stale_resets = []
         for inv in inv_list:
-            if inv.required <= 0:
+            req_amount = inv.required
+            if req_amount <= 0:
+                # reset stale cache so dashboard counts stay accurate
+                if inv.required_cached != 0:
+                    stale_resets.append(inv.pk)
                 continue
+            # keep cache in sync with live value
+            if inv.required_cached != req_amount:
+                inv.required_cached = req_amount
+                inv.save(update_fields=["required_cached"])
 
             prod_amount = job_map.get(inv.product_id, 0)
             po_amount = po_map.get(inv.product_id, 0)
@@ -334,6 +343,10 @@ class LowStockListView(TemplateView):
                 "order_qty": order_qty,
                 "po_order_qty": needed_po,
             })
+        # bulk-reset stale required_cached values
+        if stale_resets:
+            Inventory.objects.filter(pk__in=stale_resets).update(required_cached=0)
+
         # apply filter: 'purchasable' = has a supplier and not fully covered by open POs
         # 'producible' = has a BOM and not fully covered by active production jobs
         filter_by = self.request.GET.get("filter", "")

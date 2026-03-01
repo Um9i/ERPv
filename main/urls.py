@@ -35,5 +35,6 @@ urlpatterns = [
     path("procurement/", include("procurement.urls", namespace="procurement")),
     path("sales/", include("sales.urls", namespace="sales")),
     path("production/", include("production.urls", namespace="production")),
+    path("finance/", include("finance.urls", namespace="finance")),
 ] + debug_toolbar_urls()
 

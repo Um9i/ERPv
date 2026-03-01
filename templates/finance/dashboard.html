@@ -1,0 +1,101 @@
+{% extends "dashboard_base.html" %}
+{% block dashboard_icon %}bi-cash-coin{% endblock %}
+{% block dashboard_title %}Finance Overview{% endblock %}
+
+{% block dashboard_links %}
+<li class="list-group-item px-0 border-0"><a href="{% url 'finance:sales-ledger-archive' %}">Sales ledger</a></li>
+<li class="list-group-item px-0 border-0"><a href="{% url 'finance:purchase-ledger-archive' %}">Purchase ledger</a></li>
+<li class="list-group-item px-0 border-0"><a href="{% url 'finance:customer-invoices-month' year=now|date:'Y' month=now|date:'m' %}">Customer invoices (this month)</a></li>
+<li class="list-group-item px-0 border-0"><a href="{% url 'finance:supplier-bills-month' year=now|date:'Y' month=now|date:'m' %}">Supplier bills (this month)</a></li>
+{% endblock %}
+
+{% block dashboard_metrics %}
+<div class="row g-3">
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <p class="text-muted mb-1">Total sales</p>
+                <h4 class="mb-0">£{{ sales_total|floatformat:2 }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <p class="text-muted mb-1">Total purchases</p>
+                <h4 class="mb-0">£{{ purchase_total|floatformat:2 }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <p class="text-muted mb-1">Sales this month</p>
+                <h4 class="mb-0">£{{ month_sales_total|floatformat:2 }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <p class="text-muted mb-1">Purchases this month</p>
+                <h4 class="mb-0">£{{ month_purchase_total|floatformat:2 }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row g-3 mt-4">
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">Recent sales</div>
+            <div class="card-body">
+                {% if recent_sales %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Date</th><th>Customer</th><th>Product</th><th class="text-end">Value</th></tr></thead>
+                        <tbody>
+                            {% for row in recent_sales %}
+                            <tr>
+                                <td>{{ row.date|date:"Y-m-d H:i" }}</td>
+                                <td>{{ row.customer }}</td>
+                                <td>{{ row.product }}</td>
+                                <td class="text-end">£{{ row.value|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="mb-0">No sales ledger entries yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">Recent purchases</div>
+            <div class="card-body">
+                {% if recent_purchases %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead><tr><th>Date</th><th>Supplier</th><th>Product</th><th class="text-end">Value</th></tr></thead>
+                        <tbody>
+                            {% for row in recent_purchases %}
+                            <tr>
+                                <td>{{ row.date|date:"Y-m-d H:i" }}</td>
+                                <td>{{ row.supplier }}</td>
+                                <td>{{ row.product }}</td>
+                                <td class="text-end">£{{ row.value|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="mb-0">No purchase ledger entries yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
