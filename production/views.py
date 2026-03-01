@@ -278,6 +278,11 @@ class ProductionListView(ListView):
 
     def get_queryset(self):
         qs = Production.objects.all().order_by("-created_at").select_related("product")
+        status = self.request.GET.get("status", "").lower()
+        if status == "active":
+            qs = qs.filter(closed=False)
+        elif status == "completed":
+            qs = qs.filter(complete=True)
         q = self.request.GET.get("q", "").strip()
         if q:
             qs = qs.filter(Q(product__name__icontains=q) | Q(pk__icontains=q))
@@ -292,6 +297,7 @@ class ProductionListView(ListView):
         paginator = Paginator(qs, 15)
         context["productions"] = paginator.get_page(page)
         context["q"] = self.request.GET.get("q", "")
+        context["status"] = self.request.GET.get("status", "").lower()
         return context
 
 

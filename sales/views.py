@@ -280,12 +280,17 @@ class SalesOrderListView(ListView):
 
     def get_queryset(self):
         qs = SalesOrder.objects.all().order_by("-created_at")
+        status = self.request.GET.get("status", "").lower()
+        if status == "shipped":
+            qs = qs.filter(sales_order_lines__quantity_shipped__gt=0)
+        elif status == "pending":
+            qs = qs.filter(sales_order_lines__complete=False)
         q = self.request.GET.get("q", "").strip()
         if q:
             from django.db.models import Q
 
             qs = qs.filter(Q(customer__name__icontains=q) | Q(pk__icontains=q))
-        return qs
+        return qs.distinct()
 
     def get_context_data(self, **kwargs):
         from django.core.paginator import Paginator
@@ -296,6 +301,7 @@ class SalesOrderListView(ListView):
         paginator = Paginator(qs, 15)
         context["sales_orders"] = paginator.get_page(page)
         context["q"] = self.request.GET.get("q", "")
+        context["status"] = self.request.GET.get("status", "").lower()
         return context
 
 
@@ -422,8 +428,16 @@ class SalesDashboardView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["total_orders"] = SalesOrder.objects.count()
-        context["shipped_orders"] = SalesOrderLine.objects.filter(quantity_shipped__gt=0).count()
-        # count of lines still awaiting shipment (not marked complete)
-        context["pending_shipping"] = SalesOrderLine.objects.filter(complete=False).count()
+        context["shipped_orders"] = (
+            SalesOrder.objects.filter(sales_order_lines__quantity_shipped__gt=0)
+            .distinct()
+            .count()
+        )
+        # count of orders with any lines still awaiting shipment (not marked complete)
+        context["pending_shipping"] = (
+            SalesOrder.objects.filter(sales_order_lines__complete=False)
+            .distinct()
+            .count()
+        )
         context["total_customers"] = Customer.objects.count()
         return context

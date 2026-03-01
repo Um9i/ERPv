@@ -11,12 +11,14 @@
 {% endblock %}
 
 {% block dashboard_metrics %}
+{% url 'sales:sales-order-list' as orders_url %}
+{% url 'sales:customer-list' as customers_url %}
 <div class="row">
-    {% include "includes/metric_card.html" with icon="bi-cart4" color="info" label="Total Sales Orders" value=total_orders|default:'—' %}
-    {% include "includes/metric_card.html" with icon="bi-truck" color="success" label="Orders Shipped" value=shipped_orders|default:'—' %}
-    {% include "includes/metric_card.html" with icon="bi-people-fill" color="info" label="Customers" value=total_customers|default:'—' %}
+    {% include "includes/metric_card.html" with icon="bi-cart4" color="dark" label="Total Sales Orders" value=total_orders|default:'—' url=orders_url %}
+    {% include "includes/metric_card.html" with icon="bi-truck" color="success" label="Orders Shipped" value=shipped_orders|default:'—' url=orders_url|add:'?status=shipped' %}
+    {% include "includes/metric_card.html" with icon="bi-people-fill" color="dark" label="Customers" value=total_customers|default:'—' url=customers_url %}
 </div>
 <div class="row mt-3">
-    {% include "includes/metric_card.html" with icon="bi-truck" color="warning" label="Orders Pending Shipping" value=pending_shipping|default:'—' %}
+    {% include "includes/metric_card.html" with icon="bi-truck" color="warning" label="Orders Pending Shipping" value=pending_shipping|default:'—' url=orders_url|add:'?status=pending' %}
 </div>
 {% endblock %}

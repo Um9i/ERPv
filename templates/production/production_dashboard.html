@@ -11,10 +11,12 @@
 {% endblock %}
 
 {% block dashboard_metrics %}
+{% url 'production:bom-list' as boms_url %}
+{% url 'production:production-list' as jobs_url %}
 <div class="row">
-    {% include "includes/metric_card.html" with icon="bi-gear-fill" color="primary" label="BOMs" value=total_boms|default:'—' %}
-    {% include "includes/metric_card.html" with icon="bi-wrench-adjustable-circle" color="warning" label="Active Jobs" value=active_jobs|default:'—' %}
-    {% include "includes/metric_card.html" with icon="bi-check-circle" color="success" label="Completed" value=completed_jobs|default:'—' %}
+    {% include "includes/metric_card.html" with icon="bi-gear-fill" color="dark" label="BOMs" value=total_boms|default:'—' url=boms_url %}
+    {% include "includes/metric_card.html" with icon="bi-wrench-adjustable-circle" color="warning" label="Active Jobs" value=active_jobs|default:'—' url=jobs_url|add:'?status=active' %}
+    {% include "includes/metric_card.html" with icon="bi-check-circle" color="success" label="Completed" value=completed_jobs|default:'—' url=jobs_url|add:'?status=completed' %}
 </div>
 {% if producible_low_stock %}
 <div class="row mt-3">
