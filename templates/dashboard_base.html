@@ -2,27 +2,32 @@
 {% block content %}
 {% if user.is_authenticated %}
 {% block dashboard_attention %}{% endblock %}
-<div class="row dashboard-summary mb-4">
-    <div class="col">
-        <div class="card mb-4 bg-light shadow-sm">
-            <div class="card-body p-4">
-                <h5 class="card-title mb-4"><i class="bi {% block dashboard_icon %}{% endblock %} me-4"></i>{% block dashboard_title %}{% endblock %}</h5>
-                <div class="row my-4">
-                    <div class="col-lg-3">
-                        <ul class="list-group list-group-flush mb-4">
-                            {% block dashboard_links %}{% endblock %}
-                        </ul>
-                    </div>
-                    <div class="col-lg-9">
-                        {% block dashboard_metrics %}{% endblock %}
-                    </div>
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-header-icon"><i class="bi {% block dashboard_icon %}{% endblock %}"></i></div>
+        <div>
+            <h1 class="page-title">{% block dashboard_title %}{% endblock %}</h1>
+            <p class="page-subtitle">Overview and quick actions</p>
+        </div>
+    </div>
+</div>
+<div class="dashboard-grid">
+    <div class="dashboard-quick-actions">
+        <div class="panel">
+            <div class="panel-header">Quick Actions</div>
+            <div class="panel-body">
+                <div class="quick-action-list">
+                    {% block dashboard_links %}{% endblock %}
                 </div>
             </div>
         </div>
     </div>
-    <div class="row">
-        {% block dashboard_actions %}{% endblock %}
+    <div class="dashboard-metrics-area">
+        {% block dashboard_metrics %}{% endblock %}
     </div>
+</div>
+<div class="row mt-4">
+    {% block dashboard_actions %}{% endblock %}
 </div>
 {% endif %}
 {% endblock %}

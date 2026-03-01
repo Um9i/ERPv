@@ -1,15 +1,17 @@
 <div class="col-lg-6 col-xl-4 mb-3">
-    <div class="card text-center shadow-sm">
-        {% if url %}
-        <a href="{{ url }}" class="text-decoration-none text-dark">
-        {% endif %}
-        <div class="card-body">
-            <i class="bi {{ icon }} text-{{ color }}"></i>
-            <h5 class="card-title mt-2">{{ label }}</h5>
-            <p class="card-text h2">{{ value }}</p>
+    {% if url %}
+    <a href="{{ url }}" class="metric-card-link">
+    {% endif %}
+    <div class="metric-card">
+        <div class="metric-card-icon metric-card-icon--{{ color }}">
+            <i class="bi {{ icon }}"></i>
         </div>
-        {% if url %}
-        </a>
-        {% endif %}
+        <div class="metric-card-content">
+            <span class="metric-card-label">{{ label }}</span>
+            <span class="metric-card-value">{{ value }}</span>
+        </div>
     </div>
+    {% if url %}
+    </a>
+    {% endif %}
 </div>

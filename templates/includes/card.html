@@ -1,18 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="row">
-  <div class="col">
-    <div class="card mb-4 bg-light shadow-sm">
-      <div class="card-body p-4">
-        {% block card_header %}
-        <h5 class="card-title mb-4">
-          <i class="bi {% block card_icon %}bi-gear-fill{% endblock %} me-4"></i>
-          {% block card_title %}{% endblock %}
-        </h5>
-        {% endblock %}
-        {% block card_body %}{% endblock %}
-      </div>
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-header-icon"><i class="bi {% block card_icon %}bi-gear-fill{% endblock %}"></i></div>
+        <div>
+            <h1 class="page-title">{% block card_title %}{% endblock %}</h1>
+        </div>
     </div>
-  </div>
+</div>
+<div class="content-panel">
+    {% block card_header %}{% endblock %}
+    {% block card_body %}{% endblock %}
 </div>
 {% endblock %}

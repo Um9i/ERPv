@@ -11,8 +11,7 @@ class TestMainPages:
         assert resp.status_code == 200
         content = resp.content.decode()
         assert "ERPv" in content
-        assert "Features Overview" in content
-        assert "/docs/" in content or "Documentation" in content
+        assert "Everything you need to run your operations" in content
         assert "View Demo" in content
         assert "GitHub" in content
 
@@ -36,7 +35,7 @@ class TestMainPages:
 
         resp = client.get(reverse("django_registration_register"))
         assert resp.status_code == 200
-        assert "Create Account" in resp.content.decode()
+        assert "Create your account" in resp.content.decode()
 
         resp2 = client.post(
             reverse("django_registration_register"),

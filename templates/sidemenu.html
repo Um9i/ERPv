@@ -1,10 +1,8 @@
-<div class="sidemenu col-auto col-md-3 col-lg-3 col-xl-2 px-sm-2 px-0 bg-dark py-4" data-bs-theme="dark">
-    <div class="d-flex flex-column align-items-center align-items-sm-start px-2 pt-2 text-white min-vh-100">
-        <button class="btn btn-outline-light d-md-none mb-3" type="button" data-bs-toggle="collapse" data-bs-target="#sidemenuLinks" aria-expanded="false" aria-label="Toggle sidebar">
-            &#9776; Menu
-        </button>
-        <ul class="nav nav-pills flex-column mb-sm-auto mb-0 align-items-center align-items-sm-start collapse d-md-block" id="sidemenuLinks">
+<aside class="app-sidebar" data-bs-theme="dark">
+    <div class="app-sidebar-inner">
+        <div class="sidebar-section-label">Modules</div>
+        <ul class="nav flex-column app-sidebar-nav" id="sidemenuLinks">
             {% include "includes/sidebar_links.html" %}
         </ul>
     </div>
-</div>
+</aside>
