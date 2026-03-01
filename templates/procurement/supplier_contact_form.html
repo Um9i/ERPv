@@ -1,7 +1,22 @@
-{% extends "base.html" %}
+{% extends "includes/card.html" %}
 {% load crispy_forms_tags %}
-{% block content %}
-<h1>{% if object %}Edit{% else %}New{% endif %} Supplier Contact</h1>
+{% block card_icon %}bi-person-lines-fill{% endblock %}
+{% block card_title %}{% if object %}Edit{% else %}New{% endif %} Supplier Contact{% endblock %}
+{% block card_body %}
+{% if form.errors %}
+<div class="alert alert-danger">
+    <ul>
+    {% for field in form %}
+        {% for error in field.errors %}
+            <li>{{ error }}</li>
+        {% endfor %}
+    {% endfor %}
+    {% for error in form.non_field_errors %}
+        <li>{{ error }}</li>
+    {% endfor %}
+    </ul>
+</div>
+{% endif %}
 <form method="post">
     {% csrf_token %}
     {{ form|crispy }}

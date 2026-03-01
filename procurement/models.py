@@ -4,11 +4,11 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 from decimal import Decimal, ROUND_HALF_UP
 from inventory.models import Product, Inventory, InventoryLedger
+from main.mixins import AddressMixin
 
 
-class Supplier(models.Model):
+class Supplier(AddressMixin, models.Model):
     name = models.CharField(max_length=256, unique=True)
-    address = models.TextField(blank=True)
     phone = models.CharField(max_length=64, blank=True)
     email = models.CharField(max_length=128, blank=True)
     website = models.CharField(max_length=256, blank=True)
@@ -21,12 +21,11 @@ class Supplier(models.Model):
         verbose_name_plural = "Supplier Management"
 
 
-class SupplierContact(models.Model):
+class SupplierContact(AddressMixin, models.Model):
     supplier = models.ForeignKey(
         Supplier, on_delete=models.CASCADE, related_name="supplier_contacts"
     )
     name = models.CharField(max_length=128)
-    address = models.TextField(blank=True)
     phone = models.CharField(max_length=64, blank=True)
     email = models.CharField(max_length=128, blank=True)
 

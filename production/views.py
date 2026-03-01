@@ -3,6 +3,12 @@ from .models import (
     BOMItem,
     Production,
 )
+from .forms import (
+    BillOfMaterialsForm,
+    BOMItemForm,
+    ProductionForm,
+    ProductionUpdateForm,
+)
 from django.views.generic import (
     ListView,
     DetailView,
@@ -24,7 +30,7 @@ from django.http import JsonResponse
 class BOMCreateView(CreateView):
     model = BillOfMaterials
     template_name = "production/bom_form.html"
-    fields = ["product"]
+    form_class = BillOfMaterialsForm
     # we'll redirect to the detail once created
 
     def get_success_url(self):
@@ -51,7 +57,7 @@ class BOMCreateView(CreateView):
         LineFormset = inlineformset_factory(
             BillOfMaterials,
             BOMItem,
-            fields=["product", "quantity"],
+            form=BOMItemForm,
             extra=1,
             can_delete=True,
         )
@@ -93,7 +99,7 @@ class BOMCreateView(CreateView):
 class BOMUpdateView(UpdateView):
     model = BillOfMaterials
     template_name = "production/bom_form.html"
-    fields = ["product"]
+    form_class = BillOfMaterialsForm
 
     def get_success_url(self):
         return reverse_lazy("production:bom-detail", args=[self.object.pk])
@@ -103,7 +109,7 @@ class BOMUpdateView(UpdateView):
         LineFormset = inlineformset_factory(
             BillOfMaterials,
             BOMItem,
-            fields=["product", "quantity"],
+            form=BOMItemForm,
             extra=1,
             can_delete=True,
         )
@@ -175,7 +181,7 @@ class BOMDetailView(DetailView):
 class BOMItemCreateView(CreateView):
     model = BOMItem
     template_name = "production/bom_item_form.html"
-    fields = ["bom", "product", "quantity"]
+    form_class = BOMItemForm
     success_url = reverse_lazy("production:bom-list")
 
     def get_initial(self):
@@ -199,7 +205,7 @@ class BOMItemCreateView(CreateView):
 class BOMItemUpdateView(UpdateView):
     model = BOMItem
     template_name = "production/bom_item_form.html"
-    fields = ["bom", "product", "quantity"]
+    form_class = BOMItemForm
 
     def get_success_url(self):
         return reverse_lazy("production:bom-detail", args=[self.object.bom.pk])
@@ -218,9 +224,7 @@ class BOMItemDeleteView(DeleteView):
 class ProductionCreateView(CreateView):
     model = Production
     template_name = "production/production_form.html"
-    # do not expose the `complete` checkbox when creating; jobs are always
-    # started in an open state.  the update view still allows toggling it.
-    fields = ["product", "quantity"]
+    form_class = ProductionForm
     success_url = reverse_lazy("production:production-list")
 
     def get_initial(self):
@@ -255,7 +259,7 @@ class ProductionCreateView(CreateView):
 class ProductionUpdateView(UpdateView):
     model = Production
     template_name = "production/production_form.html"
-    fields = ["product", "quantity", "complete"]
+    form_class = ProductionUpdateForm
     success_url = reverse_lazy("production:production-list")
 
     def get_form(self, form_class=None):

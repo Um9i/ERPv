@@ -5,11 +5,11 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from decimal import Decimal, ROUND_HALF_UP
 from inventory.models import Product, Inventory, InventoryLedger
+from main.mixins import AddressMixin
 
 
-class Customer(models.Model):
+class Customer(AddressMixin, models.Model):
     name = models.CharField(max_length=256, unique=True)
-    address = models.TextField(blank=True)
     phone = models.CharField(max_length=64, blank=True)
     email = models.CharField(max_length=128, blank=True)
     website = models.CharField(max_length=256, blank=True)
@@ -22,12 +22,11 @@ class Customer(models.Model):
         verbose_name_plural = "Customer Management"
 
 
-class CustomerContact(models.Model):
+class CustomerContact(AddressMixin, models.Model):
     customer = models.ForeignKey(
         Customer, on_delete=models.CASCADE, related_name="customer_contacts"
     )
     name = models.CharField(max_length=128)
-    address = models.TextField(blank=True)
     phone = models.CharField(max_length=64, blank=True)
     email = models.CharField(max_length=128, blank=True)
 

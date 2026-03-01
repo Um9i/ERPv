@@ -5,6 +5,13 @@ from .models import (
     SalesOrder,
     SalesOrderLine,
 )
+from .forms import (
+    CustomerForm,
+    CustomerContactForm,
+    CustomerProductForm,
+    SalesOrderForm,
+    SalesOrderLineForm,
+)
 from django.views.generic import (
     ListView,
     DetailView,
@@ -23,7 +30,7 @@ from django.db.models import F
 class CustomerCreateView(CreateView):
     model = Customer
     template_name = "sales/customer_form.html"
-    fields = ["name", "address", "phone", "email", "website"]
+    form_class = CustomerForm
 
     def get_success_url(self):
         return reverse_lazy("sales:customer-detail", args=[self.object.pk])
@@ -32,7 +39,7 @@ class CustomerCreateView(CreateView):
 class CustomerUpdateView(UpdateView):
     model = Customer
     template_name = "sales/customer_form.html"
-    fields = ["name", "address", "phone", "email", "website"]
+    form_class = CustomerForm
     success_url = reverse_lazy("sales:customer-list")
 
 
@@ -97,7 +104,7 @@ class CustomerDetailView(DetailView):
 class CustomerContactCreateView(CreateView):
     model = CustomerContact
     template_name = "sales/customer_contact_form.html"
-    fields = ["customer", "name", "email", "phone"]
+    form_class = CustomerContactForm
     success_url = reverse_lazy("sales:customer-list")
     def get_initial(self):
         initial = super().get_initial()
@@ -120,7 +127,7 @@ class CustomerContactCreateView(CreateView):
 class CustomerContactUpdateView(UpdateView):
     model = CustomerContact
     template_name = "sales/customer_contact_form.html"
-    fields = ["customer", "name", "address", "phone", "email"]
+    form_class = CustomerContactForm
 
     def get_success_url(self):
         return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
@@ -136,7 +143,7 @@ class CustomerContactDeleteView(DeleteView):
 class CustomerProductCreateView(CreateView):
     model = CustomerProduct
     template_name = "sales/customer_product_form.html"
-    fields = ["customer", "product", "price"]
+    form_class = CustomerProductForm
     success_url = reverse_lazy("sales:customer-list")
 
     def get_initial(self):
@@ -160,7 +167,7 @@ class CustomerProductCreateView(CreateView):
 class CustomerProductUpdateView(UpdateView):
     model = CustomerProduct
     template_name = "sales/customer_product_form.html"
-    fields = ["customer", "product", "price"]
+    form_class = CustomerProductForm
     success_url = reverse_lazy("sales:customer-list")
 
     def get_success_url(self):
@@ -213,7 +220,7 @@ class CustomerProductIDsView(DetailView):
 class SalesOrderCreateView(CreateView):
     model = SalesOrder
     template_name = "sales/sales_order_form.html"
-    fields = ["customer"]
+    form_class = SalesOrderForm
     success_url = reverse_lazy("sales:customer-list")
 
     def get_initial(self):
@@ -235,9 +242,9 @@ class SalesOrderCreateView(CreateView):
         LineFormset = inlineformset_factory(
             SalesOrder,
             SalesOrderLine,
-            fields=["product", "quantity"],
+            form=SalesOrderLineForm,
             extra=1,
-            can_delete=True,  # permitting deletion via checkbox
+            can_delete=True,
         )
         if self.request.POST:
             context["lines_formset"] = LineFormset(self.request.POST)

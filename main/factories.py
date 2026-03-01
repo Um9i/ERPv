@@ -51,7 +51,11 @@ class CustomerFactory(factory.django.DjangoModelFactory):
 
     # ensure uniqueness to satisfy unique constraint
     name = factory.LazyFunction(lambda: f"Cust-{uuid.uuid4().hex[:8]}")
-    address = factory.LazyAttribute(lambda x: fake.address())
+    address_line_1 = factory.LazyAttribute(lambda x: fake.street_address())
+    city = factory.LazyAttribute(lambda x: fake.city())
+    state = factory.LazyAttribute(lambda x: fake.state_abbr())
+    postal_code = factory.LazyAttribute(lambda x: fake.postcode())
+    country = factory.LazyAttribute(lambda x: fake.country())
     phone = factory.LazyAttribute(lambda x: fake.phone_number())
     email = factory.LazyAttribute(lambda x: fake.company_email())
     website = factory.LazyAttribute(lambda x: fake.url())
@@ -92,7 +96,11 @@ class SupplierFactory(factory.django.DjangoModelFactory):
         model = Supplier
 
     name = factory.LazyFunction(lambda: f"Supp-{uuid.uuid4().hex[:8]}")
-    address = factory.LazyAttribute(lambda x: fake.address())
+    address_line_1 = factory.LazyAttribute(lambda x: fake.street_address())
+    city = factory.LazyAttribute(lambda x: fake.city())
+    state = factory.LazyAttribute(lambda x: fake.state_abbr())
+    postal_code = factory.LazyAttribute(lambda x: fake.postcode())
+    country = factory.LazyAttribute(lambda x: fake.country())
     phone = factory.LazyAttribute(lambda x: fake.phone_number())
     email = factory.LazyAttribute(lambda x: fake.company_email())
     website = factory.LazyAttribute(lambda x: fake.url())

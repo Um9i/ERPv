@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from .models import Product, Inventory, InventoryAdjust
+from .forms import ProductForm, InventoryAdjustForm
 from django.views.generic import (
     ListView,
     DetailView,
@@ -15,7 +16,7 @@ from django.http import JsonResponse
 class ProductCreateView(CreateView):
     model = Product
     template_name = "inventory/product_form.html"
-    fields = ["name"]
+    form_class = ProductForm
     success_url = reverse_lazy("inventory:inventory-list")
 
     def get_success_url(self):
@@ -25,7 +26,7 @@ class ProductCreateView(CreateView):
 class ProductUpdateView(UpdateView):
     model = Product
     template_name = "inventory/product_form.html"
-    fields = ["name"]
+    form_class = ProductForm
     success_url = reverse_lazy("inventory:inventory-list")
 
 
@@ -166,7 +167,7 @@ class InventoryDetailView(DetailView):
 class InventoryAdjustCreateView(CreateView):
     model = InventoryAdjust
     template_name = "inventory/inventory_adjust_form.html"
-    fields = ["product", "quantity"]
+    form_class = InventoryAdjustForm
     success_url = reverse_lazy("inventory:inventory-list")
 
     def get_initial(self):

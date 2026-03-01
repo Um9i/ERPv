@@ -6,7 +6,7 @@
     
     <p>Phone: {{ supplier.phone }}</p>
     <p>Email: {{ supplier.email }}</p>
-    <p>Address: {{ supplier.address }}</p>
+    {% if supplier.full_address %}<p>Address: {{ supplier.full_address }}</p>{% endif %}
     <p>
     <a href="{% url 'procurement:supplier-update' supplier.id %}" class="btn btn-secondary">Edit Supplier</a>
     <a href="{% url 'procurement:supplier-delete' supplier.id %}" class="btn btn-danger">Delete Supplier</a>

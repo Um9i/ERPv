@@ -5,6 +5,13 @@ from .models import (
     PurchaseOrder,
     PurchaseOrderLine,
 )
+from .forms import (
+    SupplierForm,
+    SupplierContactForm,
+    SupplierProductForm,
+    PurchaseOrderForm,
+    PurchaseOrderLineForm,
+)
 from django.views.generic import (
     ListView,
     DetailView,
@@ -24,7 +31,7 @@ from django.http import JsonResponse
 class SupplierCreateView(CreateView):
     model = Supplier
     template_name = "procurement/supplier_form.html"
-    fields = ["name", "address", "phone", "email", "website"]
+    form_class = SupplierForm
 
     def get_success_url(self):
         # after creating a supplier return to that supplier's detail
@@ -34,7 +41,7 @@ class SupplierCreateView(CreateView):
 class SupplierUpdateView(UpdateView):
     model = Supplier
     template_name = "procurement/supplier_form.html"
-    fields = ["name", "address", "phone", "email", "website"]
+    form_class = SupplierForm
     success_url = reverse_lazy("procurement:supplier-list")
 
 
@@ -111,7 +118,7 @@ class SupplierDetailView(DetailView):
 class SupplierContactCreateView(CreateView):
     model = SupplierContact
     template_name = "procurement/supplier_contact_form.html"
-    fields = ["supplier", "name", "email", "phone"]
+    form_class = SupplierContactForm
     success_url = reverse_lazy("procurement:supplier-list")
     def get_initial(self):
         initial = super().get_initial()
@@ -134,7 +141,7 @@ class SupplierContactCreateView(CreateView):
 class SupplierContactUpdateView(UpdateView):
     model = SupplierContact
     template_name = "procurement/supplier_contact_form.html"
-    fields = ["supplier", "name", "address", "phone", "email"]
+    form_class = SupplierContactForm
 
     def get_success_url(self):
         return reverse_lazy("procurement:supplier-detail", args=[self.object.supplier.pk])
@@ -150,7 +157,7 @@ class SupplierContactDeleteView(DeleteView):
 class SupplierProductCreateView(CreateView):
     model = SupplierProduct
     template_name = "procurement/supplier_product_form.html"
-    fields = ["supplier", "product", "cost"]
+    form_class = SupplierProductForm
     success_url = reverse_lazy("procurement:supplier-list")
 
     def get_initial(self):
@@ -177,7 +184,7 @@ class SupplierProductCreateView(CreateView):
 class SupplierProductUpdateView(UpdateView):
     model = SupplierProduct
     template_name = "procurement/supplier_product_form.html"
-    fields = ["supplier", "product", "cost"]
+    form_class = SupplierProductForm
     success_url = reverse_lazy("procurement:supplier-list")
 
     def get_success_url(self):
@@ -244,7 +251,7 @@ class SupplierProductIDsView(DetailView):
 class PurchaseOrderCreateView(CreateView):
     model = PurchaseOrder
     template_name = "procurement/purchase_order_form.html"
-    fields = ["supplier"]
+    form_class = PurchaseOrderForm
     success_url = reverse_lazy("procurement:supplier-list")
 
 
@@ -323,7 +330,7 @@ class ProcurementDashboardView(TemplateView):
 class PurchaseOrderCreateView(CreateView):
     model = PurchaseOrder
     template_name = "procurement/purchase_order_form.html"
-    fields = ["supplier"]
+    form_class = PurchaseOrderForm
     success_url = reverse_lazy("procurement:supplier-list")
 
     def get_initial(self):
@@ -351,9 +358,9 @@ class PurchaseOrderCreateView(CreateView):
             return inlineformset_factory(
                 PurchaseOrder,
                 PurchaseOrderLine,
-                fields=["product", "quantity"],
+                form=PurchaseOrderLineForm,
                 extra=extra,
-                can_delete=True,  # allow deleting lines on create
+                can_delete=True,
             )
 
         # handle inline formset initialisation

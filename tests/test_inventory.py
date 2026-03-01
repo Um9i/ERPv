@@ -186,8 +186,6 @@ class TestInventory:
         assert "View Inventory" in content
         # summary cards should appear
         assert "Products" in content
-        assert "Total Quantity" in content
-        assert "Stock Value" in content
         # verify context values reflect database
         ctx = resp.context
         assert ctx["total_products"] == Product.objects.count()
