@@ -39,11 +39,39 @@ class BOMItem(models.Model):
     def __str__(self):
         return f"{self.product.name} x {self.quantity}"
 
+    def _get_all_sub_products(self, product, visited=None):
+        """Recursively collect all products used in a product's BOM."""
+        if visited is None:
+            visited = set()
+        if product.pk in visited:
+            return visited
+        visited.add(product.pk)
+        try:
+            bom = product.billofmaterials
+        except BillOfMaterials.DoesNotExist:
+            return visited
+        for item in bom.bom_items.all():
+            self._get_all_sub_products(item.product, visited)
+        return visited
+
     def clean(self):
         # Don't allow a products bill of materials to contain itself.
         if self.bom.product == self.product:
             raise ValidationError(_("BOM inceptions are not advisable."))
 
+        # Don't allow circular references: if the product being added as a
+        # BOM item itself has a BOM that (directly or indirectly) contains
+        # the parent product, reject it.
+        sub_products = self._get_all_sub_products(self.product, visited=set())
+        if self.bom.product.pk in sub_products:
+            raise ValidationError(
+                _("Circular BOM reference detected: %(product)s already contains "
+                  "%(parent)s in its bill of materials."),
+                params={
+                    "product": self.product.name,
+                    "parent": self.bom.product.name,
+                },
+            )
 
 class Production(models.Model):
     product = models.ForeignKey(
