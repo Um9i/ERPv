@@ -239,8 +239,17 @@ class Command(BaseCommand):
                 for _ in range(random.randint(1, 3)):
                     cp = random.choice(cp_list)
                     qty = random.randint(1, 20)
-                    complete = random.choice([True, False])
+                    # Only allow completion if we have enough stock
+                    pid = cp.product_id
+                    current_stock = inv_quantities.get(pid, 0)
+                    if current_stock >= qty:
+                        complete = random.choice([True, False])
+                    else:
+                        complete = False
                     shipped = random.randint(0, qty)
+                    if complete:
+                        # Track the inventory deduction from completed sales
+                        inv_quantities[pid] = current_stock - qty
                     lines.append((cp, qty, complete, shipped))
                 so_descriptors.append((cust, current, lines))
 
@@ -256,6 +265,10 @@ class Command(BaseCommand):
                     qty = random.randint(1, 50)
                     complete = random.choice([True, False])
                     received = random.randint(0, qty)
+                    if complete:
+                        # Track the inventory addition from completed purchases
+                        pid = sp.product_id
+                        inv_quantities[pid] = inv_quantities.get(pid, 0) + qty
                     lines.append((sp, qty, complete, received))
                 po_descriptors.append((supp, current, lines))
 
@@ -266,7 +279,7 @@ class Command(BaseCommand):
                         (random.choice(bom_products), current)
                     )
 
-            # Inventory ledger entries
+            # Inventory ledger entries (random adjustments)
             sample_size = random.randint(0, 3)
             if sample_size > 0 and all_product_ids:
                 for pid in random.sample(
@@ -275,9 +288,14 @@ class Command(BaseCommand):
                     change = random.randint(-10, 10)
                     if change == 0:
                         continue
-                    new_qty = max(inv_quantities.get(pid, 0) + change, 0)
+                    current_qty = inv_quantities.get(pid, 0)
+                    # Clamp so stock never goes negative
+                    new_qty = max(current_qty + change, 0)
+                    actual_change = new_qty - current_qty
+                    if actual_change == 0:
+                        continue
                     inv_quantities[pid] = new_qty
-                    ledger_ops.append((pid, change, current))
+                    ledger_ops.append((pid, actual_change, current))
 
             current += timedelta(days=1)
 
