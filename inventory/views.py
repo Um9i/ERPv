@@ -239,8 +239,11 @@ class InventoryDashboardView(TemplateView):
     template_name = "inventory/inventory_dashboard.html"
 
     def get_context_data(self, **kwargs):
-        # mirror previous dashboard calculations formerly misplaced on LowStockListView
-        from django.db.models import Sum
+        from django.db.models import (
+            DecimalField, F, Min, OuterRef, Subquery, Sum, Value,
+        )
+        from django.db.models.functions import Coalesce
+        from procurement.models import SupplierProduct
 
         context = super().get_context_data(**kwargs)
         context["total_products"] = Product.objects.count()
@@ -248,22 +251,30 @@ class InventoryDashboardView(TemplateView):
         context["total_quantity"] = (
             Inventory.objects.aggregate(total=Sum("quantity"))["total"] or 0
         )
-        # compute monetary stock value using per-unit costs
-        stock_val = 0
-        for inv in Inventory.objects.select_related("product").all():
-            stock_val += inv.quantity * inv.product.unit_cost
-        context["stock_value"] = stock_val
-        # optionally show list of products with required shortage
-        req = getattr(self, "request", None)
-        if req and req.GET.get("required"):
-            req_items = []
-            for inv in Inventory.objects.select_related("product").all():
-                if inv.required > 0:
-                    req_items.append({
-                        "product": inv.product,
-                        "required": inv.required,
-                    })
-            context["required_items"] = req_items
+
+        # compute monetary stock value in a single query using min supplier cost
+        min_cost_sq = (
+            SupplierProduct.objects.filter(product=OuterRef("product"))
+            .values("product")
+            .annotate(mc=Min("cost"))
+            .values("mc")[:1]
+        )
+        stock_value = (
+            Inventory.objects.annotate(
+                unit_cost=Coalesce(
+                    Subquery(min_cost_sq, output_field=DecimalField()),
+                    Value(0, output_field=DecimalField()),
+                )
+            ).aggregate(total=Sum(F("quantity") * F("unit_cost")))["total"]
+            or 0
+        )
+        context["stock_value"] = stock_value
+
+        # count of products below required stock level
+        context["low_stock_count"] = Inventory.objects.filter(
+            required_cached__gt=0
+        ).count()
+
         return context
 
 
@@ -298,8 +309,8 @@ class LowStockListView(TemplateView):
         supplier_items: dict[int, list[tuple[int, int]]] = {}
 
         for inv in inv_list:
-            # compute live required to ensure current stock is reflected
-            required_qty = inv.required
+            # use cached value to avoid per-product N+1 queries
+            required_qty = inv.required_cached
             if required_qty <= 0:
                 continue
             prod_amount = job_map.get(inv.product_id, 0)
@@ -381,6 +392,6 @@ class InventoryListApiView(TemplateView):
             data.append({
                 "product": inv.product.name,
                 "quantity": inv.quantity,
-                "required": inv.required,
+                "required": inv.required_cached,
             })
         return JsonResponse(data, safe=False)

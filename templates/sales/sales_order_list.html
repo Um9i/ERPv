@@ -37,14 +37,14 @@
         <tr>
             <td>{{ order.order_number }}</td>
             <td>{{ order.customer.name }}</td>
-            <td>{{ order.status }}</td>
+            <td>{% if order.has_open_lines %}Open{% else %}Closed{% endif %}</td>
             <td>{{ order.created_at }}</td>
             <td class="text-end">
-                {% if order.status != 'Closed' %}
+                {% if order.has_open_lines %}
                 <a href="{% url 'sales:sales-order-ship' order.id %}" class="btn btn-sm btn-success">Ship</a>
                 {% endif %}
                 <a href="{% url 'sales:sales-order-detail' order.id %}" class="btn btn-secondary btn-sm">View</a>
-                {% if order.status == 'Open' %}
+                {% if order.has_open_lines %}
                 <form method="post" action="{% url 'sales:sales-order-detail' order.id %}" class="d-inline">
                     {% csrf_token %}
                     <button type="submit" name="close_order" value="1" class="btn btn-danger btn-sm"

@@ -317,7 +317,8 @@ class ProcurementDashboardView(TemplateView):
         for inv in inv_list:
             if inv.product_id not in purchasable_ids:
                 continue
-            required_qty = inv.required
+            # use the cached value to avoid per-product N+1 queries
+            required_qty = inv.required_cached
             if required_qty <= 0:
                 continue
             po_amount = po_map.get(inv.product_id, 0)
@@ -434,40 +435,34 @@ class PurchaseOrderListView(ListView):
     context_object_name = "purchase_orders"
 
     def get_queryset(self):
-        from django.db.models import Count, Q, F
+        from django.db.models import Count, Q, F, Exists, OuterRef
 
-        qs = PurchaseOrder.objects.all().order_by("-created_at")
+        qs = (
+            PurchaseOrder.objects
+            .select_related("supplier")
+            .annotate(
+                has_open_lines=Exists(
+                    PurchaseOrderLine.objects.filter(
+                        purchase_order=OuterRef("pk"),
+                        complete=False,
+                    )
+                ),
+            )
+            .order_by("-created_at")
+        )
 
         filter_value = self.request.GET.get("filter", "").strip()
         status_value = self.request.GET.get("status", "").strip().lower()
 
         if status_value == "open":
-            qs = qs.filter(purchase_order_lines__complete=False).distinct()
+            qs = qs.filter(has_open_lines=True)
         elif status_value == "closed":
-            qs = (
-                qs.annotate(
-                    total_lines=Count("purchase_order_lines"),
-                    complete_lines=Count(
-                        "purchase_order_lines",
-                        filter=Q(purchase_order_lines__complete=True),
-                    ),
-                )
-                .filter(total_lines=F("complete_lines"))
-            )
+            qs = qs.filter(has_open_lines=False)
 
         if filter_value == "received":
-            qs = (
-                qs.annotate(
-                    total_lines=Count("purchase_order_lines"),
-                    complete_lines=Count(
-                        "purchase_order_lines",
-                        filter=Q(purchase_order_lines__complete=True),
-                    ),
-                )
-                .filter(total_lines__gt=0, total_lines=F("complete_lines"))
-            )
+            qs = qs.filter(has_open_lines=False)
         elif filter_value == "pending_receiving":
-            qs = qs.filter(purchase_order_lines__complete=False).distinct()
+            qs = qs.filter(has_open_lines=True)
 
         q = self.request.GET.get("q", "").strip()
         if q:

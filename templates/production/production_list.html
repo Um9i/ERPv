@@ -41,7 +41,7 @@
         <td>{{ job.product.name }}</td>
         <td>{{ job.quantity }}</td>
         <td>{{ job.remaining }}</td>
-        <td>{% if job.materials_available %}✓{% else %}✗{% endif %}</td>
+        <td>{% if job.materials_ok %}✓{% else %}✗{% endif %}</td>
         <td>{{ job.status }}</td>
         <td><a class="btn btn-sm btn-primary" href="{% url 'production:production-detail' job.pk %}">View</a></td>
     </tr>

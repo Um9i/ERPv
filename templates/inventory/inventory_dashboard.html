@@ -6,11 +6,20 @@
 {% block dashboard_links %}
 <a class="list-group-item list-group-item-action" href="{% url 'inventory:product-create' %}">Create Product</a>
 <a class="list-group-item list-group-item-action" href="{% url 'inventory:inventory-list' %}">View Inventory</a>
+<a class="list-group-item list-group-item-action" href="{% url 'inventory:inventory-low-stock' %}">Low Stock Items</a>
 {% endblock %}
 
 {% block dashboard_metrics %}
+{% url 'inventory:inventory-list' as inventory_url %}
+{% url 'inventory:inventory-low-stock' as low_stock_url %}
 <div class="row">
-    {% url 'inventory:inventory-list' as product_list_url %}
-    {% include "includes/metric_card.html" with icon="bi-box-seam" color="dark" label="Products" value=total_products|default:'—' url=product_list_url %}
+    {% include "includes/metric_card.html" with icon="bi-box-seam" color="dark" label="Products" value=total_products|default:'—' url=inventory_url %}
+    {% include "includes/metric_card.html" with icon="bi-boxes" color="dark" label="Total Stock" value=total_quantity|default:'—' url=inventory_url %}
+    {% include "includes/metric_card.html" with icon="bi-cash-stack" color="success" label="Stock Value" value=stock_value|floatformat:2|default:'—' url=inventory_url %}
 </div>
+{% if low_stock_count %}
+<div class="row mt-3">
+    {% include "includes/metric_card.html" with icon="bi-exclamation-triangle" color="danger" label="Low Stock Items" value=low_stock_count url=low_stock_url %}
+</div>
+{% endif %}
 {% endblock %}

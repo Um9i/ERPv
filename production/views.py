@@ -297,13 +297,54 @@ class ProductionListView(ListView):
         return qs
 
     def get_context_data(self, **kwargs):
+        from collections import defaultdict
         from django.core.paginator import Paginator
+        from inventory.models import Inventory
 
         context = super().get_context_data(**kwargs)
         qs = self.get_queryset()
         page = self.request.GET.get("page")
         paginator = Paginator(qs, 15)
-        context["productions"] = paginator.get_page(page)
+        page_obj = paginator.get_page(page)
+
+        # Evaluate the page into a list so we can enrich each object
+        productions = list(page_obj.object_list)
+
+        # Bulk-compute materials_available to avoid N+1 queries
+        product_ids = [p.product_id for p in productions]
+
+        # Load BOM items for all products on this page
+        bom_rows = (
+            BOMItem.objects
+            .filter(bom__product_id__in=product_ids)
+            .values_list("bom__product_id", "product_id", "quantity")
+        )
+        bom_map = defaultdict(list)
+        component_ids = set()
+        for prod_id, comp_id, qty in bom_rows:
+            bom_map[prod_id].append((comp_id, qty))
+            component_ids.add(comp_id)
+
+        # Load inventory for all required components in one query
+        inv_map = dict(
+            Inventory.objects
+            .filter(product_id__in=component_ids)
+            .values_list("product_id", "quantity")
+        ) if component_ids else {}
+
+        for job in productions:
+            components = bom_map.get(job.product_id, [])
+            if not components:
+                job.materials_ok = False
+            else:
+                job.materials_ok = all(
+                    inv_map.get(comp_id, 0) >= comp_qty * job.quantity
+                    for comp_id, comp_qty in components
+                )
+
+        # Replace the page's object_list so the template uses enriched objects
+        page_obj.object_list = productions
+        context["productions"] = page_obj
         context["q"] = self.request.GET.get("q", "")
         context["status"] = self.request.GET.get("status", "").lower()
         return context

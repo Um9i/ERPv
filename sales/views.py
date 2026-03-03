@@ -295,18 +295,30 @@ class SalesOrderListView(ListView):
     context_object_name = "sales_orders"
 
     def get_queryset(self):
-        qs = SalesOrder.objects.all().order_by("-created_at")
+        from django.db.models import Q, Exists, OuterRef
+
+        qs = (
+            SalesOrder.objects
+            .select_related("customer")
+            .annotate(
+                has_open_lines=Exists(
+                    SalesOrderLine.objects.filter(
+                        sales_order=OuterRef("pk"),
+                        complete=False,
+                    )
+                ),
+            )
+            .order_by("-created_at")
+        )
         status = self.request.GET.get("status", "").lower()
         if status == "shipped":
-            qs = qs.filter(sales_order_lines__quantity_shipped__gt=0)
+            qs = qs.filter(sales_order_lines__quantity_shipped__gt=0).distinct()
         elif status == "pending":
-            qs = qs.filter(sales_order_lines__complete=False)
+            qs = qs.filter(has_open_lines=True)
         q = self.request.GET.get("q", "").strip()
         if q:
-            from django.db.models import Q
-
             qs = qs.filter(Q(customer__name__icontains=q) | Q(pk__icontains=q))
-        return qs.distinct()
+        return qs
 
     def get_context_data(self, **kwargs):
         from django.core.paginator import Paginator
