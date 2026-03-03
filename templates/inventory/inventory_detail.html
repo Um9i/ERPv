@@ -124,7 +124,7 @@
                     <td>{{ entry.action }}</td>
                     <td>
                         {% if entry.transaction_id %}
-                            <code>{{ entry.transaction_id }}</code>
+                            <code>{% if entry.action == "Purchase Order" %}PO{% elif entry.action == "Sales Order" %}SO{% elif entry.action == "Production" %}PROD{% elif entry.action == "Inventory Adjustment" %}ADJ{% endif %}{{ entry.transaction_id|stringformat:"05d" }}</code>
                         {% else %}
                             <span class="text-muted">—</span>
                         {% endif %}
