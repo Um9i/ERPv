@@ -3,98 +3,141 @@
 {% block dashboard_title %}Finance Overview{% endblock %}
 
 {% block dashboard_links %}
-<a class="list-group-item list-group-item-action" href="{% url 'finance:sales-ledger-archive' %}">Sales ledger</a>
-<a class="list-group-item list-group-item-action" href="{% url 'finance:purchase-ledger-archive' %}">Purchase ledger</a>
-<a class="list-group-item list-group-item-action" href="{% url 'finance:customer-invoices-month' year=now|date:'Y' month=now|date:'m' %}">Customer invoices (this month)</a>
-<a class="list-group-item list-group-item-action" href="{% url 'finance:supplier-bills-month' year=now|date:'Y' month=now|date:'m' %}">Supplier bills (this month)</a>
+<a class="list-group-item list-group-item-action" href="{% url 'finance:sales-ledger-archive' %}"><i class="bi bi-receipt me-2"></i>Sales ledger</a>
+<a class="list-group-item list-group-item-action" href="{% url 'finance:purchase-ledger-archive' %}"><i class="bi bi-bag me-2"></i>Purchase ledger</a>
 {% endblock %}
 
 {% block dashboard_metrics %}
-<div class="row g-3">
-    <div class="col-md-3">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <p class="text-muted mb-1">Total sales</p>
-                <h4 class="mb-0">£{{ sales_total|floatformat:2 }}</h4>
+{# ── All-time metrics ── #}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-4">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-graph-up-arrow"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-label">Total Sales</span>
+                <span class="metric-card-value">&pound;{{ sales_total|floatformat:2 }}</span>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <p class="text-muted mb-1">Total purchases</p>
-                <h4 class="mb-0">£{{ purchase_total|floatformat:2 }}</h4>
+    <div class="col-6 col-lg-4">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-graph-down-arrow"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-label">Total Purchases</span>
+                <span class="metric-card-value">&pound;{{ purchase_total|floatformat:2 }}</span>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <p class="text-muted mb-1">Sales this month</p>
-                <h4 class="mb-0">£{{ month_sales_total|floatformat:2 }}</h4>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <p class="text-muted mb-1">Purchases this month</p>
-                <h4 class="mb-0">£{{ month_purchase_total|floatformat:2 }}</h4>
+    <div class="col-6 col-lg-4">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-wallet2"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-label">Gross Profit</span>
+                <span class="metric-card-value">&pound;{{ gross_profit|floatformat:2 }}</span>
             </div>
         </div>
     </div>
 </div>
-<div class="row g-3 mt-4">
-    <div class="col-lg-6">
-        <div class="card shadow-sm h-100">
-            <div class="card-header bg-white">Recent sales</div>
-            <div class="card-body">
-                {% if recent_sales %}
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle">
-                        <thead><tr><th>Date</th><th>Customer</th><th>Product</th><th class="text-end">Value</th></tr></thead>
-                        <tbody>
-                            {% for row in recent_sales %}
-                            <tr>
-                                <td>{{ row.date|date:"Y-m-d H:i" }}</td>
-                                <td>{{ row.customer }}</td>
-                                <td>{{ row.product }}</td>
-                                <td class="text-end">£{{ row.value|floatformat:2 }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <p class="mb-0">No sales ledger entries yet.</p>
-                {% endif %}
+
+{# ── This month metrics ── #}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-4">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-receipt"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-label">Sales This Month</span>
+                <span class="metric-card-value">&pound;{{ month_sales_total|floatformat:2 }}</span>
             </div>
         </div>
     </div>
-    <div class="col-lg-6">
-        <div class="card shadow-sm h-100">
-            <div class="card-header bg-white">Recent purchases</div>
-            <div class="card-body">
-                {% if recent_purchases %}
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle">
-                        <thead><tr><th>Date</th><th>Supplier</th><th>Product</th><th class="text-end">Value</th></tr></thead>
-                        <tbody>
-                            {% for row in recent_purchases %}
-                            <tr>
-                                <td>{{ row.date|date:"Y-m-d H:i" }}</td>
-                                <td>{{ row.supplier }}</td>
-                                <td>{{ row.product }}</td>
-                                <td class="text-end">£{{ row.value|floatformat:2 }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <p class="mb-0">No purchase ledger entries yet.</p>
-                {% endif %}
+    <div class="col-6 col-lg-4">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-bag"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-label">Purchases This Month</span>
+                <span class="metric-card-value">&pound;{{ month_purchase_total|floatformat:2 }}</span>
             </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-4">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-cash-stack"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-label">Profit This Month</span>
+                <span class="metric-card-value">&pound;{{ month_profit|floatformat:2 }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Recent activity tables ── #}
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="detail-section h-100">
+            <div class="detail-section-header">
+                <h2 class="detail-section-title">Recent Sales</h2>
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'finance:sales-ledger-archive' %}">View all</a>
+            </div>
+            {% if recent_sales %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th>Product</th>
+                            <th class="text-end">Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in recent_sales %}
+                        <tr>
+                            <td class="text-nowrap">{{ row.date|date:"d M Y" }}</td>
+                            <td>{{ row.customer }}</td>
+                            <td>{{ row.product }}</td>
+                            <td class="text-end">&pound;{{ row.value|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted mb-0 p-3">No sales ledger entries yet.</p>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="detail-section h-100">
+            <div class="detail-section-header">
+                <h2 class="detail-section-title">Recent Purchases</h2>
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'finance:purchase-ledger-archive' %}">View all</a>
+            </div>
+            {% if recent_purchases %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Supplier</th>
+                            <th>Product</th>
+                            <th class="text-end">Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in recent_purchases %}
+                        <tr>
+                            <td class="text-nowrap">{{ row.date|date:"d M Y" }}</td>
+                            <td>{{ row.supplier }}</td>
+                            <td>{{ row.product }}</td>
+                            <td class="text-end">&pound;{{ row.value|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted mb-0 p-3">No purchase ledger entries yet.</p>
+            {% endif %}
         </div>
     </div>
 </div>

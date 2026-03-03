@@ -6,7 +6,7 @@
 
 {# ── Key metrics ── #}
 <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-lg">
         <div class="metric-card">
             <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-boxes"></i></div>
             <div class="metric-card-content">
@@ -15,7 +15,7 @@
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-lg">
         <div class="metric-card">
             <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-cart-check"></i></div>
             <div class="metric-card-content">
@@ -24,17 +24,17 @@
             </div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-lg">
         <div class="metric-card">
             <div class="metric-card-icon metric-card-icon--dark"><i class="bi bi-truck"></i></div>
             <div class="metric-card-content">
                 <span class="metric-card-value">{{ purchase_pending }}</span>
-                <span class="metric-card-label">Purchases Pending</span>
+                <span class="metric-card-label">Purchases Incoming</span>
             </div>
         </div>
     </div>
     {% if production_pending > 0 %}
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-lg">
         <div class="metric-card">
             <div class="metric-card-icon metric-card-icon--warning"><i class="bi bi-gear"></i></div>
             <div class="metric-card-content">
@@ -45,7 +45,7 @@
     </div>
     {% endif %}
     {% if required_qty > 0 %}
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-lg">
         <div class="metric-card" style="border-color: var(--color-danger);">
             <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-exclamation-triangle"></i></div>
             <div class="metric-card-content">
@@ -58,71 +58,86 @@
 </div>
 
 {# ── Action buttons ── #}
-<div class="detail-actions mb-2">
+<div class="detail-actions mb-4">
     <a class="btn btn-outline-primary" href="{% url 'inventory:product-update' inventory.product.pk %}"><i class="bi bi-pencil me-1"></i>Edit Product</a>
     <a class="btn btn-warning" href="{% url 'inventory:inventory-adjust' inventory.pk %}"><i class="bi bi-sliders me-1"></i>Adjust Quantity</a>
 </div>
 
-{# ── Demand overview chart ── #}
+{# ── Stock Level History (full width) ── #}
 <div class="detail-section">
     <div class="detail-section-header">
-        <h2 class="detail-section-title">Demand Overview</h2>
+        <h2 class="detail-section-title">Stock Level History</h2>
     </div>
-    <div class="row g-4">
-        <div class="col-md-5">
-            <div style="max-width:320px; margin:0 auto;">
+    <canvas id="history-chart" height="80"></canvas>
+</div>
+
+{# ── Demand Overview & Monthly Activity side-by-side ── #}
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="detail-section h-100">
+            <div class="detail-section-header">
+                <h2 class="detail-section-title">Demand Overview</h2>
+            </div>
+            <div style="max-width:280px; margin:0 auto; padding-top:1rem;">
                 <canvas id="pending-chart"></canvas>
             </div>
         </div>
-        <div class="col-md-7">
-            <canvas id="history-chart" height="200"></canvas>
+    </div>
+    <div class="col-md-8">
+        <div class="detail-section h-100">
+            <div class="detail-section-header">
+                <h2 class="detail-section-title">Monthly Activity</h2>
+            </div>
+            <canvas id="monthly-chart" height="160"></canvas>
         </div>
     </div>
 </div>
 
-{# ── Monthly activity chart ── #}
-<div class="detail-section">
-    <div class="detail-section-header">
-        <h2 class="detail-section-title">Monthly Activity</h2>
-    </div>
-    <canvas id="monthly-chart" height="120"></canvas>
-</div>
-
 {# ── Inventory Ledger ── #}
-<div class="detail-section">
+<div class="detail-section mt-4">
     <div class="detail-section-header">
         <h2 class="detail-section-title">Inventory Ledger</h2>
     </div>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Quantity</th>
-                <th>Action</th>
-                <th>Transaction</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for entry in ledger %}
-            <tr>
-                <td>{{ entry.date }}</td>
-                <td>
-                    {% if entry.quantity > 0 %}
-                        <span style="color: var(--color-success); font-weight:600;">+{{ entry.quantity }}</span>
-                    {% else %}
-                        <span style="color: var(--color-danger); font-weight:600;">{{ entry.quantity }}</span>
-                    {% endif %}
-                </td>
-                <td>{{ entry.action }}</td>
-                <td>{{ entry.transaction_id }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="4" class="text-muted">No ledger entries.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th class="text-end">Change</th>
+                    <th class="text-end">Balance</th>
+                    <th>Action</th>
+                    <th>Transaction</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in ledger %}
+                <tr>
+                    <td class="text-nowrap">{{ entry.date|date:"d M Y, H:i" }}</td>
+                    <td class="text-end">
+                        {% if entry.quantity > 0 %}
+                            <span class="badge bg-success-subtle text-success">+{{ entry.quantity }}</span>
+                        {% else %}
+                            <span class="badge bg-danger-subtle text-danger">{{ entry.quantity }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end fw-semibold">{{ entry.balance }}</td>
+                    <td>{{ entry.action }}</td>
+                    <td>
+                        {% if entry.transaction_id %}
+                            <code>{{ entry.transaction_id }}</code>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-muted text-center py-4">No ledger entries recorded.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% include "includes/pagination.html" with page_obj=ledger %}
 </div>
 

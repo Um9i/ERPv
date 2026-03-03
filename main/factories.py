@@ -25,15 +25,46 @@ from production.models import (
 
 fake = Faker()
 
+# ── Realistic product name generation ──
+PRODUCT_ADJECTIVES = [
+    "Premium", "Industrial", "Heavy-Duty", "Compact", "Standard",
+    "Professional", "Ultra", "Elite", "Essential", "Advanced",
+    "Precision", "Lightweight", "Reinforced", "Eco", "High-Performance",
+]
 
-import uuid
+PRODUCT_MATERIALS = [
+    "Steel", "Aluminium", "Carbon", "Titanium", "Copper",
+    "Brass", "Polymer", "Ceramic", "Composite", "Alloy",
+]
+
+PRODUCT_TYPES = [
+    "Bearing", "Valve", "Gasket", "Bracket", "Coupling",
+    "Flange", "Piston", "Shaft", "Gear", "Sprocket",
+    "Bolt Set", "Filter", "Seal", "Bushing", "Housing",
+    "Connector", "Clamp", "Hinge", "Actuator", "Rotor",
+    "Impeller", "Nozzle", "Manifold", "Rail", "Panel",
+]
+
+
+def _generate_product_name(n):
+    import random
+    adj = random.choice(PRODUCT_ADJECTIVES)
+    mat = random.choice(PRODUCT_MATERIALS)
+    typ = random.choice(PRODUCT_TYPES)
+    size = random.choice(["6mm", "10mm", "12mm", "16mm", "20mm", "25mm", "32mm", "40mm", "50mm"])
+    return f"{adj} {mat} {typ} {size}"
+
+
+def _generate_company_name(n):
+    """Generate a realistic company name using Faker."""
+    return fake.company()
+
 
 class ProductFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Product
 
-    # generate a UUID-based name so every invocation is globally unique
-    name = factory.LazyFunction(lambda: f"Prod-{uuid.uuid4().hex[:8]}")
+    name = factory.LazyAttribute(lambda o: _generate_product_name(o))
 
 
 class InventoryFactory(factory.django.DjangoModelFactory):
@@ -49,8 +80,7 @@ class CustomerFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Customer
 
-    # ensure uniqueness to satisfy unique constraint
-    name = factory.LazyFunction(lambda: f"Cust-{uuid.uuid4().hex[:8]}")
+    name = factory.LazyFunction(lambda: fake.company())
     address_line_1 = factory.LazyAttribute(lambda x: fake.street_address())
     city = factory.LazyAttribute(lambda x: fake.city())
     state = factory.LazyAttribute(lambda x: fake.state_abbr())
@@ -95,7 +125,7 @@ class SupplierFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Supplier
 
-    name = factory.LazyFunction(lambda: f"Supp-{uuid.uuid4().hex[:8]}")
+    name = factory.LazyFunction(lambda: fake.company())
     address_line_1 = factory.LazyAttribute(lambda x: fake.street_address())
     city = factory.LazyAttribute(lambda x: fake.city())
     state = factory.LazyAttribute(lambda x: fake.state_abbr())

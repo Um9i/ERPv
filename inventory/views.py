@@ -82,15 +82,42 @@ class InventoryDetailView(DetailView):
         ledger_list = inv.product.inventory_ledger.all().order_by("-date")
         page = self.request.GET.get("page")
         paginator = Paginator(ledger_list, 10)
-        context["ledger"] = paginator.get_page(page)
-        # build time series of inventory levels from ledger
+        ledger_page = paginator.get_page(page)
+
+        # ── Compute running balance anchored to current stock ──
+        # Walk all entries newest-first to assign a balance to every entry,
+        # then attach balances to the paginated subset.
+        all_entries_desc = list(inv.product.inventory_ledger.all().order_by("-date").values_list("pk", "quantity"))
+        # build balance map: start from current qty, walk backwards (newest first)
+        balance_map = {}
+        running = inv.quantity
+        for pk, qty in all_entries_desc:
+            balance_map[pk] = running
+            running -= qty
+        # `running` now equals the implied opening balance before all ledger entries
+
+        # annotate paginated entries with their balance
+        for entry in ledger_page:
+            entry.balance = balance_map.get(entry.pk, None)
+
+        context["ledger"] = ledger_page
+
+        # ── Build chart history anchored to real stock ──
+        # Walk entries oldest-first; start from the implied opening balance
+        all_entries_asc = list(
+            inv.product.inventory_ledger.all()
+            .order_by("date")
+            .values_list("quantity", "date")
+        )
+        opening_balance = running  # leftover from the desc walk above
         history = []
-        total = 0
         dates = []
-        for entry in inv.product.inventory_ledger.all().order_by("date"):
-            total += entry.quantity
-            dates.append(entry.date.strftime("%Y-%m-%d %H:%M"))
+        total = opening_balance
+        for qty, dt in all_entries_asc:
+            total += qty
+            dates.append(dt.strftime("%Y-%m-%d %H:%M"))
             history.append(total)
+
         context["history_dates"] = dates
         context["history_qty"] = history
 
@@ -159,8 +186,11 @@ class InventoryDetailView(DetailView):
             closed=False,
         ).filter(quantity__gt=F('quantity_received'))
         context["production_pending"] = prod_qs.aggregate(total=Sum(F("quantity") - F("quantity_received")))["total"] or 0
-        # shortage required field
-        context["required_qty"] = inv.required
+
+        # shortage: how much demand exceeds all available + incoming supply
+        available = inv.quantity + context["purchase_pending"] + context["production_pending"]
+        context["required_qty"] = max(0, context["sales_pending"] - available)
+
         # bundle all chart data for json_script (consumed by static JS)
         context["chart_data"] = {
             "sales_pending": context["sales_pending"],

@@ -18,19 +18,4 @@ urlpatterns = [
         views.PurchaseLedgerMonthArchiveView.as_view(),
         name="purchase-ledger-month",
     ),
-    path(
-        "invoices/<int:year>/<int:month>/",
-        views.CustomerInvoiceMonthView.as_view(),
-        name="customer-invoices-month",
-    ),
-    path(
-        "invoices/<int:year>/<int:month>/pdf/",
-        views.CustomerInvoiceMonthPdfView.as_view(),
-        name="customer-invoices-month-pdf",
-    ),
-    path(
-        "supplier-bills/<int:year>/<int:month>/",
-        views.SupplierBillingMonthView.as_view(),
-        name="supplier-bills-month",
-    ),
 ]
