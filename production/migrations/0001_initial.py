@@ -9,48 +9,102 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('inventory', '0001_initial'),
+        ("inventory", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='BillOfMaterials',
+            name="BillOfMaterials",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('product', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='inventory.product')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "product",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="inventory.product",
+                    ),
+                ),
             ],
             options={
-                'verbose_name_plural': 'Bill of Materials Configuration',
-                'ordering': ['product'],
+                "verbose_name_plural": "Bill of Materials Configuration",
+                "ordering": ["product"],
             },
         ),
         migrations.CreateModel(
-            name='Production',
+            name="Production",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('quantity', models.PositiveBigIntegerField()),
-                ('complete', models.BooleanField(default=False)),
-                ('closed', models.BooleanField(default=False)),
-                ('bom_allocated', models.BooleanField(default=False)),
-                ('bom_allocated_amount', models.PositiveBigIntegerField(blank=True, null=True)),
-                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='product_jobs', to='inventory.product')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("quantity", models.PositiveBigIntegerField()),
+                ("complete", models.BooleanField(default=False)),
+                ("closed", models.BooleanField(default=False)),
+                ("bom_allocated", models.BooleanField(default=False)),
+                (
+                    "bom_allocated_amount",
+                    models.PositiveBigIntegerField(blank=True, null=True),
+                ),
+                (
+                    "product",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="product_jobs",
+                        to="inventory.product",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'planned production',
-                'verbose_name_plural': 'Production Planning',
-                'ordering': ['-id'],
+                "verbose_name": "planned production",
+                "verbose_name_plural": "Production Planning",
+                "ordering": ["-id"],
             },
         ),
         migrations.CreateModel(
-            name='BOMItem',
+            name="BOMItem",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('quantity', models.PositiveBigIntegerField()),
-                ('bom', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='bom_items', to='production.billofmaterials')),
-                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='product_bom_items', to='inventory.product')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("quantity", models.PositiveBigIntegerField()),
+                (
+                    "bom",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="bom_items",
+                        to="production.billofmaterials",
+                    ),
+                ),
+                (
+                    "product",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="product_bom_items",
+                        to="inventory.product",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['product__name'],
+                "ordering": ["product__name"],
             },
         ),
     ]

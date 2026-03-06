@@ -6,17 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('inventory', '0001_initial'),
+        ("inventory", "0001_initial"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='inventoryadjust',
-            name='closed',
+            model_name="inventoryadjust",
+            name="closed",
         ),
         migrations.AlterField(
-            model_name='inventoryadjust',
-            name='complete',
+            model_name="inventoryadjust",
+            name="complete",
             field=models.BooleanField(default=True),
         ),
     ]

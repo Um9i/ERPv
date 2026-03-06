@@ -6,12 +6,16 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('production', '0004_billofmaterials_production__product_4e703f_idx_and_more'),
+        ("production", "0004_billofmaterials_production__product_4e703f_idx_and_more"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='production',
-            options={'ordering': ['-closed', '-pk'], 'verbose_name': 'planned production', 'verbose_name_plural': 'Production Planning'},
+            name="production",
+            options={
+                "ordering": ["-closed", "-pk"],
+                "verbose_name": "planned production",
+                "verbose_name_plural": "Production Planning",
+            },
         ),
     ]

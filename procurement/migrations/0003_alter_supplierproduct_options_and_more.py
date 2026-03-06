@@ -7,27 +7,27 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('inventory', '0002_remove_inventoryadjust_closed_and_more'),
-        ('procurement', '0002_alter_purchaseledger_supplier'),
+        ("inventory", "0002_remove_inventoryadjust_closed_and_more"),
+        ("procurement", "0002_alter_purchaseledger_supplier"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='supplierproduct',
+            name="supplierproduct",
             options={},
         ),
         migrations.AddField(
-            model_name='purchaseorder',
-            name='created_at',
+            model_name="purchaseorder",
+            name="created_at",
             field=models.DateTimeField(default=django.utils.timezone.now),
         ),
         migrations.AddField(
-            model_name='purchaseorder',
-            name='updated_at',
+            model_name="purchaseorder",
+            name="updated_at",
             field=models.DateTimeField(auto_now=True),
         ),
         migrations.AlterUniqueTogether(
-            name='supplierproduct',
-            unique_together={('supplier', 'product')},
+            name="supplierproduct",
+            unique_together={("supplier", "product")},
         ),
     ]

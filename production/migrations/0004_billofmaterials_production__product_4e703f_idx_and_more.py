@@ -6,33 +6,43 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('inventory', '0004_inventory_inventory_i_product_f4f8f8_idx_and_more'),
-        ('production', '0003_production_quantity_received'),
+        ("inventory", "0004_inventory_inventory_i_product_f4f8f8_idx_and_more"),
+        ("production", "0003_production_quantity_received"),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='billofmaterials',
-            index=models.Index(fields=['product'], name='production__product_4e703f_idx'),
+            model_name="billofmaterials",
+            index=models.Index(
+                fields=["product"], name="production__product_4e703f_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='bomitem',
-            index=models.Index(fields=['bom'], name='production__bom_id_2a7c10_idx'),
+            model_name="bomitem",
+            index=models.Index(fields=["bom"], name="production__bom_id_2a7c10_idx"),
         ),
         migrations.AddIndex(
-            model_name='bomitem',
-            index=models.Index(fields=['product'], name='production__product_935327_idx'),
+            model_name="bomitem",
+            index=models.Index(
+                fields=["product"], name="production__product_935327_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='production',
-            index=models.Index(fields=['product'], name='production__product_1ad992_idx'),
+            model_name="production",
+            index=models.Index(
+                fields=["product"], name="production__product_1ad992_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='production',
-            index=models.Index(fields=['complete', 'closed'], name='production__complet_e117a6_idx'),
+            model_name="production",
+            index=models.Index(
+                fields=["complete", "closed"], name="production__complet_e117a6_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='production',
-            index=models.Index(fields=['bom_allocated'], name='production__bom_all_876498_idx'),
+            model_name="production",
+            index=models.Index(
+                fields=["bom_allocated"], name="production__bom_all_876498_idx"
+            ),
         ),
     ]

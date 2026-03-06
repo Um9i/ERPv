@@ -8,73 +8,143 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Product',
+            name="Product",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=256, unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=256, unique=True)),
             ],
             options={
-                'verbose_name_plural': 'Inventory Management',
-                'ordering': ['name'],
+                "verbose_name_plural": "Inventory Management",
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='ProductionAllocated',
+            name="ProductionAllocated",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('quantity', models.PositiveBigIntegerField(blank=True, default=0, null=True)),
-                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='production_allocated', to='inventory.product')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "quantity",
+                    models.PositiveBigIntegerField(blank=True, default=0, null=True),
+                ),
+                (
+                    "product",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="production_allocated",
+                        to="inventory.product",
+                    ),
+                ),
             ],
             options={
-                'verbose_name_plural': 'Production Allocated',
-                'ordering': ['-id'],
+                "verbose_name_plural": "Production Allocated",
+                "ordering": ["-id"],
             },
         ),
         migrations.CreateModel(
-            name='InventoryLedger',
+            name="InventoryLedger",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('quantity', models.BigIntegerField()),
-                ('date', models.DateTimeField(auto_now_add=True)),
-                ('action', models.CharField(max_length=128)),
-                ('transaction_id', models.PositiveBigIntegerField()),
-                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='inventory_ledger', to='inventory.product')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("quantity", models.BigIntegerField()),
+                ("date", models.DateTimeField(auto_now_add=True)),
+                ("action", models.CharField(max_length=128)),
+                ("transaction_id", models.PositiveBigIntegerField()),
+                (
+                    "product",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="inventory_ledger",
+                        to="inventory.product",
+                    ),
+                ),
             ],
             options={
-                'verbose_name_plural': 'Inventory Ledger',
-                'ordering': ['-date'],
+                "verbose_name_plural": "Inventory Ledger",
+                "ordering": ["-date"],
             },
         ),
         migrations.CreateModel(
-            name='InventoryAdjust',
+            name="InventoryAdjust",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('quantity', models.BigIntegerField()),
-                ('complete', models.BooleanField(default=False)),
-                ('closed', models.BooleanField(default=False)),
-                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='inventory_adjustment', to='inventory.product')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("quantity", models.BigIntegerField()),
+                ("complete", models.BooleanField(default=False)),
+                ("closed", models.BooleanField(default=False)),
+                (
+                    "product",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="inventory_adjustment",
+                        to="inventory.product",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'inventory adjustment',
-                'verbose_name_plural': 'Inventory Adjustment',
-                'ordering': ['-id'],
+                "verbose_name": "inventory adjustment",
+                "verbose_name_plural": "Inventory Adjustment",
+                "ordering": ["-id"],
             },
         ),
         migrations.CreateModel(
-            name='Inventory',
+            name="Inventory",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('quantity', models.PositiveBigIntegerField(default=0)),
-                ('product', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='product_inventory', to='inventory.product')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("quantity", models.PositiveBigIntegerField(default=0)),
+                (
+                    "product",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="product_inventory",
+                        to="inventory.product",
+                    ),
+                ),
             ],
             options={
-                'verbose_name_plural': 'Inventory Items',
-                'ordering': ['product'],
+                "verbose_name_plural": "Inventory Items",
+                "ordering": ["product"],
             },
         ),
     ]

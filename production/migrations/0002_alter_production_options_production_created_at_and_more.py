@@ -7,22 +7,26 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('production', '0001_initial'),
+        ("production", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='production',
-            options={'ordering': ['-pk'], 'verbose_name': 'planned production', 'verbose_name_plural': 'Production Planning'},
+            name="production",
+            options={
+                "ordering": ["-pk"],
+                "verbose_name": "planned production",
+                "verbose_name_plural": "Production Planning",
+            },
         ),
         migrations.AddField(
-            model_name='production',
-            name='created_at',
+            model_name="production",
+            name="created_at",
             field=models.DateTimeField(default=django.utils.timezone.now),
         ),
         migrations.AddField(
-            model_name='production',
-            name='updated_at',
+            model_name="production",
+            name="updated_at",
             field=models.DateTimeField(auto_now=True),
         ),
     ]

@@ -7,23 +7,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('sales', '0002_alter_salesledger_customer'),
+        ("sales", "0002_alter_salesledger_customer"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='salesorder',
-            name='created_at',
+            model_name="salesorder",
+            name="created_at",
             field=models.DateTimeField(default=django.utils.timezone.now),
         ),
         migrations.AddField(
-            model_name='salesorder',
-            name='updated_at',
+            model_name="salesorder",
+            name="updated_at",
             field=models.DateTimeField(auto_now=True),
         ),
         migrations.AddField(
-            model_name='salesorderline',
-            name='quantity_shipped',
+            model_name="salesorderline",
+            name="quantity_shipped",
             field=models.PositiveBigIntegerField(default=0),
         ),
     ]

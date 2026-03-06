@@ -7,13 +7,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('sales', '0001_initial'),
+        ("sales", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='salesledger',
-            name='customer',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='sales_ledgers', to='sales.customer'),
+            model_name="salesledger",
+            name="customer",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="sales_ledgers",
+                to="sales.customer",
+            ),
         ),
     ]

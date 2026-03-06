@@ -7,13 +7,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('procurement', '0005_purchaseledger_procurement_product_c87226_idx_and_more'),
+        ("procurement", "0005_purchaseledger_procurement_product_c87226_idx_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='purchaseorder',
-            name='total_amount_cached',
-            field=models.DecimalField(decimal_places=2, default=Decimal('0.00'), editable=False, max_digits=14),
+            model_name="purchaseorder",
+            name="total_amount_cached",
+            field=models.DecimalField(
+                decimal_places=2, default=Decimal("0.00"), editable=False, max_digits=14
+            ),
         ),
     ]

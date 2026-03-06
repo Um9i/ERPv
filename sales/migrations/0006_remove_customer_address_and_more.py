@@ -6,76 +6,88 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('sales', '0005_salesorder_total_amount_cached'),
+        ("sales", "0005_salesorder_total_amount_cached"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='customer',
-            name='address',
+            model_name="customer",
+            name="address",
         ),
         migrations.RemoveField(
-            model_name='customercontact',
-            name='address',
+            model_name="customercontact",
+            name="address",
         ),
         migrations.AddField(
-            model_name='customer',
-            name='address_line_1',
-            field=models.CharField(blank=True, max_length=256, verbose_name='Address line 1'),
+            model_name="customer",
+            name="address_line_1",
+            field=models.CharField(
+                blank=True, max_length=256, verbose_name="Address line 1"
+            ),
         ),
         migrations.AddField(
-            model_name='customer',
-            name='address_line_2',
-            field=models.CharField(blank=True, max_length=256, verbose_name='Address line 2'),
+            model_name="customer",
+            name="address_line_2",
+            field=models.CharField(
+                blank=True, max_length=256, verbose_name="Address line 2"
+            ),
         ),
         migrations.AddField(
-            model_name='customer',
-            name='city',
+            model_name="customer",
+            name="city",
             field=models.CharField(blank=True, max_length=128),
         ),
         migrations.AddField(
-            model_name='customer',
-            name='country',
+            model_name="customer",
+            name="country",
             field=models.CharField(blank=True, max_length=128),
         ),
         migrations.AddField(
-            model_name='customer',
-            name='postal_code',
+            model_name="customer",
+            name="postal_code",
             field=models.CharField(blank=True, max_length=20),
         ),
         migrations.AddField(
-            model_name='customer',
-            name='state',
-            field=models.CharField(blank=True, max_length=128, verbose_name='State / Region'),
+            model_name="customer",
+            name="state",
+            field=models.CharField(
+                blank=True, max_length=128, verbose_name="State / Region"
+            ),
         ),
         migrations.AddField(
-            model_name='customercontact',
-            name='address_line_1',
-            field=models.CharField(blank=True, max_length=256, verbose_name='Address line 1'),
+            model_name="customercontact",
+            name="address_line_1",
+            field=models.CharField(
+                blank=True, max_length=256, verbose_name="Address line 1"
+            ),
         ),
         migrations.AddField(
-            model_name='customercontact',
-            name='address_line_2',
-            field=models.CharField(blank=True, max_length=256, verbose_name='Address line 2'),
+            model_name="customercontact",
+            name="address_line_2",
+            field=models.CharField(
+                blank=True, max_length=256, verbose_name="Address line 2"
+            ),
         ),
         migrations.AddField(
-            model_name='customercontact',
-            name='city',
+            model_name="customercontact",
+            name="city",
             field=models.CharField(blank=True, max_length=128),
         ),
         migrations.AddField(
-            model_name='customercontact',
-            name='country',
+            model_name="customercontact",
+            name="country",
             field=models.CharField(blank=True, max_length=128),
         ),
         migrations.AddField(
-            model_name='customercontact',
-            name='postal_code',
+            model_name="customercontact",
+            name="postal_code",
             field=models.CharField(blank=True, max_length=20),
         ),
         migrations.AddField(
-            model_name='customercontact',
-            name='state',
-            field=models.CharField(blank=True, max_length=128, verbose_name='State / Region'),
+            model_name="customercontact",
+            name="state",
+            field=models.CharField(
+                blank=True, max_length=128, verbose_name="State / Region"
+            ),
         ),
     ]

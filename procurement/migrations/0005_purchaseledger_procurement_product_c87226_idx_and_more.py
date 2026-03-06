@@ -6,37 +6,48 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('inventory', '0004_inventory_inventory_i_product_f4f8f8_idx_and_more'),
-        ('procurement', '0004_purchaseorderline_quantity_received'),
+        ("inventory", "0004_inventory_inventory_i_product_f4f8f8_idx_and_more"),
+        ("procurement", "0004_purchaseorderline_quantity_received"),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='purchaseledger',
-            index=models.Index(fields=['product', 'supplier'], name='procurement_product_c87226_idx'),
+            model_name="purchaseledger",
+            index=models.Index(
+                fields=["product", "supplier"], name="procurement_product_c87226_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='purchaseledger',
-            index=models.Index(fields=['date'], name='procurement_date_434025_idx'),
+            model_name="purchaseledger",
+            index=models.Index(fields=["date"], name="procurement_date_434025_idx"),
         ),
         migrations.AddIndex(
-            model_name='purchaseorder',
-            index=models.Index(fields=['supplier'], name='procurement_supplie_4b007c_idx'),
+            model_name="purchaseorder",
+            index=models.Index(
+                fields=["supplier"], name="procurement_supplie_4b007c_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='purchaseorder',
-            index=models.Index(fields=['created_at'], name='procurement_created_164010_idx'),
+            model_name="purchaseorder",
+            index=models.Index(
+                fields=["created_at"], name="procurement_created_164010_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='purchaseorderline',
-            index=models.Index(fields=['purchase_order', 'complete'], name='procurement_purchas_96f44a_idx'),
+            model_name="purchaseorderline",
+            index=models.Index(
+                fields=["purchase_order", "complete"],
+                name="procurement_purchas_96f44a_idx",
+            ),
         ),
         migrations.AddIndex(
-            model_name='purchaseorderline',
-            index=models.Index(fields=['product'], name='procurement_product_cff152_idx'),
+            model_name="purchaseorderline",
+            index=models.Index(
+                fields=["product"], name="procurement_product_cff152_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='purchaseorderline',
-            index=models.Index(fields=['closed'], name='procurement_closed_4c7787_idx'),
+            model_name="purchaseorderline",
+            index=models.Index(fields=["closed"], name="procurement_closed_4c7787_idx"),
         ),
     ]

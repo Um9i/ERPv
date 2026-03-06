@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('inventory', '0004_inventory_inventory_i_product_f4f8f8_idx_and_more'),
+        ("inventory", "0004_inventory_inventory_i_product_f4f8f8_idx_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='inventory',
-            name='required_cached',
+            model_name="inventory",
+            name="required_cached",
             field=models.BigIntegerField(default=0, editable=False),
         ),
     ]

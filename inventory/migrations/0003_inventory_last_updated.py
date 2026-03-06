@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('inventory', '0002_remove_inventoryadjust_closed_and_more'),
+        ("inventory", "0002_remove_inventoryadjust_closed_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='inventory',
-            name='last_updated',
+            model_name="inventory",
+            name="last_updated",
             field=models.DateTimeField(auto_now=True),
         ),
     ]

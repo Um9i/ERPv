@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('procurement', '0003_alter_supplierproduct_options_and_more'),
+        ("procurement", "0003_alter_supplierproduct_options_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='purchaseorderline',
-            name='quantity_received',
+            model_name="purchaseorderline",
+            name="quantity_received",
             field=models.PositiveBigIntegerField(default=0),
         ),
     ]

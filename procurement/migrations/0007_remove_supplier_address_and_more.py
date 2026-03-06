@@ -6,76 +6,88 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('procurement', '0006_purchaseorder_total_amount_cached'),
+        ("procurement", "0006_purchaseorder_total_amount_cached"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='supplier',
-            name='address',
+            model_name="supplier",
+            name="address",
         ),
         migrations.RemoveField(
-            model_name='suppliercontact',
-            name='address',
+            model_name="suppliercontact",
+            name="address",
         ),
         migrations.AddField(
-            model_name='supplier',
-            name='address_line_1',
-            field=models.CharField(blank=True, max_length=256, verbose_name='Address line 1'),
+            model_name="supplier",
+            name="address_line_1",
+            field=models.CharField(
+                blank=True, max_length=256, verbose_name="Address line 1"
+            ),
         ),
         migrations.AddField(
-            model_name='supplier',
-            name='address_line_2',
-            field=models.CharField(blank=True, max_length=256, verbose_name='Address line 2'),
+            model_name="supplier",
+            name="address_line_2",
+            field=models.CharField(
+                blank=True, max_length=256, verbose_name="Address line 2"
+            ),
         ),
         migrations.AddField(
-            model_name='supplier',
-            name='city',
+            model_name="supplier",
+            name="city",
             field=models.CharField(blank=True, max_length=128),
         ),
         migrations.AddField(
-            model_name='supplier',
-            name='country',
+            model_name="supplier",
+            name="country",
             field=models.CharField(blank=True, max_length=128),
         ),
         migrations.AddField(
-            model_name='supplier',
-            name='postal_code',
+            model_name="supplier",
+            name="postal_code",
             field=models.CharField(blank=True, max_length=20),
         ),
         migrations.AddField(
-            model_name='supplier',
-            name='state',
-            field=models.CharField(blank=True, max_length=128, verbose_name='State / Region'),
+            model_name="supplier",
+            name="state",
+            field=models.CharField(
+                blank=True, max_length=128, verbose_name="State / Region"
+            ),
         ),
         migrations.AddField(
-            model_name='suppliercontact',
-            name='address_line_1',
-            field=models.CharField(blank=True, max_length=256, verbose_name='Address line 1'),
+            model_name="suppliercontact",
+            name="address_line_1",
+            field=models.CharField(
+                blank=True, max_length=256, verbose_name="Address line 1"
+            ),
         ),
         migrations.AddField(
-            model_name='suppliercontact',
-            name='address_line_2',
-            field=models.CharField(blank=True, max_length=256, verbose_name='Address line 2'),
+            model_name="suppliercontact",
+            name="address_line_2",
+            field=models.CharField(
+                blank=True, max_length=256, verbose_name="Address line 2"
+            ),
         ),
         migrations.AddField(
-            model_name='suppliercontact',
-            name='city',
+            model_name="suppliercontact",
+            name="city",
             field=models.CharField(blank=True, max_length=128),
         ),
         migrations.AddField(
-            model_name='suppliercontact',
-            name='country',
+            model_name="suppliercontact",
+            name="country",
             field=models.CharField(blank=True, max_length=128),
         ),
         migrations.AddField(
-            model_name='suppliercontact',
-            name='postal_code',
+            model_name="suppliercontact",
+            name="postal_code",
             field=models.CharField(blank=True, max_length=20),
         ),
         migrations.AddField(
-            model_name='suppliercontact',
-            name='state',
-            field=models.CharField(blank=True, max_length=128, verbose_name='State / Region'),
+            model_name="suppliercontact",
+            name="state",
+            field=models.CharField(
+                blank=True, max_length=128, verbose_name="State / Region"
+            ),
         ),
     ]
