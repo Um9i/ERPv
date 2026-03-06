@@ -40,18 +40,17 @@ class BOMItem(models.Model):
         return f"{self.product.name} x {self.quantity}"
 
     def _get_all_sub_products(self, product, visited=None):
-        """Recursively collect all products used in a product's BOM."""
-        if visited is None:
-            visited = set()
-        if product.pk in visited:
-            return visited
-        visited.add(product.pk)
-        try:
-            bom = product.billofmaterials
-        except BillOfMaterials.DoesNotExist:
-            return visited
-        for item in bom.bom_items.all():
-            self._get_all_sub_products(item.product, visited)
+        """Iteratively collect all sub-product IDs using bulk queries."""
+        visited = set()
+        frontier = {product.pk}
+        while frontier:
+            visited |= frontier
+            children = set(
+                BOMItem.objects.filter(
+                    bom__product_id__in=frontier
+                ).values_list("product_id", flat=True)
+            )
+            frontier = children - visited
         return visited
 
     def clean(self):

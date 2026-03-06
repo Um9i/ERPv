@@ -1,10 +1,9 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
-from django.db.models.signals import post_save
-from django.db.models import F
-from django.dispatch import receiver
+from django.db.models import F, Min, Sum
 from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 
 
@@ -23,23 +22,69 @@ class Product(models.Model):
         2. If a bill of materials exists, compute cost as sum(component_cost * quantity).
         3. Otherwise zero.
         """
-        # cheapest supplier cost
-        suppliers = self.product_suppliers.all().order_by("cost")
-        if suppliers.exists():
-            try:
-                return suppliers.first().cost
-            except Exception:
-                return 0
-        # compute from BOM if available
-        try:
-            bom = self.billofmaterials
-        except Product.billofmaterials.RelatedObjectDoesNotExist:
+        from procurement.models import SupplierProduct
+        from production.models import BOMItem, BillOfMaterials
+        from collections import defaultdict
+
+        # cheapest supplier cost for this product
+        first = (
+            SupplierProduct.objects.filter(product=self)
+            .order_by("cost")
+            .values_list("cost", flat=True)
+            .first()
+        )
+        if first is not None:
+            return first
+
+        # no supplier — try BOM cost roll-up
+        if not BillOfMaterials.objects.filter(product=self).exists():
             return 0
-        total = 0
-        for item in bom.bom_items.all().select_related("product"):
-            # recursive call
-            total += item.quantity * item.product.unit_cost
-        return total
+
+        # collect all product IDs in the BOM tree iteratively
+        all_ids = set()
+        frontier = {self.pk}
+        while frontier:
+            all_ids |= frontier
+            children = set(
+                BOMItem.objects.filter(
+                    bom__product_id__in=frontier
+                ).values_list("product_id", flat=True)
+            )
+            frontier = children - all_ids
+
+        # bulk-load all BOM edges
+        children_map = defaultdict(list)
+        for parent_id, child_id, qty in BOMItem.objects.filter(
+            bom__product_id__in=all_ids
+        ).values_list("bom__product_id", "product_id", "quantity"):
+            children_map[parent_id].append((child_id, qty))
+
+        # bulk-load cheapest supplier cost per product
+        supplier_costs = dict(
+            SupplierProduct.objects.filter(product_id__in=all_ids)
+            .values("product_id")
+            .annotate(min_cost=Min("cost"))
+            .values_list("product_id", "min_cost")
+        )
+
+        # bottom-up cost computation
+        costs = {pid: supplier_costs[pid] for pid in all_ids if pid in supplier_costs}
+        changed = True
+        while changed:
+            changed = False
+            for pid in all_ids:
+                if pid in costs:
+                    continue
+                if pid not in children_map:
+                    costs[pid] = 0
+                    changed = True
+                elif all(cid in costs for cid, _ in children_map[pid]):
+                    costs[pid] = sum(
+                        qty * costs[cid] for cid, qty in children_map[pid]
+                    )
+                    changed = True
+
+        return costs.get(self.pk, 0)
 
     @property
     def can_produce(self):
@@ -53,8 +98,6 @@ class Product(models.Model):
             bom = self.billofmaterials
         except Product.billofmaterials.RelatedObjectDoesNotExist:
             return False
-        # lazy-import to avoid circular import
-        from .models import Inventory
 
         for item in bom.bom_items.select_related("product").all():
             try:
@@ -103,13 +146,13 @@ class Inventory(models.Model):
         Mirrors logic previously implemented in the admin helper.  Positive
         value indicates how many more units we need (stock minus demand).
         """
-        # allocated production amount
-        allocated = sum(job.quantity for job in self.product.production_allocated.all())
-        # sales orders demand (customer products have on_sales_order helper)
+        allocated = (
+            self.product.production_allocated.aggregate(total=Sum("quantity"))["total"]
+            or 0
+        )
         sales_orders = sum(
             sold.on_sales_order() for sold in self.product.product_customers.all()
         )
-        # compute shortage relative to current stock
         short = self.quantity - allocated - sales_orders
         return abs(short) if short < 0 else 0
 
@@ -186,12 +229,9 @@ class InventoryAdjust(models.Model):
         ]
 
     def clean(self):
-        # validate against inventory before applying change
-        product = Inventory.objects.select_for_update().get(product=self.product)
+        product = Inventory.objects.get(product=self.product)
         if product.quantity + self.quantity < 0:
             raise ValidationError(_("Not enough resources to complete transaction."))
-        # no change to cached requirements here; the quantity check occurs
-        # under ``select_for_update`` which will be followed by an adjustment
 
     @transaction.atomic
     def save(self, *args, **kwargs):

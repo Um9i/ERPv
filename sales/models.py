@@ -1,6 +1,9 @@
 from django.db import models, transaction
 from django.db.models import F, Sum
+from django.db.models.functions import Greatest
+from django.db.models.signals import post_save, post_delete
 from django.core.exceptions import ValidationError
+from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from decimal import Decimal, ROUND_HALF_UP
@@ -119,12 +122,16 @@ class SalesOrder(models.Model):
 
     @property
     def remaining_total(self):
-        total = Decimal("0.00")
-        for line in self.sales_order_lines.all():
-            rt = line.remaining_total
-            if rt is not None:
-                total += rt
-        return total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        total = self.sales_order_lines.aggregate(
+            total=Sum(
+                F("product__price") * Greatest(
+                    F("quantity") - F("quantity_shipped"), 0
+                )
+            )
+        )["total"]
+        if total is None:
+            return Decimal("0.00")
+        return Decimal(total).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     def update_cached_total(self):
         total = self.sales_order_lines.aggregate(
@@ -163,10 +170,6 @@ class SalesLedger(models.Model):
 
 
 # signal helpers to maintain cached total on the sales order header
-from django.db.models.signals import post_save, post_delete
-from django.dispatch import receiver
-
-
 class SalesOrderLine(models.Model):
     sales_order = models.ForeignKey(
         SalesOrder, on_delete=models.CASCADE, related_name="sales_order_lines"
@@ -190,9 +193,7 @@ class SalesOrderLine(models.Model):
 
     def clean(self):
         if self.complete == True and self.closed == False:
-            product = Inventory.objects.select_for_update().get(
-                product=self.product.product
-            )
+            product = Inventory.objects.get(product=self.product.product)
             if product.quantity - self.quantity < 0:
                 raise ValidationError(
                     _("Not enough resources to complete transaction.")
@@ -209,9 +210,6 @@ class SalesOrderLine(models.Model):
             product_qs = Inventory.objects.select_for_update().filter(
                 product=self.product.product
             )
-            # decrement atomically
-            from django.utils import timezone
-
             product_qs.update(
                 quantity=F("quantity") - self.quantity, last_updated=timezone.now()
             )

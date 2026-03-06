@@ -1,6 +1,8 @@
 from django.db import models, transaction
 from django.db.models import F, Sum
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Coalesce, Greatest
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
 from django.utils import timezone
 from decimal import Decimal, ROUND_HALF_UP
 from inventory.models import Product, Inventory, InventoryLedger
@@ -48,6 +50,7 @@ class SupplierProduct(models.Model):
 
     class Meta:
         ordering = ["product__name"]
+        unique_together = ("supplier", "product")
         indexes = [
             models.Index(fields=["supplier"]),
             models.Index(fields=["product"]),
@@ -63,9 +66,6 @@ class SupplierProduct(models.Model):
             .get("total")
         )
         return total or 0
-
-    class Meta:
-        unique_together = ("supplier", "product")
 
 
 class PurchaseOrder(models.Model):
@@ -124,13 +124,16 @@ class PurchaseOrder(models.Model):
     @property
     def remaining_total(self):
         """Cash value of all remaining quantity on the order."""
-        total = Decimal("0.00")
-        for line in self.purchase_order_lines.all():
-            # remaining_total on line already does the right thing
-            rt = line.remaining_total
-            if rt is not None:
-                total += rt
-        return total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        total = self.purchase_order_lines.aggregate(
+            total=Sum(
+                F("product__cost") * Greatest(
+                    F("quantity") - F("quantity_received"), 0
+                )
+            )
+        )["total"]
+        if total is None:
+            return Decimal("0.00")
+        return Decimal(total).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     def update_cached_total(self):
         """Recompute and store the aggregate amount for this order."""
@@ -241,8 +244,6 @@ class PurchaseOrderLine(models.Model):
             product_qs = Inventory.objects.select_for_update().filter(
                 product=self.product.product
             )
-            from django.utils import timezone
-
             product_qs.update(
                 quantity=F("quantity") + self.quantity, last_updated=timezone.now()
             )
@@ -273,10 +274,6 @@ class PurchaseOrderLine(models.Model):
 
 
 # signals to keep order cache up-to-date
-from django.db.models.signals import post_save, post_delete
-from django.dispatch import receiver
-
-
 @receiver(post_save, sender=PurchaseOrderLine)
 @receiver(post_delete, sender=PurchaseOrderLine)
 def _update_po_cache(sender, instance, **kwargs):
