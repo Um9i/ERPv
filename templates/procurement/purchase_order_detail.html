@@ -1,4 +1,5 @@
 {% extends "includes/card.html" %}
+{% load currency_tags %}
 {% block card_icon %}bi-cart-plus{% endblock %}
 {% block card_title %}Purchase Order {{ purchase_order.order_number }}{% endblock %}
 {% block card_body %}
@@ -6,8 +7,8 @@
 <p><strong>Created At:</strong> {{ purchase_order.created_at }}</p>
 <p><strong>Updated At:</strong> {{ purchase_order.updated_at }}</p>
 <p><strong>Status:</strong> {{ purchase_order.status }}</p>
-<p><strong>Total Order Value:</strong> {{ purchase_order.total_amount }}</p>
-<p><strong>Open Order Value:</strong> {{ purchase_order.remaining_total }}</p>
+<p><strong>Total Order Value:</strong> {{ purchase_order.total_amount|currency }}</p>
+<p><strong>Open Order Value:</strong> {{ purchase_order.remaining_total|currency }}</p>
 
 <h3>Order Lines</h3>
 <table class="table">
@@ -27,9 +28,9 @@
             <td>{{ line.product.product.name }}</td>
             <td>{{ line.quantity }}</td>
             <td>{{ line.quantity_received }}</td>
-            <td>{{ line.unit_price }}</td>
-            <td>{{ line.received_total }}</td>
-            <td>{{ line.remaining_total }}</td>
+            <td>{{ line.unit_price|currency }}</td>
+            <td>{{ line.received_total|currency }}</td>
+            <td>{{ line.remaining_total|currency }}</td>
         </tr>
         {% empty %}
         <tr><td colspan="6">No lines.</td></tr>

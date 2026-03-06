@@ -1,4 +1,5 @@
 {% extends "includes/card.html" %}
+{% load currency_tags %}
 {% block card_icon %}bi-people-fill{% endblock %}
 {% block card_title %}{{ customer.name }}{% endblock %}
 {% block card_body %}
@@ -121,7 +122,7 @@
                 <td>{{ order.order_number }}</td>
                 <td>{{ order.date }}</td>
                 <td>{{ order.status }}</td>
-                <td>{{ order.total_amount }}</td>
+                <td>{{ order.total_amount|currency }}</td>
                 <td><a href="{% url 'sales:sales-order-detail' order.id %}" class="btn btn-sm btn-primary">View</a></td>
             </tr>
             {% empty %}
@@ -155,7 +156,7 @@
             {% for customer_product in customer_products %}
             <tr>
                 <td>{{ customer_product.product.name }}</td>
-                <td>{{ customer_product.price }}</td>
+                <td>{{ customer_product.price|currency }}</td>
                 <td>
                     <a href="{% url 'sales:customer-product-update' customer_product.id %}" class="btn btn-sm btn-secondary">Edit</a>
                     <a href="{% url 'sales:customer-product-delete' customer_product.id %}" class="btn btn-sm btn-danger">Delete</a>

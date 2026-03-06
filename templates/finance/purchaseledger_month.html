@@ -1,5 +1,6 @@
 {% extends "includes/card.html" %}
 {% load query_tags %}
+{% load currency_tags %}
 {% block card_icon %}bi-journal-text{% endblock %}
 {% block card_title %}Purchase Ledger – {{ month|date:"F Y" }}{% endblock %}
 {% block card_body %}
@@ -15,7 +16,7 @@
     </div>
     <div class="text-end">
         <p class="mb-1 text-muted">Month total</p>
-        <h5 class="mb-0">£{{ month_total|floatformat:2 }}</h5>
+        <h5 class="mb-0">{{ month_total|currency }}</h5>
     </div>
 </div>
 
@@ -52,7 +53,7 @@
             <td>{{ row.supplier }}</td>
             <td>{{ row.product }}</td>
             <td class="text-end">{{ row.quantity }}</td>
-            <td class="text-end">£{{ row.value|floatformat:2 }}</td>
+            <td class="text-end">{{ row.value|currency }}</td>
             <td class="text-end"><code>PO{{ row.transaction_id|stringformat:"05d" }}</code></td>
         </tr>
         {% empty %}

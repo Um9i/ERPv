@@ -1,4 +1,5 @@
 {% extends "dashboard_base.html" %}
+{% load currency_tags %}
 
 {% block dashboard_icon %}bi-box-seam{% endblock %}
 {% block dashboard_title %}Inventory Management{% endblock %}
@@ -15,7 +16,7 @@
 <div class="row">
     {% include "includes/metric_card.html" with icon="bi-box-seam" color="dark" label="Products" value=total_products|default:'—' url=inventory_url %}
     {% include "includes/metric_card.html" with icon="bi-boxes" color="dark" label="Total Stock" value=total_quantity|default:'—' url=inventory_url %}
-    {% include "includes/metric_card.html" with icon="bi-cash-stack" color="success" label="Stock Value" value=stock_value|floatformat:2|default:'—' url=inventory_url %}
+    {% include "includes/metric_card.html" with icon="bi-cash-stack" color="success" label="Stock Value" value=stock_value|currency|default:'—' url=inventory_url %}
 </div>
 {% if low_stock_count %}
 <div class="row mt-3">

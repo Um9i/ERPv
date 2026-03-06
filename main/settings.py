@@ -29,6 +29,8 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"
 
+CURRENCY_SYMBOL = os.getenv("CURRENCY_SYMBOL", "£")
+
 INTERNAL_IPS = [
     "127.0.0.1",
 ]
@@ -47,6 +49,7 @@ INSTALLED_APPS = [
     # crispy forms support
     "crispy_forms",
     "crispy_bootstrap5",
+    "main",
     "inventory.apps.InventoryConfig",
     "procurement.apps.ProcurementConfig",
     "production.apps.ProductionConfig",

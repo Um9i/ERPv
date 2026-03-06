@@ -244,6 +244,7 @@ class InventoryDashboardView(TemplateView):
         )
         from django.db.models.functions import Coalesce
         from procurement.models import SupplierProduct
+        from production.models import BillOfMaterials, BOMItem
 
         context = super().get_context_data(**kwargs)
         context["total_products"] = Product.objects.count()
@@ -252,21 +253,43 @@ class InventoryDashboardView(TemplateView):
             Inventory.objects.aggregate(total=Sum("quantity"))["total"] or 0
         )
 
-        # compute monetary stock value in a single query using min supplier cost
+        # compute monetary stock value using min supplier cost per product
         min_cost_sq = (
             SupplierProduct.objects.filter(product=OuterRef("product"))
             .values("product")
             .annotate(mc=Min("cost"))
             .values("mc")[:1]
         )
-        stock_value = (
+        inventories = list(
             Inventory.objects.annotate(
-                unit_cost=Coalesce(
-                    Subquery(min_cost_sq, output_field=DecimalField()),
-                    Value(0, output_field=DecimalField()),
+                unit_cost=Subquery(min_cost_sq, output_field=DecimalField()),
+            ).values_list("product_id", "quantity", "unit_cost")
+        )
+
+        # for products without a supplier cost, fall back to BOM component costs
+        no_cost_ids = [pid for pid, qty, cost in inventories if cost is None and qty]
+        bom_costs = {}
+        if no_cost_ids:
+            bom_items = (
+                BOMItem.objects.filter(bom__product_id__in=no_cost_ids)
+                .annotate(
+                    comp_cost=Subquery(
+                        SupplierProduct.objects.filter(product=OuterRef("product"))
+                        .values("product")
+                        .annotate(mc=Min("cost"))
+                        .values("mc")[:1],
+                        output_field=DecimalField(),
+                    )
                 )
-            ).aggregate(total=Sum(F("quantity") * F("unit_cost")))["total"]
-            or 0
+                .values_list("bom__product_id", "quantity", "comp_cost")
+            )
+            for parent_id, bom_qty, comp_cost in bom_items:
+                if comp_cost is not None:
+                    bom_costs[parent_id] = bom_costs.get(parent_id, 0) + bom_qty * comp_cost
+
+        stock_value = sum(
+            qty * (cost if cost is not None else bom_costs.get(pid, 0))
+            for pid, qty, cost in inventories
         )
         context["stock_value"] = stock_value
 
@@ -274,6 +297,43 @@ class InventoryDashboardView(TemplateView):
         context["low_stock_count"] = Inventory.objects.filter(
             required_cached__gt=0
         ).count()
+
+        # when ?required=1 is passed, include low-stock items in context
+        if getattr(self, "request", None) and self.request.GET.get("required"):
+            from procurement.services import best_supplier_products, pending_po_by_product
+            from production.services import bom_product_ids, pending_jobs_by_product
+
+            inv_list = list(
+                Inventory.objects.select_related("product")
+                .filter(required_cached__gt=0)
+            )
+            product_ids = [inv.product_id for inv in inv_list]
+            po_map = pending_po_by_product(product_ids)
+            job_map = pending_jobs_by_product(product_ids)
+            bom_ids = bom_product_ids(product_ids)
+            supplier_map = best_supplier_products(product_ids)
+
+            items = []
+            for inv in inv_list:
+                required_qty = inv.required_cached
+                if required_qty <= 0:
+                    continue
+                prod_amount = job_map.get(inv.product_id, 0)
+                po_amount = po_map.get(inv.product_id, 0)
+                needed_po = max(required_qty - po_amount, 0)
+                supplierproduct = supplier_map.get(inv.product_id)
+                supplier_id = supplierproduct.supplier_id if supplierproduct else None
+                has_bom = inv.product_id in bom_ids
+                items.append({
+                    "product": inv.product,
+                    "required": required_qty,
+                    "quantity": inv.quantity,
+                    "production_amount": prod_amount,
+                    "po_amount": po_amount,
+                    "has_bom": has_bom,
+                    "supplier_id": supplier_id,
+                })
+            context["required_items"] = items
 
         return context
 

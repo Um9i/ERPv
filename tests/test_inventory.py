@@ -104,7 +104,7 @@ class TestInventory:
         assert ctx["inventory"].last_updated is not None
         # summary statistics should appear as metric cards
         assert "Sales Pending" in content
-        assert "Purchases Pending" in content
+        assert "Purchases Incoming" in content
         # shortage card only appears when nonzero; check for the label text
         assert "Shortage" in content or "In Stock" in content
         # chart canvases should be present
