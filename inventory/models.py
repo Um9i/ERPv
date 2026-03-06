@@ -46,9 +46,9 @@ class Product(models.Model):
         while frontier:
             all_ids |= frontier
             children = set(
-                BOMItem.objects.filter(
-                    bom__product_id__in=frontier
-                ).values_list("product_id", flat=True)
+                BOMItem.objects.filter(bom__product_id__in=frontier).values_list(
+                    "product_id", flat=True
+                )
             )
             frontier = children - all_ids
 
@@ -79,9 +79,7 @@ class Product(models.Model):
                     costs[pid] = 0
                     changed = True
                 elif all(cid in costs for cid, _ in children_map[pid]):
-                    costs[pid] = sum(
-                        qty * costs[cid] for cid, qty in children_map[pid]
-                    )
+                    costs[pid] = sum(qty * costs[cid] for cid, qty in children_map[pid])
                     changed = True
 
         return costs.get(self.pk, 0)

@@ -126,9 +126,7 @@ class PurchaseOrder(models.Model):
         """Cash value of all remaining quantity on the order."""
         total = self.purchase_order_lines.aggregate(
             total=Sum(
-                F("product__cost") * Greatest(
-                    F("quantity") - F("quantity_received"), 0
-                )
+                F("product__cost") * Greatest(F("quantity") - F("quantity_received"), 0)
             )
         )["total"]
         if total is None:

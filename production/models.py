@@ -46,9 +46,9 @@ class BOMItem(models.Model):
         while frontier:
             visited |= frontier
             children = set(
-                BOMItem.objects.filter(
-                    bom__product_id__in=frontier
-                ).values_list("product_id", flat=True)
+                BOMItem.objects.filter(bom__product_id__in=frontier).values_list(
+                    "product_id", flat=True
+                )
             )
             frontier = children - visited
         return visited

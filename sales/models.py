@@ -124,9 +124,7 @@ class SalesOrder(models.Model):
     def remaining_total(self):
         total = self.sales_order_lines.aggregate(
             total=Sum(
-                F("product__price") * Greatest(
-                    F("quantity") - F("quantity_shipped"), 0
-                )
+                F("product__price") * Greatest(F("quantity") - F("quantity_shipped"), 0)
             )
         )["total"]
         if total is None:
