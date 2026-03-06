@@ -124,12 +124,20 @@ class TestInventory:
         assert "monthly_dates" in ctx and isinstance(ctx["monthly_dates"], list)
         assert "monthly_sales" in ctx and isinstance(ctx["monthly_sales"], list)
         assert "monthly_purchases" in ctx and isinstance(ctx["monthly_purchases"], list)
-        assert "monthly_production" in ctx and isinstance(ctx["monthly_production"], list)
+        assert "monthly_production" in ctx and isinstance(
+            ctx["monthly_production"], list
+        )
         # all monthly lists should have same length
-        assert len(ctx["monthly_dates"]) == len(ctx["monthly_sales"] ) == len(ctx["monthly_purchases"]) == len(ctx["monthly_production"])
+        assert (
+            len(ctx["monthly_dates"])
+            == len(ctx["monthly_sales"])
+            == len(ctx["monthly_purchases"])
+            == len(ctx["monthly_production"])
+        )
 
     def test_last_updated_changes_on_inventory_operations(self, product):
         from inventory.models import Inventory
+
         inv = Inventory.objects.get(product=product)
         orig = inv.last_updated
         # adjust inventory
@@ -145,6 +153,7 @@ class TestInventory:
         from inventory.models import Inventory, Product
         from procurement.models import Supplier, SupplierProduct
         from production.models import BillOfMaterials, BOMItem
+
         # create components with supplier cost
         comp2 = Product.objects.create(name="component2")
         comp3 = Product.objects.create(name="component3")
@@ -158,14 +167,15 @@ class TestInventory:
         BOMItem.objects.create(bom=bom, product=comp2, quantity=2)
         BOMItem.objects.create(bom=bom, product=comp3, quantity=3)
         # inventories
-        Inventory.objects.update_or_create(product=finished, defaults={"quantity":1})
-        Inventory.objects.update_or_create(product=comp2, defaults={"quantity":0})
-        Inventory.objects.update_or_create(product=comp3, defaults={"quantity":0})
+        Inventory.objects.update_or_create(product=finished, defaults={"quantity": 1})
+        Inventory.objects.update_or_create(product=comp2, defaults={"quantity": 0})
+        Inventory.objects.update_or_create(product=comp3, defaults={"quantity": 0})
         # compute dashboard context
         from inventory.views import InventoryDashboardView
+
         view = InventoryDashboardView()
         ctx = view.get_context_data()
-        expected_cost = 1 * (2*10 + 3*5)
+        expected_cost = 1 * (2 * 10 + 3 * 5)
         assert ctx["stock_value"] == expected_cost
 
     def test_dashboard_links(self, client, product):
@@ -190,34 +200,49 @@ class TestInventory:
         ctx = resp.context
         assert ctx["total_products"] == Product.objects.count()
         assert ctx["total_inventory_items"] == Inventory.objects.count()
-        assert ctx["total_quantity"] == Inventory.objects.aggregate(total=Sum("quantity"))["total"] or 0
+        assert (
+            ctx["total_quantity"]
+            == Inventory.objects.aggregate(total=Sum("quantity"))["total"]
+            or 0
+        )
         # when the required filter is applied we expect a list in context
-        resp2 = client.get(url + '?required=1')
-        assert 'required_items' in resp2.context
+        resp2 = client.get(url + "?required=1")
+        assert "required_items" in resp2.context
         # ensure the low-stock view renders entries when shortages exist
         # create a shortage if none already
-        if not resp2.context['required_items']:
+        if not resp2.context["required_items"]:
             inv = Inventory.objects.first()
             inv.quantity = 0
             inv.save()
-            from sales.models import Customer, CustomerProduct, SalesOrder, SalesOrderLine
-            cust = Customer.objects.create(name='C4')
-            cp = CustomerProduct.objects.create(customer=cust, product=inv.product, price=1)
+            from sales.models import (
+                Customer,
+                CustomerProduct,
+                SalesOrder,
+                SalesOrderLine,
+            )
+
+            cust = Customer.objects.create(name="C4")
+            cp = CustomerProduct.objects.create(
+                customer=cust, product=inv.product, price=1
+            )
             so = SalesOrder.objects.create(customer=cust)
             SalesOrderLine.objects.create(sales_order=so, product=cp, quantity=5)
-            resp2 = client.get(url + '?required=1')
-        assert resp2.context['required_items']
-        content_l = client.get(reverse('inventory:inventory-low-stock')).content.decode()
+            resp2 = client.get(url + "?required=1")
+        assert resp2.context["required_items"]
+        content_l = client.get(
+            reverse("inventory:inventory-low-stock")
+        ).content.decode()
         # there should be table rows for required products
-        assert '<table' in content_l
-        entry = resp2.context['required_items'][0]
-        assert entry['product'].name in content_l
+        assert "<table" in content_l
+        entry = resp2.context["required_items"][0]
+        assert entry["product"].name in content_l
 
     def test_low_stock_pagination(self, client, product):
         """More than one page of shortages should show pagination controls."""
         from django.urls import reverse
         from django.contrib.auth.models import User
         from inventory.models import Inventory
+
         # create many inventory rows with required shortage
         Inventory.objects.all().delete()
         Product = product.__class__
@@ -229,23 +254,28 @@ class TestInventory:
         # we make each product, so no need to add them ourselves
         # force at least one sales order per item to make required>0
         from sales.models import Customer, CustomerProduct, SalesOrder, SalesOrderLine
+
         cust = Customer.objects.create(name="Cpage")
         for inv in Inventory.objects.all():
-            cp = CustomerProduct.objects.create(customer=cust, product=inv.product, price=1)
+            cp = CustomerProduct.objects.create(
+                customer=cust, product=inv.product, price=1
+            )
             so = SalesOrder.objects.create(customer=cust)
             SalesOrderLine.objects.create(sales_order=so, product=cp, quantity=1)
         user = User.objects.create_user(username="dashpage")
         client.force_login(user)
-        resp = client.get(reverse('inventory:inventory-low-stock'))
+        resp = client.get(reverse("inventory:inventory-low-stock"))
         assert resp.status_code == 200
         content = resp.content.decode()
         # should include a pagination link to page 2
-        assert '?page=2' in content
+        assert "?page=2" in content
         # page object in context should report multiple pages
-        page_obj = resp.context['required_items']
+        page_obj = resp.context["required_items"]
         assert page_obj.paginator.num_pages > 1
 
-    def test_low_stock_po_action_and_prefill(self, client, product, supplier, supplier_product):
+    def test_low_stock_po_action_and_prefill(
+        self, client, product, supplier, supplier_product
+    ):
         """Items with suppliers should expose a PO link and it should prefill.
 
         We make the product short and associate a supplier-product; the low
@@ -263,6 +293,7 @@ class TestInventory:
         inv.quantity = 0
         inv.save()
         from sales.models import Customer, CustomerProduct, SalesOrder, SalesOrderLine
+
         cust = Customer.objects.create(name="C1")
         cp = CustomerProduct.objects.create(customer=cust, product=product, price=1)
         so = SalesOrder.objects.create(customer=cust)
@@ -272,24 +303,29 @@ class TestInventory:
         user = User.objects.create_user(username="tester")
         client.force_login(user)
 
-        url = reverse('inventory:inventory-low-stock')
+        url = reverse("inventory:inventory-low-stock")
         resp = client.get(url)
         assert resp.status_code == 200
-        items = resp.context['required_items']
+        items = resp.context["required_items"]
         assert items, "expected at least one low-stock entry"
         entry = items[0]
-        assert entry.get('po_url'), "purchase order url should be present"
+        assert entry.get("po_url"), "purchase order url should be present"
         # url should contain supplier param and at least one item= pair
-        assert f"supplier={supplier.pk}" in entry['po_url']
-        assert "item=" in entry['po_url']
+        assert f"supplier={supplier.pk}" in entry["po_url"]
+        assert "item=" in entry["po_url"]
 
         # now simulate a pending purchase order covering the requirement - link disappears
         from procurement.models import PurchaseOrder, PurchaseOrderLine
+
         po = PurchaseOrder.objects.create(supplier=supplier)
-        PurchaseOrderLine.objects.create(purchase_order=po, product=supplier_product, quantity=5)
+        PurchaseOrderLine.objects.create(
+            purchase_order=po, product=supplier_product, quantity=5
+        )
         resp3 = client.get(url)
-        entry2 = resp3.context['required_items'][0]
-        assert not entry2.get('po_url'), "PO link should be hidden when amount on PO meets required"
+        entry2 = resp3.context["required_items"][0]
+        assert not entry2.get(
+            "po_url"
+        ), "PO link should be hidden when amount on PO meets required"
 
         # clear previous orders so we can test a partial amount case
         PurchaseOrderLine.objects.all().delete()
@@ -297,25 +333,31 @@ class TestInventory:
 
         # if only partial amount is on PO then link still exists with reduced qty
         po2 = PurchaseOrder.objects.create(supplier=supplier)
-        PurchaseOrderLine.objects.create(purchase_order=po2, product=supplier_product, quantity=2)
+        PurchaseOrderLine.objects.create(
+            purchase_order=po2, product=supplier_product, quantity=2
+        )
         resp4 = client.get(url)
-        entry3 = resp4.context['required_items'][0]
-        assert entry3.get('po_url'), "expected PO link when only partial amount exists"
+        entry3 = resp4.context["required_items"][0]
+        assert entry3.get("po_url"), "expected PO link when only partial amount exists"
         # verify query string quantity equals required - on_po
-        assert f"item={supplier_product.pk}:{entry3['po_order_qty']}" in entry3['po_url']
+        assert (
+            f"item={supplier_product.pk}:{entry3['po_order_qty']}" in entry3["po_url"]
+        )
 
         # follow the link and inspect formset
-        resp2 = client.get(entry['po_url'])
+        resp2 = client.get(entry["po_url"])
         assert resp2.status_code == 200
-        fs = resp2.context['lines_formset']
+        fs = resp2.context["lines_formset"]
         # there should be a form for the initial item we required
         # values come back as strings from the query string
-        assert int(fs.forms[0].initial.get('quantity')) == 5
+        assert int(fs.forms[0].initial.get("quantity")) == 5
         # supplier field should be hidden and have correct value
-        form = resp2.context['form']
-        assert str(form.initial.get('supplier')) == str(supplier.pk)
+        form = resp2.context["form"]
+        assert str(form.initial.get("supplier")) == str(supplier.pk)
 
-    def test_low_stock_po_grouping_by_supplier(self, client, product, supplier, supplier_product):
+    def test_low_stock_po_grouping_by_supplier(
+        self, client, product, supplier, supplier_product
+    ):
         """When multiple required products share a supplier, the PO link
         generated from any row should include all of them."""
         from django.urls import reverse
@@ -331,6 +373,7 @@ class TestInventory:
         inv_other.save()
         # give other a shortage via sales order
         from sales.models import Customer, CustomerProduct, SalesOrder, SalesOrderLine
+
         custx = Customer.objects.create(name="CX")
         cpx = CustomerProduct.objects.create(customer=custx, product=other, price=1)
         sox = SalesOrder.objects.create(customer=custx)
@@ -348,11 +391,11 @@ class TestInventory:
 
         user = User.objects.create_user(username="tester2")
         client.force_login(user)
-        resp = client.get(reverse('inventory:inventory-low-stock'))
-        entry = resp.context['required_items'][0]
-        url = entry['po_url']
+        resp = client.get(reverse("inventory:inventory-low-stock"))
+        entry = resp.context["required_items"][0]
+        url = entry["po_url"]
         # there should be two item= parameters in the query string
-        assert url.count('item=') == 2
+        assert url.count("item=") == 2
 
     def test_low_stock_production_prefill_quantity(self, client, product, bom):
         """The New job link should supply quantity equal to the required shortage."""
@@ -365,6 +408,7 @@ class TestInventory:
         inv.quantity = 0
         inv.save()
         from sales.models import Customer, CustomerProduct, SalesOrder, SalesOrderLine
+
         cust = Customer.objects.create(name="D")
         cp = CustomerProduct.objects.create(customer=cust, product=product, price=1)
         so = SalesOrder.objects.create(customer=cust)
@@ -373,15 +417,19 @@ class TestInventory:
 
         user = User.objects.create_user(username="tester5")
         client.force_login(user)
-        resp = client.get(reverse('inventory:inventory-low-stock'))
-        entry = resp.context['required_items'][0]
-        link = entry['product'] and f"?product={entry['product'].pk}&quantity={entry['order_qty']}"
+        resp = client.get(reverse("inventory:inventory-low-stock"))
+        entry = resp.context["required_items"][0]
+        link = (
+            entry["product"]
+            and f"?product={entry['product'].pk}&quantity={entry['order_qty']}"
+        )
         # follow link by directly calling production create with same params
         from django.urls import reverse as r
-        resp2 = client.get(r('production:production-create') + link)
+
+        resp2 = client.get(r("production:production-create") + link)
         assert resp2.status_code == 200
-        form = resp2.context['form']
-        assert int(form.initial.get('quantity')) == entry['order_qty']
+        form = resp2.context["form"]
+        assert int(form.initial.get("quantity")) == entry["order_qty"]
 
     def test_production_allocation_accumulates(self, product, bom):
         """Multiple production jobs add to component allocations."""
@@ -392,7 +440,7 @@ class TestInventory:
         for item in bom.bom_items.all():
             pa = ProductionAllocated.objects.get(product=item.product)
             pa.quantity = 0
-            pa.save(update_fields=['quantity'])
+            pa.save(update_fields=["quantity"])
 
         job1 = Production.objects.create(product=product, quantity=2)
         job2 = Production.objects.create(product=product, quantity=3)
@@ -401,7 +449,9 @@ class TestInventory:
             pa = ProductionAllocated.objects.get(product=item.product)
             assert pa.quantity == item.quantity * total_qty
 
-    def test_low_stock_supplier_tiebreaker(self, client, product, supplier, supplier_product):
+    def test_low_stock_supplier_tiebreaker(
+        self, client, product, supplier, supplier_product
+    ):
         """If two suppliers offer the same price for a short item, choose the
         supplier whose overall catalogue (across all products) is cheaper.
         """
@@ -414,7 +464,9 @@ class TestInventory:
         # existing supplier provides `product` at whatever fixture cost (=10)
         # create alternate supplier with same cost for this product so it's a tie
         other_supp = Supplier.objects.create(name="Other")
-        SupplierProduct.objects.create(supplier=other_supp, product=product, cost=supplier_product.cost)
+        SupplierProduct.objects.create(
+            supplier=other_supp, product=product, cost=supplier_product.cost
+        )
         # give the original supplier a cheaper overall catalogue by adding a
         # very low‑cost extra item
         extra = InvProduct.objects.create(name="extra1")
@@ -431,6 +483,7 @@ class TestInventory:
         inv_extra.save()
         # create sales orders to make required >0 for each
         from sales.models import Customer, CustomerProduct, SalesOrder, SalesOrderLine
+
         cust = Customer.objects.create(name="TieCust")
         cp = CustomerProduct.objects.create(customer=cust, product=product, price=1)
         so = SalesOrder.objects.create(customer=cust)
@@ -440,13 +493,15 @@ class TestInventory:
 
         user = User.objects.create_user(username="tester7")
         client.force_login(user)
-        resp = client.get(reverse('inventory:inventory-low-stock'))
-        items = resp.context['required_items']
+        resp = client.get(reverse("inventory:inventory-low-stock"))
+        items = resp.context["required_items"]
         # find entry for the original product; its po_url should use supplier
-        entry = next(item for item in items if item['product'] == product)
-        assert f"supplier={supplier.pk}" in entry['po_url']
+        entry = next(item for item in items if item["product"] == product)
+        assert f"supplier={supplier.pk}" in entry["po_url"]
 
-    def test_low_stock_query_count(self, client, product, supplier, supplier_product, django_assert_num_queries):
+    def test_low_stock_query_count(
+        self, client, product, supplier, supplier_product, django_assert_num_queries
+    ):
         """Ensure low-stock view executes a bounded number of queries.
 
         We prepare a single shortage and then request the view; with the
@@ -468,7 +523,7 @@ class TestInventory:
 
         user = User.objects.create_user(username="qcuser")
         client.force_login(user)
-        url = reverse('inventory:inventory-low-stock')
+        url = reverse("inventory:inventory-low-stock")
         # allow a generous ceiling to accommodate middleware and debug toolbar
         # queries; we simply assert we don't explode with an N+1 pattern.
         with django_assert_num_queries(100, exact=False):

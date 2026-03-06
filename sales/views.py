@@ -84,8 +84,8 @@ class CustomerDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         customer = self.object
         order_list = customer.customer_sales_orders.all()
-        prod_list = customer.customer_products.all().order_by('product__name')
-        contacts_list = customer.customer_contacts.all().order_by('name')
+        prod_list = customer.customer_products.all().order_by("product__name")
+        contacts_list = customer.customer_contacts.all().order_by("name")
 
         order_page = self.request.GET.get("order_page")
         prod_page = self.request.GET.get("cp_page")
@@ -106,6 +106,7 @@ class CustomerContactCreateView(CreateView):
     template_name = "sales/customer_contact_form.html"
     form_class = CustomerContactForm
     success_url = reverse_lazy("sales:customer-list")
+
     def get_initial(self):
         initial = super().get_initial()
         customer_id = self.request.GET.get("customer")
@@ -139,6 +140,7 @@ class CustomerContactDeleteView(DeleteView):
 
     def get_success_url(self):
         return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
+
 
 class CustomerProductCreateView(CreateView):
     model = CustomerProduct
@@ -209,8 +211,9 @@ class CustomerProductIDsView(DetailView):
     def get(self, request, *args, **kwargs):
         customer = self.get_object()
         ids = list(
-            CustomerProduct.objects.filter(customer=customer)
-            .values_list("id", flat=True)
+            CustomerProduct.objects.filter(customer=customer).values_list(
+                "id", flat=True
+            )
         )
         from django.http import JsonResponse
 
@@ -298,8 +301,7 @@ class SalesOrderListView(ListView):
         from django.db.models import Q, Exists, OuterRef
 
         qs = (
-            SalesOrder.objects
-            .select_related("customer")
+            SalesOrder.objects.select_related("customer")
             .annotate(
                 has_open_lines=Exists(
                     SalesOrderLine.objects.filter(
@@ -348,18 +350,15 @@ class SalesOrderDetailView(DetailView):
                 line.save(update_fields=["complete", "closed"])
             self.object.save(update_fields=["updated_at"])
             from django.shortcuts import redirect
+
             return redirect(request.path)
         return super().post(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         sales_order = self.object
-        context["lines"] = sales_order.sales_order_lines.select_related(
-            "product"
-        ).all()
+        context["lines"] = sales_order.sales_order_lines.select_related("product").all()
         return context
-
-
 
 
 class SalesOrderShipView(DetailView):
@@ -396,7 +395,9 @@ class SalesOrderShipView(DetailView):
                 from sales.models import SalesLedger
 
                 try:
-                    inv = Inventory.objects.select_for_update().get(product=line.product.product)
+                    inv = Inventory.objects.select_for_update().get(
+                        product=line.product.product
+                    )
                 except Inventory.DoesNotExist:
                     inv = None
                 if inv is None or (inv.quantity - qty) < 0:
@@ -440,6 +441,7 @@ class SalesOrderShipView(DetailView):
             context = self.get_context_data()
             context["errors"] = errors
             from django.shortcuts import render
+
             return render(request, self.template_name, context)
         if touched:
             self.object.save(update_fields=["updated_at"])

@@ -10,8 +10,7 @@ from procurement.models import PurchaseOrderLine, SupplierProduct
 
 def supplier_cost_totals() -> dict[int, Decimal]:
     totals = (
-        SupplierProduct.objects
-        .values("supplier")
+        SupplierProduct.objects.values("supplier")
         .annotate(total=Sum("cost"))
         .order_by("supplier")
     )
@@ -26,10 +25,8 @@ def best_supplier_products(product_ids: Iterable[int]) -> dict[int, SupplierProd
     suppliers.
     """
     supplier_totals = supplier_cost_totals()
-    sp_qs = (
-        SupplierProduct.objects
-        .filter(product_id__in=product_ids)
-        .order_by("product_id", "cost")
+    sp_qs = SupplierProduct.objects.filter(product_id__in=product_ids).order_by(
+        "product_id", "cost"
     )
     best: dict[int, SupplierProduct] = {}
     for sp in sp_qs:
@@ -50,8 +47,9 @@ def best_supplier_products(product_ids: Iterable[int]) -> dict[int, SupplierProd
 
 def pending_po_by_product(product_ids: Iterable[int]) -> dict[int, int]:
     po_vals = (
-        PurchaseOrderLine.objects
-        .filter(product__product_id__in=product_ids, complete=False)
+        PurchaseOrderLine.objects.filter(
+            product__product_id__in=product_ids, complete=False
+        )
         .annotate(rem=F("quantity") - F("quantity_received"))
         .values("product__product_id")
         .annotate(total=Sum("rem"))

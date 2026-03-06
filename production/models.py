@@ -65,13 +65,16 @@ class BOMItem(models.Model):
         sub_products = self._get_all_sub_products(self.product, visited=set())
         if self.bom.product.pk in sub_products:
             raise ValidationError(
-                _("Circular BOM reference detected: %(product)s already contains "
-                  "%(parent)s in its bill of materials."),
+                _(
+                    "Circular BOM reference detected: %(product)s already contains "
+                    "%(parent)s in its bill of materials."
+                ),
                 params={
                     "product": self.product.name,
                     "parent": self.bom.product.name,
                 },
             )
+
 
 class Production(models.Model):
     product = models.ForeignKey(
@@ -152,6 +155,7 @@ class Production(models.Model):
             return False
         # lazy import Inventory to avoid cycle at module import time
         from inventory.models import Inventory
+
         for item in self.bom():
             try:
                 inv = Inventory.objects.get(product=item.product)
@@ -195,22 +199,29 @@ class Production(models.Model):
     def save(self, *args, skip_allocation=False, **kwargs):
         # run validation when allocating or if any quantity_received change
         should_validate = (
-            (self.bom() is not None and self.bom_allocated == False and not skip_allocation)
-            or (self.quantity_received > 0 and self.closed == False)
-        )
+            self.bom() is not None
+            and self.bom_allocated == False
+            and not skip_allocation
+        ) or (self.quantity_received > 0 and self.closed == False)
         if should_validate:
             self.full_clean()
 
         affected_product_ids = set()
 
         # handle allocation
-        if self.bom() is not None and self.bom_allocated == False and not skip_allocation:
+        if (
+            self.bom() is not None
+            and self.bom_allocated == False
+            and not skip_allocation
+        ):
             for item in self.bom():
                 # accumulate across jobs rather than overwriting existing
                 product = ProductionAllocated.objects.select_for_update().get(
                     product=item.product
                 )
-                product.quantity = (product.quantity or 0) + item.quantity * self.quantity
+                product.quantity = (
+                    product.quantity or 0
+                ) + item.quantity * self.quantity
                 product.save()
             self.bom_allocated = True
             self.bom_allocated_amount = self.quantity
@@ -227,7 +238,9 @@ class Production(models.Model):
             # before making any changes ensure all components have enough stock
             if self.bom() is not None:
                 for item in self.bom():
-                    inv = Inventory.objects.select_for_update().get(product=item.product)
+                    inv = Inventory.objects.select_for_update().get(
+                        product=item.product
+                    )
                     if inv.quantity - item.quantity * delta < 0:
                         raise ValidationError(
                             _("Not enough Inventory to complete production.")
@@ -242,13 +255,13 @@ class Production(models.Model):
                 for item in self.bom():
                     qty_change = item.quantity * delta
                     # decrement component inventory atomically
-                    Inventory.objects.select_for_update().filter(product=item.product).update(
-                        quantity=F('quantity') - qty_change
-                    )
+                    Inventory.objects.select_for_update().filter(
+                        product=item.product
+                    ).update(quantity=F("quantity") - qty_change)
                     # reduce the allocated amount atomically
-                    ProductionAllocated.objects.select_for_update().filter(product=item.product).update(
-                        quantity=F('quantity') - qty_change
-                    )
+                    ProductionAllocated.objects.select_for_update().filter(
+                        product=item.product
+                    ).update(quantity=F("quantity") - qty_change)
                     InventoryLedger.objects.create(
                         product=item.product,
                         quantity=-abs(qty_change),
@@ -280,13 +293,17 @@ class Production(models.Model):
         if self.closed:
             return
 
-        outstanding_qty = max((self.bom_allocated_amount or 0) - self.quantity_received, 0)
+        outstanding_qty = max(
+            (self.bom_allocated_amount or 0) - self.quantity_received, 0
+        )
         affected_product_ids = {self.product_id}
 
         if self.bom() is not None and outstanding_qty > 0:
             for item in self.bom():
                 qty_change = item.quantity * outstanding_qty
-                alloc = ProductionAllocated.objects.select_for_update().get(product=item.product)
+                alloc = ProductionAllocated.objects.select_for_update().get(
+                    product=item.product
+                )
                 alloc.quantity = max((alloc.quantity or 0) - qty_change, 0)
                 alloc.save(update_fields=["quantity"])
                 affected_product_ids.add(item.product_id)
@@ -297,7 +314,13 @@ class Production(models.Model):
         self.complete = False
         self.save(
             skip_allocation=True,
-            update_fields=["bom_allocated", "bom_allocated_amount", "closed", "complete", "updated_at"],
+            update_fields=[
+                "bom_allocated",
+                "bom_allocated_amount",
+                "closed",
+                "complete",
+                "updated_at",
+            ],
         )
 
         if affected_product_ids:

@@ -1,8 +1,20 @@
 import pytest
 from inventory.models import Product, Inventory
 from production.models import BillOfMaterials, BOMItem
-from procurement.models import Supplier, SupplierContact, SupplierProduct, PurchaseOrder, PurchaseOrderLine
-from sales.models import Customer, CustomerContact, CustomerProduct, SalesOrder, SalesOrderLine
+from procurement.models import (
+    Supplier,
+    SupplierContact,
+    SupplierProduct,
+    PurchaseOrder,
+    PurchaseOrderLine,
+)
+from sales.models import (
+    Customer,
+    CustomerContact,
+    CustomerProduct,
+    SalesOrder,
+    SalesOrderLine,
+)
 
 
 @pytest.fixture
@@ -44,7 +56,9 @@ def supplier_contact(db, supplier):
 
 @pytest.fixture
 def supplier_product(db, supplier, product):
-    return SupplierProduct.objects.create(supplier=supplier, product=product, cost=10.00)
+    return SupplierProduct.objects.create(
+        supplier=supplier, product=product, cost=10.00
+    )
 
 
 @pytest.fixture
@@ -54,7 +68,12 @@ def purchase_order(db, supplier):
 
 @pytest.fixture
 def purchase_order_line(db, purchase_order, supplier_product):
-    return PurchaseOrderLine.objects.create(purchase_order=purchase_order, product=supplier_product, quantity=5, complete=False)
+    return PurchaseOrderLine.objects.create(
+        purchase_order=purchase_order,
+        product=supplier_product,
+        quantity=5,
+        complete=False,
+    )
 
 
 @pytest.fixture
@@ -69,7 +88,9 @@ def customer_contact(db, customer):
 
 @pytest.fixture
 def customer_product(db, customer, product):
-    return CustomerProduct.objects.create(customer=customer, product=product, price=10.00)
+    return CustomerProduct.objects.create(
+        customer=customer, product=product, price=10.00
+    )
 
 
 @pytest.fixture
@@ -85,7 +106,9 @@ def sales_order_line(db, sales_order, customer_product):
         product=customer_product.product,
         defaults={"quantity": 100},
     )
-    return SalesOrderLine.objects.create(sales_order=sales_order, product=customer_product, quantity=5, complete=False)
+    return SalesOrderLine.objects.create(
+        sales_order=sales_order, product=customer_product, quantity=5, complete=False
+    )
 
 
 @pytest.fixture

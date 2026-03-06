@@ -82,7 +82,13 @@ class TestProduction:
         inventory = Inventory.objects.get(product=product)
         # fixture seeded 100 units; creating and completing job adds 10
         assert inventory.quantity == 100 + 10
-        ledger = InventoryLedger.objects.filter(transaction_id=production.pk, action="Production", quantity__lt=0).order_by("pk").first()
+        ledger = (
+            InventoryLedger.objects.filter(
+                transaction_id=production.pk, action="Production", quantity__lt=0
+            )
+            .order_by("pk")
+            .first()
+        )
         assert ledger is not None
         assert ledger.quantity == -100
         assert ledger.action == "Production"
@@ -167,10 +173,10 @@ class TestProduction:
         assert resp.status_code == 200
         html = resp.content.decode()
         # form should contain product and quantity inputs
-        assert "name=\"product\"" in html
-        assert "name=\"quantity\"" in html
+        assert 'name="product"' in html
+        assert 'name="quantity"' in html
         # and must not include the complete field
-        assert "name=\"complete\"" not in html
+        assert 'name="complete"' not in html
 
     def test_bom_create_formset_present(self, client, product):
         """BOM create page should render component formset and add button."""
@@ -184,7 +190,7 @@ class TestProduction:
         assert resp.status_code == 200
         html = resp.content.decode()
         assert "Components" in html
-        assert "id=\"add-line\"" in html
+        assert 'id="add-line"' in html
         # management form must be present (uses related_name prefix)
         assert "bom_items-TOTAL_FORMS" in html
 
@@ -202,21 +208,21 @@ class TestProduction:
         client.force_login(user)
         url = reverse("production:bom-create")
         data = {
-            'product': product.pk,
-            'bom_items-TOTAL_FORMS': '2',
-            'bom_items-INITIAL_FORMS': '0',
-            'bom_items-MIN_NUM_FORMS': '0',
-            'bom_items-MAX_NUM_FORMS': '1000',
-            'bom_items-0-product': comp1.pk,
-            'bom_items-0-quantity': '5',
-            'bom_items-1-product': comp2.pk,
-            'bom_items-1-quantity': '7',
+            "product": product.pk,
+            "bom_items-TOTAL_FORMS": "2",
+            "bom_items-INITIAL_FORMS": "0",
+            "bom_items-MIN_NUM_FORMS": "0",
+            "bom_items-MAX_NUM_FORMS": "1000",
+            "bom_items-0-product": comp1.pk,
+            "bom_items-0-quantity": "5",
+            "bom_items-1-product": comp2.pk,
+            "bom_items-1-quantity": "7",
         }
         resp = client.post(url, data)
         # expect redirect to detail
         assert resp.status_code in (302, 303)
         bom = BillOfMaterials.objects.get(product=product)
-        items = list(bom.bom_items.order_by('product'))
+        items = list(bom.bom_items.order_by("product"))
         assert len(items) == 2
         assert items[0].product == comp1 and items[0].quantity == 5
         assert items[1].product == comp2 and items[1].quantity == 7
@@ -235,23 +241,23 @@ class TestProduction:
         url = reverse("production:bom-update", args=[bom.pk])
         # prepare initial data reflecting existing items
         data = {
-            'product': product.pk,
-            'bom_items-TOTAL_FORMS': '3',
-            'bom_items-INITIAL_FORMS': '2',
-            'bom_items-MIN_NUM_FORMS': '0',
-            'bom_items-MAX_NUM_FORMS': '1000',
+            "product": product.pk,
+            "bom_items-TOTAL_FORMS": "3",
+            "bom_items-INITIAL_FORMS": "2",
+            "bom_items-MIN_NUM_FORMS": "0",
+            "bom_items-MAX_NUM_FORMS": "1000",
         }
         for idx, itm in enumerate(existing):
-            data[f'bom_items-{idx}-id'] = itm.pk
-            data[f'bom_items-{idx}-product'] = itm.product.pk
-            data[f'bom_items-{idx}-quantity'] = str(itm.quantity + 1)
+            data[f"bom_items-{idx}-id"] = itm.pk
+            data[f"bom_items-{idx}-product"] = itm.product.pk
+            data[f"bom_items-{idx}-quantity"] = str(itm.quantity + 1)
         # add new component
-        data['bom_items-2-product'] = comp_new.pk
-        data['bom_items-2-quantity'] = '3'
+        data["bom_items-2-product"] = comp_new.pk
+        data["bom_items-2-quantity"] = "3"
         resp = client.post(url, data)
         assert resp.status_code in (302, 303)
         bom.refresh_from_db()
-        items = list(bom.bom_items.order_by('product'))
+        items = list(bom.bom_items.order_by("product"))
         assert any(i.product == comp_new for i in items)
         # existing ones should have updated quantities
         for itm in existing:
@@ -274,7 +280,9 @@ class TestProduction:
         html = resp.content.decode()
         assert "order_form.js" in html, "order_form.js not referenced on BOM form"
         js_path = Path(settings.BASE_DIR) / "static" / "js" / "order_form.js"
-        result = subprocess.run(["node", "--check", str(js_path)], capture_output=True, text=True)
+        result = subprocess.run(
+            ["node", "--check", str(js_path)], capture_output=True, text=True
+        )
         assert result.returncode == 0, f"JS syntax error: {result.stderr}"
 
     def test_receiving_views(self, client, product, bom, bom_item):
@@ -311,7 +319,7 @@ class TestProduction:
         assert job.quantity_received == job.quantity
         # full receive should mark job complete
         assert job.complete
-        
+
         # now simulate insufficient component inventory and verify error
         job2 = Production.objects.create(product=product, quantity=1)
         url2 = reverse("production:production-receive", args=[job2.pk])
@@ -337,6 +345,7 @@ class TestProduction:
         from django.urls import reverse
         from production.models import BillOfMaterials, BOMItem
         from django.contrib.auth.models import User
+
         # must be logged in because middleware enforces auth
         user = User.objects.create_user(username="test")
         client.force_login(user)
@@ -360,6 +369,7 @@ class TestProduction:
         assert resp.status_code == 200
         # add item (use a different component product)
         from inventory.models import Product as InvProduct
+
         prod2 = InvProduct.objects.create(name="component1")
         url = reverse("production:bomitem-create") + f"?bom={bom.pk}"
         resp = client.post(url, {"bom": bom.pk, "product": prod2.pk, "quantity": 3})
@@ -382,6 +392,7 @@ class TestProduction:
         from django.urls import reverse
         from production.models import Production
         from django.contrib.auth.models import User
+
         user = User.objects.create_user(username="test")
         client.force_login(user)
         # create job

@@ -59,8 +59,9 @@ class CustomerProduct(models.Model):
 
     def on_sales_order(self):
         total = (
-            self.product_sales_orders.filter(complete=False).aggregate(total=Sum('quantity'))
-            .get('total')
+            self.product_sales_orders.filter(complete=False)
+            .aggregate(total=Sum("quantity"))
+            .get("total")
         )
         return total or 0
 
@@ -71,7 +72,9 @@ class SalesOrder(models.Model):
     )
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
-    total_amount_cached = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"), editable=False)
+    total_amount_cached = models.DecimalField(
+        max_digits=14, decimal_places=2, default=Decimal("0.00"), editable=False
+    )
 
     class Meta:
         ordering = ["-pk"]
@@ -102,13 +105,14 @@ class SalesOrder(models.Model):
 
     @property
     def total_amount(self):
-        if self.total_amount_cached is not None and self.total_amount_cached != Decimal("0.00"):
+        if (
+            self.total_amount_cached is not None
+            and self.total_amount_cached != Decimal("0.00")
+        ):
             return self.total_amount_cached
-        total = (
-            self.sales_order_lines.aggregate(
-                total=Sum(F("product__price") * F("quantity"))
-            ).get("total")
-        )
+        total = self.sales_order_lines.aggregate(
+            total=Sum(F("product__price") * F("quantity"))
+        ).get("total")
         if total is None:
             return Decimal("0.00")
         return Decimal(total).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
@@ -123,14 +127,14 @@ class SalesOrder(models.Model):
         return total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     def update_cached_total(self):
-        total = (
-            self.sales_order_lines.aggregate(
-                total=Sum(F("product__price") * F("quantity"))
-            ).get("total")
-        )
+        total = self.sales_order_lines.aggregate(
+            total=Sum(F("product__price") * F("quantity"))
+        ).get("total")
         if total is None:
             total = Decimal("0.00")
-        self.total_amount_cached = Decimal(total).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        self.total_amount_cached = Decimal(total).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
         self.save(update_fields=["total_amount_cached"])
 
 
@@ -140,7 +144,7 @@ class SalesLedger(models.Model):
     )
     quantity = models.BigIntegerField()
     customer = models.ForeignKey(
-        Customer, on_delete=models.PROTECT, related_name='sales_ledgers'
+        Customer, on_delete=models.PROTECT, related_name="sales_ledgers"
     )
     value = models.DecimalField(max_digits=10, decimal_places=2)
     date = models.DateTimeField(auto_now_add=True)
@@ -158,11 +162,10 @@ class SalesLedger(models.Model):
         ]
 
 
-
-
 # signal helpers to maintain cached total on the sales order header
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+
 
 class SalesOrderLine(models.Model):
     sales_order = models.ForeignKey(
@@ -208,7 +211,10 @@ class SalesOrderLine(models.Model):
             )
             # decrement atomically
             from django.utils import timezone
-            product_qs.update(quantity=F('quantity') - self.quantity, last_updated=timezone.now())
+
+            product_qs.update(
+                quantity=F("quantity") - self.quantity, last_updated=timezone.now()
+            )
             try:
                 self.value = self.product.price * self.quantity
             except Exception:

@@ -24,8 +24,8 @@ from django import forms
 from django.db.models import F, Q
 from django.http import JsonResponse
 
-
 # ----- BOM views -----
+
 
 class BOMCreateView(CreateView):
     model = BillOfMaterials
@@ -114,7 +114,9 @@ class BOMUpdateView(UpdateView):
             can_delete=True,
         )
         if self.request.POST:
-            context["lines_formset"] = LineFormset(self.request.POST, instance=self.object)
+            context["lines_formset"] = LineFormset(
+                self.request.POST, instance=self.object
+            )
         else:
             context["lines_formset"] = LineFormset(instance=self.object)
         # hide DELETE checkboxes — JS remove buttons handle this
@@ -225,6 +227,7 @@ class BOMItemDeleteView(DeleteView):
 
 # ----- Production job views -----
 
+
 class ProductionCreateView(CreateView):
     model = Production
     template_name = "production/production_form.html"
@@ -273,7 +276,9 @@ class ProductionUpdateView(UpdateView):
         # include only products that have a BOM; also allow the current
         # product in case its BOM was removed after creation.
         qs = Product.objects.filter(billofmaterials__isnull=False)
-        if self.object and self.object.product_id not in qs.values_list("id", flat=True):
+        if self.object and self.object.product_id not in qs.values_list(
+            "id", flat=True
+        ):
             qs = qs | Product.objects.filter(pk=self.object.product_id)
         form.fields["product"].queryset = qs
         return form
@@ -314,10 +319,8 @@ class ProductionListView(ListView):
         product_ids = [p.product_id for p in productions]
 
         # Load BOM items for all products on this page
-        bom_rows = (
-            BOMItem.objects
-            .filter(bom__product_id__in=product_ids)
-            .values_list("bom__product_id", "product_id", "quantity")
+        bom_rows = BOMItem.objects.filter(bom__product_id__in=product_ids).values_list(
+            "bom__product_id", "product_id", "quantity"
         )
         bom_map = defaultdict(list)
         component_ids = set()
@@ -326,11 +329,15 @@ class ProductionListView(ListView):
             component_ids.add(comp_id)
 
         # Load inventory for all required components in one query
-        inv_map = dict(
-            Inventory.objects
-            .filter(product_id__in=component_ids)
-            .values_list("product_id", "quantity")
-        ) if component_ids else {}
+        inv_map = (
+            dict(
+                Inventory.objects.filter(product_id__in=component_ids).values_list(
+                    "product_id", "quantity"
+                )
+            )
+            if component_ids
+            else {}
+        )
 
         for job in productions:
             components = bom_map.get(job.product_id, [])
@@ -411,7 +418,7 @@ class ProductionReceiveView(DetailView):
         else:
             try:
                 received = int(request.POST.get("received", 0))
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 received = 0
             # sanitize input: cannot be negative or exceed remaining
             if received < 0:
@@ -449,20 +456,25 @@ class ProductionDashboardView(TemplateView):
         from inventory.models import Inventory
         from django.db.models import Sum, F, OuterRef, Subquery, IntegerField
         from django.db.models.functions import Coalesce
+
         producible_ids = set(
             BillOfMaterials.objects.values_list("product_id", flat=True)
         )
         job_subquery = (
-            Production.objects
-            .filter(product_id=OuterRef("product_id"), closed=False)
+            Production.objects.filter(product_id=OuterRef("product_id"), closed=False)
             .values("product_id")
             .annotate(total=Sum(F("quantity") - F("quantity_received")))
             .values("total")
         )
         context["producible_low_stock"] = (
-            Inventory.objects
-            .filter(required_cached__gt=0, product_id__in=producible_ids)
-            .annotate(pending_job=Coalesce(Subquery(job_subquery, output_field=IntegerField()), 0))
+            Inventory.objects.filter(
+                required_cached__gt=0, product_id__in=producible_ids
+            )
+            .annotate(
+                pending_job=Coalesce(
+                    Subquery(job_subquery, output_field=IntegerField()), 0
+                )
+            )
             .filter(pending_job__lt=F("required_cached"))
             .count()
         )

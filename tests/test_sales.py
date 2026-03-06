@@ -33,10 +33,18 @@ class TestCustomer:
         orders_page = response.context.get("sales_orders")
         assert hasattr(orders_page, "paginator")
         content = response.content.decode()
-        assert f"href=\"{reverse('sales:customer-salesorders', args=[customer.pk])}\"" in content
-        assert f"href=\"{reverse('sales:customer-products', args=[customer.pk])}\"" in content
+        assert (
+            f"href=\"{reverse('sales:customer-salesorders', args=[customer.pk])}\""
+            in content
+        )
+        assert (
+            f"href=\"{reverse('sales:customer-products', args=[customer.pk])}\""
+            in content
+        )
 
-    def test_customer_contacts_shown_and_links(self, client, customer, customer_contact):
+    def test_customer_contacts_shown_and_links(
+        self, client, customer, customer_contact
+    ):
         from django.urls import reverse
         from django.contrib.auth.models import User
 
@@ -78,7 +86,11 @@ class TestCustomer:
         url = reverse("sales:customer-contact-update", args=[customer_contact.pk])
         resp = client.get(url)
         assert resp.status_code == 200
-        data = {"customer": customer.pk, "name": "Edited Cust", "email": customer_contact.email}
+        data = {
+            "customer": customer.pk,
+            "name": "Edited Cust",
+            "email": customer_contact.email,
+        }
         resp2 = client.post(url, data)
         assert resp2.status_code == 302
         assert resp2.url == reverse("sales:customer-detail", args=[customer.pk])
@@ -90,6 +102,7 @@ class TestCustomer:
         assert resp3.status_code == 302
         assert resp3.url == reverse("sales:customer-detail", args=[customer.pk])
         from sales.models import CustomerContact
+
         assert not CustomerContact.objects.filter(pk=customer_contact.pk).exists()
 
     def test_customer_list_pagination(self, client, customer):
@@ -140,14 +153,21 @@ class TestCustomer:
         assert resp.status_code == 200
         ctx = resp.context
         assert ctx["total_orders"] == SalesOrder.objects.count()
-        assert ctx["shipped_orders"] == SalesOrderLine.objects.filter(quantity_shipped__gt=0).count()
-        assert ctx["pending_shipping"] == SalesOrderLine.objects.filter(complete=False).count()
+        assert (
+            ctx["shipped_orders"]
+            == SalesOrderLine.objects.filter(quantity_shipped__gt=0).count()
+        )
+        assert (
+            ctx["pending_shipping"]
+            == SalesOrderLine.objects.filter(complete=False).count()
+        )
         assert ctx["total_customers"] == customer.__class__.objects.count()
         content = resp.content.decode()
         assert "Total Sales Orders" in content
         assert "Shipped" in content
         assert "Pending Shipping" in content
         assert "Customers" in content
+
 
 @pytest.mark.django_db
 class TestCustomerProduct:
@@ -180,6 +200,7 @@ class TestCustomerProduct:
 
     def test_on_sales_order(self, customer_product, sales_order_line):
         assert customer_product.on_sales_order() == 5
+
 
 @pytest.mark.django_db
 class TestSalesOrder:
@@ -227,6 +248,7 @@ class TestSalesOrder:
         assert sales_order.status == "Open"
         expected = sales_order_line.product.price * sales_order_line.quantity
         from decimal import Decimal, ROUND_HALF_UP
+
         expected = Decimal(expected).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         assert sales_order.total_amount == expected
         sales_order_line.complete = True
@@ -240,7 +262,10 @@ class TestSalesOrder:
         assert so.remaining_total == so.total_amount
         original_total = so.total_amount
         assert sales_order_line.shipped_total == 0
-        assert sales_order_line.remaining_total == sales_order_line.unit_price * sales_order_line.quantity
+        assert (
+            sales_order_line.remaining_total
+            == sales_order_line.unit_price * sales_order_line.quantity
+        )
         sales_order_line.quantity_shipped = 2
         sales_order_line.save()
         assert so.total_amount == original_total
@@ -316,6 +341,7 @@ class TestSalesOrder:
         form = response.context["form"]
         assert str(form.initial.get("customer")) == str(customer.pk)
         from django import forms
+
         assert isinstance(form.fields["customer"].widget, forms.HiddenInput)
         fs = response.context["lines_formset"]
         for f in fs:
@@ -337,6 +363,7 @@ class TestSalesOrder:
         form = response.context["form"]
         assert str(form.initial.get("customer")) == str(customer.pk)
         from django import forms
+
         assert isinstance(form.fields["customer"].widget, forms.HiddenInput)
 
         post_url = reverse("sales:customer-product-create")
@@ -345,11 +372,12 @@ class TestSalesOrder:
         assert resp2.status_code == 302
         assert resp2.url == reverse("sales:customer-detail", args=[customer.pk])
 
-    def test_create_view_auto_customer_and_lines(self, client, customer, customer_product):
+    def test_create_view_auto_customer_and_lines(
+        self, client, customer, customer_product
+    ):
         from django.urls import reverse
         from sales.models import SalesOrder
         from django.contrib.auth.models import User
-
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -373,13 +401,15 @@ class TestSalesOrder:
         assert so.customer == customer
         lines = so.sales_order_lines.all()
         assert lines.count() == 2
-        first, second = lines.order_by('pk')
+        first, second = lines.order_by("pk")
         assert first.product == customer_product
         assert first.quantity == 3
         assert second.product == customer_product
         assert second.quantity == 4
 
-    def test_create_view_rejects_mismatched_product(self, client, customer, customer_product, product):
+    def test_create_view_rejects_mismatched_product(
+        self, client, customer, customer_product, product
+    ):
         from sales.models import Customer, CustomerProduct, SalesOrder
         from django.urls import reverse
         from django.contrib.auth.models import User
@@ -427,22 +457,34 @@ class TestSalesOrder:
         html = resp.content.decode()
         assert "order_form.js" in html
         js_path = Path(settings.BASE_DIR) / "static" / "js" / "order_form.js"
-        result = subprocess.run(["node", "--check", str(js_path)], capture_output=True, text=True)
+        result = subprocess.run(
+            ["node", "--check", str(js_path)], capture_output=True, text=True
+        )
         assert result.returncode == 0, f"JS syntax error: {result.stderr}"
+
 
 @pytest.mark.django_db
 class TestSalesOrderLine:
     def test_sales_order_line_creation(self, sales_order_line):
         assert sales_order_line.quantity == 5
 
-
     def test_sales_order_line_save(self, sales_order_line_complete):
-        inventory = Inventory.objects.get(product=sales_order_line_complete.product.product)
+        inventory = Inventory.objects.get(
+            product=sales_order_line_complete.product.product
+        )
         assert inventory.quantity == 0
-        ledger = InventoryLedger.objects.filter(product=sales_order_line_complete.product.product).order_by("pk").first()
+        ledger = (
+            InventoryLedger.objects.filter(
+                product=sales_order_line_complete.product.product
+            )
+            .order_by("pk")
+            .first()
+        )
         assert ledger is not None
         assert ledger.quantity == -5
-        sales_ledger = SalesLedger.objects.get(product=sales_order_line_complete.product.product)
+        sales_ledger = SalesLedger.objects.get(
+            product=sales_order_line_complete.product.product
+        )
         assert sales_ledger.quantity == 5
 
 
@@ -461,14 +503,14 @@ class TestShipping:
         list_url = reverse("sales:sales-order-list")
         # list should expose ship button for open order
         list_resp = client.get(list_url)
-        assert 'Ship' in list_resp.content.decode()
+        assert "Ship" in list_resp.content.decode()
         url = reverse("sales:sales-order-ship", args=[so.pk])
         resp = client.get(url)
         assert resp.status_code == 200
         content = resp.content.decode()
         assert "Already Shipped" in content or "Quantity Shipped" in content
         assert "ship_all" in content
-        assert f"max=\"{sales_order_line.remaining}\"" in content
+        assert f'max="{sales_order_line.remaining}"' in content
         data = {f"shipped_{sales_order_line.id}": sales_order_line.quantity}
         resp2 = client.post(url, data)
         assert resp2.status_code == 302
@@ -476,7 +518,10 @@ class TestShipping:
         sales_order_line.refresh_from_db()
         assert sales_order_line.complete is True
         assert sales_order_line.quantity_shipped == sales_order_line.quantity
-        assert sales_order_line.value == sales_order_line.unit_price * sales_order_line.quantity
+        assert (
+            sales_order_line.value
+            == sales_order_line.unit_price * sales_order_line.quantity
+        )
         so.refresh_from_db()
         assert so.updated_at > so.created_at
         resp3 = client.get(url)
@@ -484,9 +529,11 @@ class TestShipping:
         inv = Inventory.objects.get(product=sales_order_line.product.product)
         # fixture ensures starting stock = 100
         assert inv.quantity == 100 - sales_order_line.quantity
-        ledger = InventoryLedger.objects.filter(
-            product=sales_order_line.product.product
-        ).order_by("pk").last()
+        ledger = (
+            InventoryLedger.objects.filter(product=sales_order_line.product.product)
+            .order_by("pk")
+            .last()
+        )
         assert ledger.quantity == -sales_order_line.quantity
 
     def test_ship_view_partial_quantity(self, client, sales_order_line):
@@ -511,15 +558,15 @@ class TestShipping:
         so.refresh_from_db()
         remaining = sales_order_line.quantity - partial
         resp2 = client.get(url)
-        assert f"max=\"{remaining}\"" in resp2.content.decode()
+        assert f'max="{remaining}"' in resp2.content.decode()
         inv = Inventory.objects.get(product=sales_order_line.product.product)
         assert inv.quantity == 100 - partial
-        ledger = InventoryLedger.objects.filter(
-            product=sales_order_line.product.product
-        ).order_by("pk").last()
+        ledger = (
+            InventoryLedger.objects.filter(product=sales_order_line.product.product)
+            .order_by("pk")
+            .last()
+        )
         assert ledger.quantity == -partial
-
-
 
     def test_ship_all_button(self, client, customer, customer_product):
         from django.urls import reverse
@@ -531,7 +578,9 @@ class TestShipping:
         client.force_login(user)
 
         # ensure inventory on product so shipping succeeds
-        Inventory.objects.update_or_create(product=customer_product.product, defaults={"quantity": 100})
+        Inventory.objects.update_or_create(
+            product=customer_product.product, defaults={"quantity": 100}
+        )
         so = SalesOrder.objects.create(customer=customer)
         line1 = SalesOrderLine.objects.create(
             sales_order=so, product=customer_product, quantity=3
@@ -551,10 +600,11 @@ class TestShipping:
         inv = Inventory.objects.get(product=customer_product.product)
         # started at 100 for every product in fixtures
         assert inv.quantity == 100 - 8
-        ledger = InventoryLedger.objects.filter(
-            product=customer_product.product
-        ).order_by("pk").last()
+        ledger = (
+            InventoryLedger.objects.filter(product=customer_product.product)
+            .order_by("pk")
+            .last()
+        )
         assert ledger.quantity in (-5, -3)
         getresp = client.get(url)
-        assert "max=\"0\"" in getresp.content.decode()
-
+        assert 'max="0"' in getresp.content.decode()

@@ -36,10 +36,18 @@ class TestSupplier:
         assert hasattr(purchase_page, "paginator")
         # see all links present in rendered content
         content = response.content.decode()
-        assert f"href=\"{reverse('procurement:supplier-purchaseorders', args=[supplier.pk])}\"" in content
-        assert f"href=\"{reverse('procurement:supplier-products', args=[supplier.pk])}\"" in content
+        assert (
+            f"href=\"{reverse('procurement:supplier-purchaseorders', args=[supplier.pk])}\""
+            in content
+        )
+        assert (
+            f"href=\"{reverse('procurement:supplier-products', args=[supplier.pk])}\""
+            in content
+        )
 
-    def test_supplier_contacts_shown_and_links(self, client, supplier, supplier_contact):
+    def test_supplier_contacts_shown_and_links(
+        self, client, supplier, supplier_contact
+    ):
         from django.urls import reverse
         from django.contrib.auth.models import User
 
@@ -61,11 +69,17 @@ class TestSupplier:
 
         user = User.objects.create_user(username="tester3")
         client.force_login(user)
-        url = reverse("procurement:supplier-contact-create") + f"?supplier={supplier.pk}"
+        url = (
+            reverse("procurement:supplier-contact-create") + f"?supplier={supplier.pk}"
+        )
         resp = client.get(url)
         assert resp.status_code == 200
         # post new contact
-        data = {"supplier": supplier.pk, "name": "New Contact", "email": "x@example.com"}
+        data = {
+            "supplier": supplier.pk,
+            "name": "New Contact",
+            "email": "x@example.com",
+        }
         resp2 = client.post(url, data)
         assert resp2.status_code == 302
         assert resp2.url == reverse("procurement:supplier-detail", args=[supplier.pk])
@@ -83,18 +97,25 @@ class TestSupplier:
         url = reverse("procurement:supplier-contact-update", args=[supplier_contact.pk])
         resp = client.get(url)
         assert resp.status_code == 200
-        data = {"supplier": supplier.pk, "name": "Edited Name", "email": supplier_contact.email}
+        data = {
+            "supplier": supplier.pk,
+            "name": "Edited Name",
+            "email": supplier_contact.email,
+        }
         resp2 = client.post(url, data)
         assert resp2.status_code == 302
         assert resp2.url == reverse("procurement:supplier-detail", args=[supplier.pk])
         supplier_contact.refresh_from_db()
         assert supplier_contact.name == "Edited Name"
         # delete
-        del_url = reverse("procurement:supplier-contact-delete", args=[supplier_contact.pk])
+        del_url = reverse(
+            "procurement:supplier-contact-delete", args=[supplier_contact.pk]
+        )
         resp3 = client.post(del_url)
         assert resp3.status_code == 302
         assert resp3.url == reverse("procurement:supplier-detail", args=[supplier.pk])
         from procurement.models import SupplierContact
+
         assert not SupplierContact.objects.filter(pk=supplier_contact.pk).exists()
 
     def test_supplier_list_pagination(self, client, supplier):
@@ -137,7 +158,9 @@ class TestSupplier:
         resp2 = client.get(url, {"q": ""})
         assert supplier.name in resp2.content.decode()
 
-    def test_dashboard_metrics(self, client, supplier, purchase_order, purchase_order_line):
+    def test_dashboard_metrics(
+        self, client, supplier, purchase_order, purchase_order_line
+    ):
         from django.urls import reverse
         from django.contrib.auth.models import User
         from procurement.models import PurchaseOrder, PurchaseOrderLine, Supplier
@@ -151,8 +174,7 @@ class TestSupplier:
         ctx = resp.context
         assert ctx["total_purchase_orders"] == PurchaseOrder.objects.count()
         expected_received = (
-            PurchaseOrder.objects
-            .annotate(
+            PurchaseOrder.objects.annotate(
                 total_lines=Count("purchase_order_lines"),
                 complete_lines=Count(
                     "purchase_order_lines",
@@ -164,8 +186,7 @@ class TestSupplier:
         )
         assert ctx["orders_received"] == expected_received
         expected_open = (
-            PurchaseOrder.objects
-            .filter(purchase_order_lines__complete=False)
+            PurchaseOrder.objects.filter(purchase_order_lines__complete=False)
             .distinct()
             .count()
         )
@@ -195,6 +216,7 @@ class TestSupplier:
         assert int(supplier_product.pk) in data["product_ids"]
         # pagination assertions for supplier list remain unchanged
         from procurement.models import Supplier
+
         for i in range(12):
             Supplier.objects.create(name=f"Pagi{i}")
         url = reverse("procurement:supplier-list")
@@ -203,6 +225,7 @@ class TestSupplier:
         assert resp.context["suppliers"].paginator is not None
         resp2 = client.get(url + "?page=2")
         assert resp2.status_code == 200
+
 
 @pytest.mark.django_db
 class TestSupplierProduct:
@@ -264,9 +287,12 @@ class TestSupplierProduct:
         assert "Quantity Received" in content
         # receive-all button should have confirmation JS
         assert "receive_all" in content
-        assert "confirm('Are you sure you want to receive ALL remaining quantities?')" in content
+        assert (
+            "confirm('Are you sure you want to receive ALL remaining quantities?')"
+            in content
+        )
         # since nothing has been received yet max should equal ordered
-        assert f"max=\"{purchase_order_line.quantity}\"" in content
+        assert f'max="{purchase_order_line.quantity}"' in content
         # we don't need any JS on the receive page; it simply lists
         # the lines and presents inputs for received quantities.
         data = {f"received_{purchase_order_line.id}": purchase_order_line.quantity}
@@ -277,22 +303,30 @@ class TestSupplierProduct:
         assert purchase_order_line.complete is True
         assert purchase_order_line.quantity_received == purchase_order_line.quantity
         # value should reflect the whole line, not just the amount blurred
-        assert purchase_order_line.value == purchase_order_line.unit_price * purchase_order_line.quantity
+        assert (
+            purchase_order_line.value
+            == purchase_order_line.unit_price * purchase_order_line.quantity
+        )
         # order timestamp should have moved forward
         po.refresh_from_db()
         assert po.updated_at > original
         # total_amount should stay equal to quantity×unit_price regardless
         # of the line's stored value or received count
-        assert po.total_amount == purchase_order_line.unit_price * purchase_order_line.quantity
+        assert (
+            po.total_amount
+            == purchase_order_line.unit_price * purchase_order_line.quantity
+        )
         # after the POST the receiving page should now reflect the received amount
         resp3 = client.get(url)
         assert str(purchase_order_line.quantity_received) in resp3.content.decode()
         # inventory should have been incremented by the same amount
         inv = Inventory.objects.get(product=purchase_order_line.product.product)
         assert inv.quantity == purchase_order_line.quantity
-        ledger = InventoryLedger.objects.filter(
-            product=purchase_order_line.product.product
-        ).order_by("pk").last()
+        ledger = (
+            InventoryLedger.objects.filter(product=purchase_order_line.product.product)
+            .order_by("pk")
+            .last()
+        )
         assert ledger.quantity == purchase_order_line.quantity
 
     def test_receive_view_partial_quantity(self, client, purchase_order_line):
@@ -320,17 +354,22 @@ class TestSupplierProduct:
         assert purchase_order_line.value is None
         # total_amount must still equal full original cost
         po.refresh_from_db()
-        assert po.total_amount == purchase_order_line.unit_price * purchase_order_line.quantity
+        assert (
+            po.total_amount
+            == purchase_order_line.unit_price * purchase_order_line.quantity
+        )
         # after the partial post, max input should be remaining quantity
         resp2 = client.get(url)
         remaining = purchase_order_line.quantity - partial
-        assert f"max=\"{remaining}\"" in resp2.content.decode()
+        assert f'max="{remaining}"' in resp2.content.decode()
         # inventory increased by the partial amount
         inv = Inventory.objects.get(product=purchase_order_line.product.product)
         assert inv.quantity == partial
-        ledger = InventoryLedger.objects.filter(
-            product=purchase_order_line.product.product
-        ).order_by("pk").last()
+        ledger = (
+            InventoryLedger.objects.filter(product=purchase_order_line.product.product)
+            .order_by("pk")
+            .last()
+        )
         assert ledger.quantity == partial
 
     def test_receiving_list_pagination(self, client, supplier, supplier_product):
@@ -343,7 +382,9 @@ class TestSupplierProduct:
         # create 12 purchase orders with incomplete lines
         for _ in range(12):
             po = PurchaseOrder.objects.create(supplier=supplier)
-            PurchaseOrderLine.objects.create(purchase_order=po, product=supplier_product, quantity=2)
+            PurchaseOrderLine.objects.create(
+                purchase_order=po, product=supplier_product, quantity=2
+            )
         # receiving list view removed – regular purchase order list
         # handles pagination.  simply assert the PO list works instead.
         url = reverse("procurement:purchase-order-list")
@@ -358,15 +399,20 @@ class TestSupplierProduct:
         from django.urls import reverse
         from procurement.models import Supplier
         from django.contrib.auth.models import User
+
         user = User.objects.create_user(username="tester")
         client.force_login(user)
 
         other = Supplier.objects.create(name="Other Supplier")
         # create one incomplete order for each supplier
         po1 = PurchaseOrder.objects.create(supplier=supplier)
-        PurchaseOrderLine.objects.create(purchase_order=po1, product=supplier_product, quantity=1)
+        PurchaseOrderLine.objects.create(
+            purchase_order=po1, product=supplier_product, quantity=1
+        )
         po2 = PurchaseOrder.objects.create(supplier=other)
-        PurchaseOrderLine.objects.create(purchase_order=po2, product=supplier_product, quantity=1)
+        PurchaseOrderLine.objects.create(
+            purchase_order=po2, product=supplier_product, quantity=1
+        )
         url = reverse("procurement:purchase-order-list")
         # filter by supplier name
         resp = client.get(url, {"q": "Test Supplier"})
@@ -406,13 +452,16 @@ class TestSupplierProduct:
         # inventory increments by the sum
         inv = Inventory.objects.get(product=supplier_product.product)
         assert inv.quantity == 8
-        ledger = InventoryLedger.objects.filter(
-            product=supplier_product.product
-        ).order_by("pk").last()
+        ledger = (
+            InventoryLedger.objects.filter(product=supplier_product.product)
+            .order_by("pk")
+            .last()
+        )
         assert ledger.quantity == 5 or ledger.quantity == 3
         # page should reflect zero remaining on success GET
         getresp = client.get(url)
-        assert "max=\"0\"" in getresp.content.decode()
+        assert 'max="0"' in getresp.content.decode()
+
 
 @pytest.mark.django_db
 class TestPurchaseOrder:
@@ -458,7 +507,9 @@ class TestPurchaseOrder:
         resp2 = client.get(url, {"q": str(purchase_order.pk)})
         assert purchase_order.order_number in resp2.content.decode()
 
-    def test_purchase_order_list_filter_received(self, client, supplier, supplier_product):
+    def test_purchase_order_list_filter_received(
+        self, client, supplier, supplier_product
+    ):
         """Filter=received should show only fully received purchase orders."""
         from django.urls import reverse
         from procurement.models import PurchaseOrder, PurchaseOrderLine
@@ -490,7 +541,9 @@ class TestPurchaseOrder:
         assert received_po.order_number in content
         assert open_po.order_number not in content
 
-    def test_purchase_order_list_filter_pending_receiving(self, client, supplier, supplier_product):
+    def test_purchase_order_list_filter_pending_receiving(
+        self, client, supplier, supplier_product
+    ):
         """Filter=pending_receiving should show orders with open lines."""
         from django.urls import reverse
         from procurement.models import PurchaseOrder, PurchaseOrderLine
@@ -530,6 +583,7 @@ class TestPurchaseOrder:
         # total amount should always compute from quantity × unit price
         expected = purchase_order_line.product.cost * purchase_order_line.quantity
         from decimal import Decimal, ROUND_HALF_UP
+
         expected = Decimal(expected).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         assert purchase_order.total_amount == expected
         # closing the line sets its stored `value` but order total remains
@@ -546,13 +600,18 @@ class TestPurchaseOrder:
         original_total = po.total_amount
         # check line helpers
         assert purchase_order_line.received_total == 0
-        assert purchase_order_line.remaining_total == purchase_order_line.unit_price * purchase_order_line.quantity
+        assert (
+            purchase_order_line.remaining_total
+            == purchase_order_line.unit_price * purchase_order_line.quantity
+        )
         # simulate receiving some quantity
         purchase_order_line.quantity_received = 2
         purchase_order_line.save()
         # total order value should not change when we record received amounts
         assert po.total_amount == original_total
-        expected_rem = (purchase_order_line.quantity - 2) * purchase_order_line.unit_price
+        expected_rem = (
+            purchase_order_line.quantity - 2
+        ) * purchase_order_line.unit_price
         assert purchase_order_line.remaining_total == expected_rem
         # order remaining value updates accordingly
         assert po.remaining_total == expected_rem
@@ -609,7 +668,9 @@ class TestPurchaseOrder:
             assert line.closed is True
             assert line.quantity_received == 0
             assert line.value is None
-        inv = Inventory.objects.filter(product=purchase_order_line.product.product).first()
+        inv = Inventory.objects.filter(
+            product=purchase_order_line.product.product
+        ).first()
         assert inv is None or inv.quantity == 0
 
         # list page no longer renders a close button for the closed order
@@ -634,6 +695,7 @@ class TestPurchaseOrder:
         # initial supplier should be set (string representation is fine)
         assert str(form.initial.get("supplier")) == str(supplier.pk)
         from django import forms
+
         assert isinstance(form.fields["supplier"].widget, forms.HiddenInput)
         # formset shouldn't expose a complete field but should allow deletion
         fs = response.context["lines_formset"]
@@ -650,12 +712,15 @@ class TestPurchaseOrder:
         user = User.objects.create_user(username="tester")
         client.force_login(user)
 
-        url = reverse("procurement:supplier-product-create") + f"?supplier={supplier.pk}"
+        url = (
+            reverse("procurement:supplier-product-create") + f"?supplier={supplier.pk}"
+        )
         response = client.get(url)
         assert response.status_code == 200
         form = response.context["form"]
         assert str(form.initial.get("supplier")) == str(supplier.pk)
         from django import forms
+
         assert isinstance(form.fields["supplier"].widget, forms.HiddenInput)
 
         # after POST we should end up back at the supplier detail page
@@ -681,10 +746,14 @@ class TestPurchaseOrder:
         html = resp.content.decode()
         assert "order_form.js" in html
         js_path = Path(settings.BASE_DIR) / "static" / "js" / "order_form.js"
-        result = subprocess.run(["node", "--check", str(js_path)], capture_output=True, text=True)
+        result = subprocess.run(
+            ["node", "--check", str(js_path)], capture_output=True, text=True
+        )
         assert result.returncode == 0, f"JS syntax error: {result.stderr}"
 
-    def test_create_view_auto_supplier_and_lines(self, client, supplier, supplier_product):
+    def test_create_view_auto_supplier_and_lines(
+        self, client, supplier, supplier_product
+    ):
         """The create view should prefill supplier from the query string and
         allow submitting one or more order lines.  Deletion checkboxes should
         be rendered but can be ignored on creation."""
@@ -715,13 +784,15 @@ class TestPurchaseOrder:
         lines = po.purchase_order_lines.all()
         # we posted two lines so both should exist
         assert lines.count() == 2
-        first, second = lines.order_by('pk')
+        first, second = lines.order_by("pk")
         assert first.product == supplier_product
         assert first.quantity == 3
         assert second.product == supplier_product
         assert second.quantity == 4
 
-    def test_create_view_rejects_mismatched_product(self, client, supplier, supplier_product, product):
+    def test_create_view_rejects_mismatched_product(
+        self, client, supplier, supplier_product, product
+    ):
         """POSTing a supplier-product that doesn't belong to the chosen
         supplier should result in form errors and not create a PO."""
         from procurement.models import Supplier, SupplierProduct
@@ -758,6 +829,7 @@ class TestPurchaseOrder:
         # no purchase order should have been created
         assert not PurchaseOrder.objects.filter(supplier=supplier).exists()
 
+
 @pytest.mark.django_db
 class TestPurchaseOrderLine:
     def test_purchase_order_line_creation(self, purchase_order_line):
@@ -768,9 +840,15 @@ class TestPurchaseOrderLine:
         purchase_order_line.complete = True
         purchase_order_line.save()
         assert inventory.quantity == 0
-        ledger = InventoryLedger.objects.filter(product=purchase_order_line.product.product).order_by("pk").first()
+        ledger = (
+            InventoryLedger.objects.filter(product=purchase_order_line.product.product)
+            .order_by("pk")
+            .first()
+        )
         assert ledger is not None
         assert ledger.quantity == 5
-        purchase_ledger = PurchaseLedger.objects.filter(transaction_id=purchase_order_line.purchase_order.pk).first()
+        purchase_ledger = PurchaseLedger.objects.filter(
+            transaction_id=purchase_order_line.purchase_order.pk
+        ).first()
         assert purchase_ledger is not None
         assert purchase_ledger.quantity == 5

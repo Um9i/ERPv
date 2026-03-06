@@ -16,8 +16,12 @@ class FinanceDashboardView(TemplateView):
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
-        sales_total = SalesLedger.objects.aggregate(total=Coalesce(Sum("value"), Decimal("0")))["total"] or Decimal("0")
-        purchase_total = PurchaseLedger.objects.aggregate(total=Coalesce(Sum("value"), Decimal("0")))["total"] or Decimal("0")
+        sales_total = SalesLedger.objects.aggregate(
+            total=Coalesce(Sum("value"), Decimal("0"))
+        )["total"] or Decimal("0")
+        purchase_total = PurchaseLedger.objects.aggregate(
+            total=Coalesce(Sum("value"), Decimal("0"))
+        )["total"] or Decimal("0")
 
         now = timezone.now()
         month_filter = {"date__year": now.year, "date__month": now.month}
@@ -37,10 +41,12 @@ class FinanceDashboardView(TemplateView):
                 "month_sales_total": month_sales,
                 "month_purchase_total": month_purchases,
                 "month_profit": month_sales - month_purchases,
-                "recent_sales": SalesLedger.objects.select_related("customer", "product")
-                .order_by("-date")[:5],
-                "recent_purchases": PurchaseLedger.objects.select_related("supplier", "product")
-                .order_by("-date")[:5],
+                "recent_sales": SalesLedger.objects.select_related(
+                    "customer", "product"
+                ).order_by("-date")[:5],
+                "recent_purchases": PurchaseLedger.objects.select_related(
+                    "supplier", "product"
+                ).order_by("-date")[:5],
             }
         )
         return context
@@ -84,7 +90,9 @@ class SalesLedgerFilterMixin:
         return context
 
 
-class SalesLedgerArchiveView(SalesLedgerFilterMixin, LedgerArchiveMixin, ArchiveIndexView):
+class SalesLedgerArchiveView(
+    SalesLedgerFilterMixin, LedgerArchiveMixin, ArchiveIndexView
+):
     model = SalesLedger
     template_name = "finance/salesledger_archive.html"
 
@@ -99,7 +107,9 @@ class SalesLedgerArchiveView(SalesLedgerFilterMixin, LedgerArchiveMixin, Archive
         return context
 
 
-class SalesLedgerMonthArchiveView(SalesLedgerFilterMixin, LedgerArchiveMixin, MonthArchiveView):
+class SalesLedgerMonthArchiveView(
+    SalesLedgerFilterMixin, LedgerArchiveMixin, MonthArchiveView
+):
     model = SalesLedger
     template_name = "finance/salesledger_month.html"
 
@@ -135,7 +145,9 @@ class PurchaseLedgerFilterMixin:
         return context
 
 
-class PurchaseLedgerArchiveView(PurchaseLedgerFilterMixin, LedgerArchiveMixin, ArchiveIndexView):
+class PurchaseLedgerArchiveView(
+    PurchaseLedgerFilterMixin, LedgerArchiveMixin, ArchiveIndexView
+):
     model = PurchaseLedger
     template_name = "finance/purchaseledger_archive.html"
 
@@ -149,7 +161,9 @@ class PurchaseLedgerArchiveView(PurchaseLedgerFilterMixin, LedgerArchiveMixin, A
         return context
 
 
-class PurchaseLedgerMonthArchiveView(PurchaseLedgerFilterMixin, LedgerArchiveMixin, MonthArchiveView):
+class PurchaseLedgerMonthArchiveView(
+    PurchaseLedgerFilterMixin, LedgerArchiveMixin, MonthArchiveView
+):
     model = PurchaseLedger
     template_name = "finance/purchaseledger_month.html"
 

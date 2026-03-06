@@ -81,7 +81,9 @@ class Command(BaseCommand):
         t0 = time.monotonic()
 
         with transaction.atomic():
-            self._seed(start_date, now, total_days, num_customers, num_suppliers, num_products)
+            self._seed(
+                start_date, now, total_days, num_customers, num_suppliers, num_products
+            )
 
         elapsed = time.monotonic() - t0
         self.stdout.write(self.style.SUCCESS(f"Seeding complete in {elapsed:.1f}s"))
@@ -91,7 +93,9 @@ class Command(BaseCommand):
         self.stdout.write(f"  {msg}")
 
     # ------------------------------------------------------------------
-    def _seed(self, start_date, now, total_days, num_customers, num_suppliers, num_products):
+    def _seed(
+        self, start_date, now, total_days, num_customers, num_suppliers, num_products
+    ):
         # ── 1. Base entities (small counts – factories are fine) ──
         self._log("Creating products...")
         products = ProductFactory.create_batch(num_products)
@@ -211,10 +215,10 @@ class Command(BaseCommand):
         # ── 5. Plan all daily data in memory (no DB queries) ─────
         self._log("Planning daily orders and ledger entries...")
 
-        so_descriptors = []   # [(customer, date, [(cp, qty, complete, shipped), ...])]
-        po_descriptors = []   # [(supplier, date, [(sp, qty, complete, received), ...])]
-        prod_job_list = []    # [(product, date)]
-        ledger_ops = []       # [(product_id, change, date)]
+        so_descriptors = []  # [(customer, date, [(cp, qty, complete, shipped), ...])]
+        po_descriptors = []  # [(supplier, date, [(sp, qty, complete, received), ...])]
+        prod_job_list = []  # [(product, date)]
+        ledger_ops = []  # [(product_id, change, date)]
 
         # Track inventory quantities in Python for ledger simulation
         inv_quantities = {inv.product_id: inv.quantity for inv in inventories}
@@ -275,9 +279,7 @@ class Command(BaseCommand):
             # Production jobs (only products with BOMs)
             for _ in range(random.randint(0, 2)):
                 if bom_products:
-                    prod_job_list.append(
-                        (random.choice(bom_products), current)
-                    )
+                    prod_job_list.append((random.choice(bom_products), current))
 
             # Inventory ledger entries (random adjustments)
             sample_size = random.randint(0, 3)
@@ -303,8 +305,15 @@ class Command(BaseCommand):
         # This must happen BEFORE constructing objects so that Django
         # does not silently replace historical dates with now().
         auto_date_fields = []
-        for model in (InventoryLedger, SalesLedger, PurchaseLedger,
-                       SalesOrder, PurchaseOrder, Production, Inventory):
+        for model in (
+            InventoryLedger,
+            SalesLedger,
+            PurchaseLedger,
+            SalesOrder,
+            PurchaseOrder,
+            Production,
+            Inventory,
+        ):
             for field in model._meta.get_fields():
                 if getattr(field, "auto_now_add", False):
                     auto_date_fields.append((field, "auto_now_add", True))
@@ -315,8 +324,11 @@ class Command(BaseCommand):
 
         try:
             self._bulk_insert_all(
-                so_descriptors, po_descriptors, prod_job_list,
-                ledger_ops, inv_quantities,
+                so_descriptors,
+                po_descriptors,
+                prod_job_list,
+                ledger_ops,
+                inv_quantities,
             )
         finally:
             for field, attr, orig in auto_date_fields:
@@ -331,7 +343,9 @@ class Command(BaseCommand):
                 inv.quantity = target
                 inv_updates.append(inv)
         if inv_updates:
-            Inventory.objects.bulk_update(inv_updates, ["quantity"], batch_size=BATCH_SIZE)
+            Inventory.objects.bulk_update(
+                inv_updates, ["quantity"], batch_size=BATCH_SIZE
+            )
 
         # ── 11. Rebuild cached totals (single pass) ──────────────
         self._log("Rebuilding cached order totals...")
@@ -366,8 +380,9 @@ class Command(BaseCommand):
             inv.update_required_cached()
 
     # ------------------------------------------------------------------
-    def _bulk_insert_all(self, so_descriptors, po_descriptors, prod_job_list,
-                         ledger_ops, inv_quantities):
+    def _bulk_insert_all(
+        self, so_descriptors, po_descriptors, prod_job_list, ledger_ops, inv_quantities
+    ):
         """Create all orders, lines, and ledger entries with correct dates.
 
         Called AFTER auto_now / auto_now_add have been temporarily disabled

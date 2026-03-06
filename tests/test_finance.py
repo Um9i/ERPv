@@ -56,4 +56,3 @@ def test_sales_ledger_archive_lists_entry(client):
     body = response.content.decode()
     assert entry.product.name in body
     assert customer.name in body
-

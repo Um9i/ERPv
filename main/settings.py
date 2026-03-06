@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/4.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.0/ref/settings/
 """
+
 import dj_database_url
 import os
 from pathlib import Path
@@ -103,7 +104,9 @@ DATABASES = {
 }
 
 _ssl_req = os.getenv("DB_SSL_REQUIRE", "False").lower() in ("1", "true", "yes")
-DATABASES["default"].update(dj_database_url.config(conn_max_age=500, ssl_require=_ssl_req))
+DATABASES["default"].update(
+    dj_database_url.config(conn_max_age=500, ssl_require=_ssl_req)
+)
 
 # Silk profiler configuration – we don't want it to fire on the
 # public landing page because that request is deliberately simple and

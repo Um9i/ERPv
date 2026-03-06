@@ -1,7 +1,12 @@
 from django import forms
 from django.core.validators import EmailValidator, RegexValidator
-from .models import Customer, CustomerContact, CustomerProduct, SalesOrder, SalesOrderLine
-
+from .models import (
+    Customer,
+    CustomerContact,
+    CustomerProduct,
+    SalesOrder,
+    SalesOrderLine,
+)
 
 # ── shared validators ──────────────────────────────────────────────────
 
@@ -21,6 +26,7 @@ ADDRESS_FIELDS = [
 
 
 # ── Customer ───────────────────────────────────────────────────────────
+
 
 class CustomerForm(forms.ModelForm):
     email = forms.CharField(
@@ -54,6 +60,7 @@ class CustomerForm(forms.ModelForm):
 
 # ── Customer Contact ───────────────────────────────────────────────────
 
+
 class CustomerContactForm(forms.ModelForm):
     email = forms.CharField(
         max_length=128,
@@ -79,6 +86,7 @@ class CustomerContactForm(forms.ModelForm):
 
 # ── Customer Product ───────────────────────────────────────────────────
 
+
 class CustomerProductForm(forms.ModelForm):
     class Meta:
         model = CustomerProduct
@@ -92,6 +100,7 @@ class CustomerProductForm(forms.ModelForm):
 
 
 # ── Sales Order ────────────────────────────────────────────────────────
+
 
 class SalesOrderForm(forms.ModelForm):
     class Meta:

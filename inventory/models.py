@@ -24,7 +24,7 @@ class Product(models.Model):
         3. Otherwise zero.
         """
         # cheapest supplier cost
-        suppliers = self.product_suppliers.all().order_by('cost')
+        suppliers = self.product_suppliers.all().order_by("cost")
         if suppliers.exists():
             try:
                 return suppliers.first().cost
@@ -36,7 +36,7 @@ class Product(models.Model):
         except Product.billofmaterials.RelatedObjectDoesNotExist:
             return 0
         total = 0
-        for item in bom.bom_items.all().select_related('product'):
+        for item in bom.bom_items.all().select_related("product"):
             # recursive call
             total += item.quantity * item.product.unit_cost
         return total
@@ -55,6 +55,7 @@ class Product(models.Model):
             return False
         # lazy-import to avoid circular import
         from .models import Inventory
+
         for item in bom.bom_items.select_related("product").all():
             try:
                 inv = item.product.product_inventory
@@ -111,7 +112,6 @@ class Inventory(models.Model):
         # compute shortage relative to current stock
         short = self.quantity - allocated - sales_orders
         return abs(short) if short < 0 else 0
-
 
     def update_required_cached(self):
         """Recompute and persist the cached required quantity."""
@@ -189,9 +189,7 @@ class InventoryAdjust(models.Model):
         # validate against inventory before applying change
         product = Inventory.objects.select_for_update().get(product=self.product)
         if product.quantity + self.quantity < 0:
-            raise ValidationError(
-                _("Not enough resources to complete transaction.")
-            )
+            raise ValidationError(_("Not enough resources to complete transaction."))
         # no change to cached requirements here; the quantity check occurs
         # under ``select_for_update`` which will be followed by an adjustment
 
@@ -200,10 +198,15 @@ class InventoryAdjust(models.Model):
         # only apply quantity changes when creating new records
         self.full_clean()
         if self.pk is None and self.complete:
-            product_qs = Inventory.objects.select_for_update().filter(product=self.product)
+            product_qs = Inventory.objects.select_for_update().filter(
+                product=self.product
+            )
             # also update last_updated timestamp
             from django.utils import timezone
-            product_qs.update(quantity=F('quantity') + self.quantity, last_updated=timezone.now())
+
+            product_qs.update(
+                quantity=F("quantity") + self.quantity, last_updated=timezone.now()
+            )
             InventoryLedger.objects.create(
                 product=self.product,
                 quantity=self.quantity,
@@ -228,6 +231,7 @@ def _update_required_from_allocation(sender, instance, **kwargs):
 
 
 from sales.models import SalesOrderLine  # imported here to avoid circular import
+
 
 @receiver(post_save, sender=SalesOrderLine)
 @receiver(post_delete, sender=SalesOrderLine)

@@ -12,7 +12,11 @@ urlpatterns = [
         views.SalesLedgerMonthArchiveView.as_view(),
         name="sales-ledger-month",
     ),
-    path("purchases/", views.PurchaseLedgerArchiveView.as_view(), name="purchase-ledger-archive"),
+    path(
+        "purchases/",
+        views.PurchaseLedgerArchiveView.as_view(),
+        name="purchase-ledger-archive",
+    ),
     path(
         "purchases/<int:year>/<int:month>/",
         views.PurchaseLedgerMonthArchiveView.as_view(),

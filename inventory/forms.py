@@ -16,9 +16,7 @@ class ProductForm(forms.ModelForm):
         if self.instance and self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
-            raise forms.ValidationError(
-                f'A product named "{name}" already exists.'
-            )
+            raise forms.ValidationError(f'A product named "{name}" already exists.')
         return name
 
 

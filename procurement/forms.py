@@ -8,7 +8,6 @@ from .models import (
     PurchaseOrderLine,
 )
 
-
 # ── shared validators ──────────────────────────────────────────────────
 
 phone_validator = RegexValidator(
@@ -27,6 +26,7 @@ ADDRESS_FIELDS = [
 
 
 # ── Supplier ───────────────────────────────────────────────────────────
+
 
 class SupplierForm(forms.ModelForm):
     email = forms.CharField(
@@ -60,6 +60,7 @@ class SupplierForm(forms.ModelForm):
 
 # ── Supplier Contact ──────────────────────────────────────────────────
 
+
 class SupplierContactForm(forms.ModelForm):
     email = forms.CharField(
         max_length=128,
@@ -85,6 +86,7 @@ class SupplierContactForm(forms.ModelForm):
 
 # ── Supplier Product ──────────────────────────────────────────────────
 
+
 class SupplierProductForm(forms.ModelForm):
     class Meta:
         model = SupplierProduct
@@ -107,6 +109,7 @@ class SupplierProductForm(forms.ModelForm):
 
 
 # ── Purchase Order ────────────────────────────────────────────────────
+
 
 class PurchaseOrderForm(forms.ModelForm):
     class Meta:

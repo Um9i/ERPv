@@ -120,6 +120,7 @@ class SupplierContactCreateView(CreateView):
     template_name = "procurement/supplier_contact_form.html"
     form_class = SupplierContactForm
     success_url = reverse_lazy("procurement:supplier-list")
+
     def get_initial(self):
         initial = super().get_initial()
         supplier_id = self.request.GET.get("supplier")
@@ -135,7 +136,9 @@ class SupplierContactCreateView(CreateView):
         return form
 
     def get_success_url(self):
-        return reverse_lazy("procurement:supplier-detail", args=[self.object.supplier.pk])
+        return reverse_lazy(
+            "procurement:supplier-detail", args=[self.object.supplier.pk]
+        )
 
 
 class SupplierContactUpdateView(UpdateView):
@@ -144,7 +147,9 @@ class SupplierContactUpdateView(UpdateView):
     form_class = SupplierContactForm
 
     def get_success_url(self):
-        return reverse_lazy("procurement:supplier-detail", args=[self.object.supplier.pk])
+        return reverse_lazy(
+            "procurement:supplier-detail", args=[self.object.supplier.pk]
+        )
 
 
 class SupplierContactDeleteView(DeleteView):
@@ -152,7 +157,10 @@ class SupplierContactDeleteView(DeleteView):
     template_name = "procurement/supplier_contact_confirm_delete.html"
 
     def get_success_url(self):
-        return reverse_lazy("procurement:supplier-detail", args=[self.object.supplier.pk])
+        return reverse_lazy(
+            "procurement:supplier-detail", args=[self.object.supplier.pk]
+        )
+
 
 class SupplierProductCreateView(CreateView):
     model = SupplierProduct
@@ -271,8 +279,7 @@ class ProcurementDashboardView(TemplateView):
         context["total_purchase_orders"] = PurchaseOrder.objects.count()
         # how many purchase orders are fully received (all lines complete)
         context["orders_received"] = (
-            PurchaseOrder.objects
-            .annotate(
+            PurchaseOrder.objects.annotate(
                 total_lines=Count("purchase_order_lines"),
                 complete_lines=Count(
                     "purchase_order_lines",
@@ -287,8 +294,7 @@ class ProcurementDashboardView(TemplateView):
         # label remains "Pending Receiving" for now, but the underlying
         # value aligns with the executive/main dashboard semantics.
         context["pending_receiving"] = (
-            PurchaseOrder.objects
-            .filter(purchase_order_lines__complete=False)
+            PurchaseOrder.objects.filter(purchase_order_lines__complete=False)
             .distinct()
             .count()
         )
@@ -301,16 +307,14 @@ class ProcurementDashboardView(TemplateView):
         from procurement.services import pending_po_by_product
 
         inv_list = list(
-            Inventory.objects
-            .select_related("product")
-            .filter(required_cached__gt=0)
+            Inventory.objects.select_related("product").filter(required_cached__gt=0)
         )
         product_ids = [inv.product_id for inv in inv_list]
         po_map = pending_po_by_product(product_ids)
         purchasable_ids = set(
-            SupplierProduct.objects
-            .filter(product_id__in=product_ids)
-            .values_list("product_id", flat=True)
+            SupplierProduct.objects.filter(product_id__in=product_ids).values_list(
+                "product_id", flat=True
+            )
         )
 
         purchasable_short = 0
@@ -350,6 +354,7 @@ class PurchaseOrderCreateView(CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
         # create an inline formset for the purchase order lines
         # don't offer complete or deletion on the initial create formset;
         # completion is handled later via the line save logic and deletion not
@@ -438,8 +443,7 @@ class PurchaseOrderListView(ListView):
         from django.db.models import Count, Q, F, Exists, OuterRef
 
         qs = (
-            PurchaseOrder.objects
-            .select_related("supplier")
+            PurchaseOrder.objects.select_related("supplier")
             .annotate(
                 has_open_lines=Exists(
                     PurchaseOrderLine.objects.filter(
@@ -534,6 +538,7 @@ class PurchaseOrderDetailView(DetailView):
 # PurchaseOrderReceivingListView removed – functionality overlaps
 # with PurchaseOrderListView which already provides access to open orders.
 # The dedicated template and URL have been deleted as well.
+
 
 class PurchaseOrderReceiveView(DetailView):
     model = PurchaseOrder

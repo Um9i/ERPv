@@ -71,6 +71,7 @@ class InventoryDetailView(DetailView):
     def get_context_data(self, **kwargs):
         from django.core.paginator import Paginator
         from django.db.models import Sum, F
+
         # import lazily to avoid circular deps
         from sales.models import SalesOrderLine
         from procurement.models import PurchaseOrderLine
@@ -87,7 +88,11 @@ class InventoryDetailView(DetailView):
         # ── Compute running balance anchored to current stock ──
         # Walk all entries newest-first to assign a balance to every entry,
         # then attach balances to the paginated subset.
-        all_entries_desc = list(inv.product.inventory_ledger.all().order_by("-date").values_list("pk", "quantity"))
+        all_entries_desc = list(
+            inv.product.inventory_ledger.all()
+            .order_by("-date")
+            .values_list("pk", "quantity")
+        )
         # build balance map: start from current qty, walk backwards (newest first)
         balance_map = {}
         running = inv.quantity
@@ -123,29 +128,30 @@ class InventoryDetailView(DetailView):
 
         # monthly activity summaries for charts
         from django.db.models.functions import TruncMonth
+
         # sales by month
         sales_months = (
             SalesOrderLine.objects.filter(product__product=inv.product)
-            .annotate(month=TruncMonth('sales_order__created_at'))
-            .values('month')
-            .annotate(total=Sum('quantity'))
-            .order_by('month')
+            .annotate(month=TruncMonth("sales_order__created_at"))
+            .values("month")
+            .annotate(total=Sum("quantity"))
+            .order_by("month")
         )
         # purchases by month
         purchase_months = (
             PurchaseOrderLine.objects.filter(product__product=inv.product)
-            .annotate(month=TruncMonth('purchase_order__created_at'))
-            .values('month')
-            .annotate(total=Sum('quantity'))
-            .order_by('month')
+            .annotate(month=TruncMonth("purchase_order__created_at"))
+            .values("month")
+            .annotate(total=Sum("quantity"))
+            .order_by("month")
         )
         # production by month
         production_months = (
             Production.objects.filter(product=inv.product)
-            .annotate(month=TruncMonth('created_at'))
-            .values('month')
-            .annotate(total=Sum('quantity'))
-            .order_by('month')
+            .annotate(month=TruncMonth("created_at"))
+            .values("month")
+            .annotate(total=Sum("quantity"))
+            .order_by("month")
         )
         # convert to parallel lists (months as YYYY-MM format)
         m_dates = []
@@ -153,42 +159,59 @@ class InventoryDetailView(DetailView):
         m_purch = []
         m_prod = []
         # build mapping for each type for easier access
-        sales_map = {entry['month']: entry['total'] or 0 for entry in sales_months}
-        purch_map = {entry['month']: entry['total'] or 0 for entry in purchase_months}
-        prod_map = {entry['month']: entry['total'] or 0 for entry in production_months}
+        sales_map = {entry["month"]: entry["total"] or 0 for entry in sales_months}
+        purch_map = {entry["month"]: entry["total"] or 0 for entry in purchase_months}
+        prod_map = {entry["month"]: entry["total"] or 0 for entry in production_months}
         # unify all month keys
-        all_months = sorted(set(list(sales_map.keys()) + list(purch_map.keys()) + list(prod_map.keys())))
+        all_months = sorted(
+            set(list(sales_map.keys()) + list(purch_map.keys()) + list(prod_map.keys()))
+        )
         for m in all_months:
             m_dates.append(m.strftime("%Y-%m"))
             m_sales.append(sales_map.get(m, 0))
             m_purch.append(purch_map.get(m, 0))
             m_prod.append(prod_map.get(m, 0))
-        context['monthly_dates'] = m_dates
-        context['monthly_sales'] = m_sales
-        context['monthly_purchases'] = m_purch
-        context['monthly_production'] = m_prod
+        context["monthly_dates"] = m_dates
+        context["monthly_sales"] = m_sales
+        context["monthly_purchases"] = m_purch
+        context["monthly_production"] = m_prod
         # compute pending amounts for this product
         # sales pending: sum of quantities not yet shipped
         sales_qs = SalesOrderLine.objects.filter(
             product__product=inv.product,
             complete=False,
         )
-        context["sales_pending"] = sales_qs.aggregate(total=Sum(F("quantity") - F("quantity_shipped"))) ["total"] or 0
+        context["sales_pending"] = (
+            sales_qs.aggregate(total=Sum(F("quantity") - F("quantity_shipped")))[
+                "total"
+            ]
+            or 0
+        )
         # purchase pending: sum of remaining quantity to receive
         po_qs = PurchaseOrderLine.objects.filter(
             product__product=inv.product,
             complete=False,
         )
-        context["purchase_pending"] = po_qs.aggregate(total=Sum(F("quantity") - F("quantity_received")))["total"] or 0
+        context["purchase_pending"] = (
+            po_qs.aggregate(total=Sum(F("quantity") - F("quantity_received")))["total"]
+            or 0
+        )
         # production pending: sum of remaining production quantity
         prod_qs = Production.objects.filter(
             product=inv.product,
             closed=False,
-        ).filter(quantity__gt=F('quantity_received'))
-        context["production_pending"] = prod_qs.aggregate(total=Sum(F("quantity") - F("quantity_received")))["total"] or 0
+        ).filter(quantity__gt=F("quantity_received"))
+        context["production_pending"] = (
+            prod_qs.aggregate(total=Sum(F("quantity") - F("quantity_received")))[
+                "total"
+            ]
+            or 0
+        )
 
         # shortage: how much demand exceeds all available + incoming supply
-        available = inv.quantity + context["purchase_pending"] + context["production_pending"]
+        available = (
+            inv.quantity + context["purchase_pending"] + context["production_pending"]
+        )
         context["required_qty"] = max(0, context["sales_pending"] - available)
 
         # bundle all chart data for json_script (consumed by static JS)
@@ -215,7 +238,9 @@ class InventoryAdjustCreateView(CreateView):
 
     def get_initial(self):
         initial = super().get_initial()
-        inventory = Inventory.objects.select_related("product").get(pk=self.kwargs.get("pk"))
+        inventory = Inventory.objects.select_related("product").get(
+            pk=self.kwargs.get("pk")
+        )
         initial["product"] = inventory.product
         return initial
 
@@ -227,7 +252,9 @@ class InventoryAdjustCreateView(CreateView):
         return form
 
     def form_valid(self, form):
-        inventory = Inventory.objects.select_related("product").get(pk=self.kwargs.get("pk"))
+        inventory = Inventory.objects.select_related("product").get(
+            pk=self.kwargs.get("pk")
+        )
         form.instance.product = inventory.product
         form.instance.complete = True
         return super().form_valid(form)
@@ -240,7 +267,13 @@ class InventoryDashboardView(TemplateView):
 
     def get_context_data(self, **kwargs):
         from django.db.models import (
-            DecimalField, F, Min, OuterRef, Subquery, Sum, Value,
+            DecimalField,
+            F,
+            Min,
+            OuterRef,
+            Subquery,
+            Sum,
+            Value,
         )
         from django.db.models.functions import Coalesce
         from procurement.models import SupplierProduct
@@ -285,7 +318,9 @@ class InventoryDashboardView(TemplateView):
             )
             for parent_id, bom_qty, comp_cost in bom_items:
                 if comp_cost is not None:
-                    bom_costs[parent_id] = bom_costs.get(parent_id, 0) + bom_qty * comp_cost
+                    bom_costs[parent_id] = (
+                        bom_costs.get(parent_id, 0) + bom_qty * comp_cost
+                    )
 
         stock_value = sum(
             qty * (cost if cost is not None else bom_costs.get(pid, 0))
@@ -300,12 +335,16 @@ class InventoryDashboardView(TemplateView):
 
         # when ?required=1 is passed, include low-stock items in context
         if getattr(self, "request", None) and self.request.GET.get("required"):
-            from procurement.services import best_supplier_products, pending_po_by_product
+            from procurement.services import (
+                best_supplier_products,
+                pending_po_by_product,
+            )
             from production.services import bom_product_ids, pending_jobs_by_product
 
             inv_list = list(
-                Inventory.objects.select_related("product")
-                .filter(required_cached__gt=0)
+                Inventory.objects.select_related("product").filter(
+                    required_cached__gt=0
+                )
             )
             product_ids = [inv.product_id for inv in inv_list]
             po_map = pending_po_by_product(product_ids)
@@ -324,15 +363,17 @@ class InventoryDashboardView(TemplateView):
                 supplierproduct = supplier_map.get(inv.product_id)
                 supplier_id = supplierproduct.supplier_id if supplierproduct else None
                 has_bom = inv.product_id in bom_ids
-                items.append({
-                    "product": inv.product,
-                    "required": required_qty,
-                    "quantity": inv.quantity,
-                    "production_amount": prod_amount,
-                    "po_amount": po_amount,
-                    "has_bom": has_bom,
-                    "supplier_id": supplier_id,
-                })
+                items.append(
+                    {
+                        "product": inv.product,
+                        "required": required_qty,
+                        "quantity": inv.quantity,
+                        "production_amount": prod_amount,
+                        "po_amount": po_amount,
+                        "has_bom": has_bom,
+                        "supplier_id": supplier_id,
+                    }
+                )
             context["required_items"] = items
 
         return context
@@ -354,9 +395,7 @@ class LowStockListView(TemplateView):
 
         # gather low-stock inventories; use cached shortage for the broad query
         inv_list = list(
-            Inventory.objects
-            .select_related("product")
-            .filter(required_cached__gt=0)
+            Inventory.objects.select_related("product").filter(required_cached__gt=0)
         )
         product_ids = [inv.product_id for inv in inv_list]
 
@@ -391,28 +430,38 @@ class LowStockListView(TemplateView):
             can_order = supplier_id is not None and needed_po > 0
             order_qty = max(required_qty - prod_amount, 0)
 
-            items.append({
-                "product": inv.product,
-                "required": required_qty,
-                "quantity": inv.quantity,
-                "production_amount": prod_amount,
-                "po_amount": po_amount,
-                "has_bom": has_bom,
-                "can_start_job": can_start,
-                "supplier_id": supplier_id,
-                "supplierproduct_id": supplierproduct_id,
-                "can_order": can_order,
-                "order_qty": order_qty,
-                "po_order_qty": needed_po,
-            })
+            items.append(
+                {
+                    "product": inv.product,
+                    "required": required_qty,
+                    "quantity": inv.quantity,
+                    "production_amount": prod_amount,
+                    "po_amount": po_amount,
+                    "has_bom": has_bom,
+                    "can_start_job": can_start,
+                    "supplier_id": supplier_id,
+                    "supplierproduct_id": supplierproduct_id,
+                    "can_order": can_order,
+                    "order_qty": order_qty,
+                    "po_order_qty": needed_po,
+                }
+            )
 
         # apply filter: 'purchasable' = has a supplier and not fully covered by open POs
         # 'producible' = has a BOM and not fully covered by active production jobs
         filter_by = self.request.GET.get("filter", "")
         if filter_by == "purchasable":
-            items = [e for e in items if e["supplier_id"] is not None and e["po_amount"] < e["required"]]
+            items = [
+                e
+                for e in items
+                if e["supplier_id"] is not None and e["po_amount"] < e["required"]
+            ]
         elif filter_by == "producible":
-            items = [e for e in items if e["has_bom"] and e["production_amount"] < e["required"]]
+            items = [
+                e
+                for e in items
+                if e["has_bom"] and e["production_amount"] < e["required"]
+            ]
         context["filter_by"] = filter_by
 
         # sort items by requirement descending so highest shortages appear first
@@ -423,7 +472,9 @@ class LowStockListView(TemplateView):
             if sid is not None and entry.get("can_order", False):
                 pairs = supplier_items.get(sid, [])
                 qs = "&".join(f"item={pid}:{qty}" for pid, qty in pairs)
-                entry["po_url"] = f"{reverse('procurement:purchase-order-create')}?supplier={sid}&{qs}"
+                entry["po_url"] = (
+                    f"{reverse('procurement:purchase-order-create')}?supplier={sid}&{qs}"
+                )
             else:
                 entry["po_url"] = None
 
@@ -434,7 +485,9 @@ class LowStockListView(TemplateView):
         return context
 
     def form_valid(self, form):
-        inventory = Inventory.objects.select_related("product").get(pk=self.kwargs.get("pk"))
+        inventory = Inventory.objects.select_related("product").get(
+            pk=self.kwargs.get("pk")
+        )
         form.instance.product = inventory.product
         form.instance.complete = True
         return super().form_valid(form)
@@ -449,9 +502,11 @@ class InventoryListApiView(TemplateView):
         # compute inventory levels for all products
         data = []
         for inv in Inventory.objects.select_related("product").all():
-            data.append({
-                "product": inv.product.name,
-                "quantity": inv.quantity,
-                "required": inv.required_cached,
-            })
+            data.append(
+                {
+                    "product": inv.product.name,
+                    "quantity": inv.quantity,
+                    "required": inv.required_cached,
+                }
+            )
         return JsonResponse(data, safe=False)

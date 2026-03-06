@@ -27,31 +27,74 @@ fake = Faker()
 
 # ── Realistic product name generation ──
 PRODUCT_ADJECTIVES = [
-    "Premium", "Industrial", "Heavy-Duty", "Compact", "Standard",
-    "Professional", "Ultra", "Elite", "Essential", "Advanced",
-    "Precision", "Lightweight", "Reinforced", "Eco", "High-Performance",
+    "Premium",
+    "Industrial",
+    "Heavy-Duty",
+    "Compact",
+    "Standard",
+    "Professional",
+    "Ultra",
+    "Elite",
+    "Essential",
+    "Advanced",
+    "Precision",
+    "Lightweight",
+    "Reinforced",
+    "Eco",
+    "High-Performance",
 ]
 
 PRODUCT_MATERIALS = [
-    "Steel", "Aluminium", "Carbon", "Titanium", "Copper",
-    "Brass", "Polymer", "Ceramic", "Composite", "Alloy",
+    "Steel",
+    "Aluminium",
+    "Carbon",
+    "Titanium",
+    "Copper",
+    "Brass",
+    "Polymer",
+    "Ceramic",
+    "Composite",
+    "Alloy",
 ]
 
 PRODUCT_TYPES = [
-    "Bearing", "Valve", "Gasket", "Bracket", "Coupling",
-    "Flange", "Piston", "Shaft", "Gear", "Sprocket",
-    "Bolt Set", "Filter", "Seal", "Bushing", "Housing",
-    "Connector", "Clamp", "Hinge", "Actuator", "Rotor",
-    "Impeller", "Nozzle", "Manifold", "Rail", "Panel",
+    "Bearing",
+    "Valve",
+    "Gasket",
+    "Bracket",
+    "Coupling",
+    "Flange",
+    "Piston",
+    "Shaft",
+    "Gear",
+    "Sprocket",
+    "Bolt Set",
+    "Filter",
+    "Seal",
+    "Bushing",
+    "Housing",
+    "Connector",
+    "Clamp",
+    "Hinge",
+    "Actuator",
+    "Rotor",
+    "Impeller",
+    "Nozzle",
+    "Manifold",
+    "Rail",
+    "Panel",
 ]
 
 
 def _generate_product_name(n):
     import random
+
     adj = random.choice(PRODUCT_ADJECTIVES)
     mat = random.choice(PRODUCT_MATERIALS)
     typ = random.choice(PRODUCT_TYPES)
-    size = random.choice(["6mm", "10mm", "12mm", "16mm", "20mm", "25mm", "32mm", "40mm", "50mm"])
+    size = random.choice(
+        ["6mm", "10mm", "12mm", "16mm", "20mm", "25mm", "32mm", "40mm", "50mm"]
+    )
     return f"{adj} {mat} {typ} {size}"
 
 

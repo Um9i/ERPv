@@ -13,9 +13,11 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.contrib import admin
 from django.urls import path, include
-#from django.views.generic import TemplateView
+
+# from django.views.generic import TemplateView
 from django.views.generic import TemplateView
 from debug_toolbar.toolbar import debug_toolbar_urls
 
@@ -26,7 +28,7 @@ admin.site.index_title = ""
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path('accounts/', include('django_registration.backends.one_step.urls')),
+    path("accounts/", include("django_registration.backends.one_step.urls")),
     path("accounts/", include("django.contrib.auth.urls")),
     path("", TemplateView.as_view(template_name="home.html"), name="home"),
     path("inventory/", include("inventory.urls", namespace="inventory")),
@@ -35,4 +37,3 @@ urlpatterns = [
     path("production/", include("production.urls", namespace="production")),
     path("finance/", include("finance.urls", namespace="finance")),
 ] + debug_toolbar_urls()
-

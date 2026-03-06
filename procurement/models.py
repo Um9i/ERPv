@@ -58,13 +58,15 @@ class SupplierProduct(models.Model):
 
     def on_purchase_order(self):
         total = (
-            self.product_purchase_orders.filter(complete=False).aggregate(total=Sum('quantity'))
-            .get('total')
+            self.product_purchase_orders.filter(complete=False)
+            .aggregate(total=Sum("quantity"))
+            .get("total")
         )
         return total or 0
 
     class Meta:
         unique_together = ("supplier", "product")
+
 
 class PurchaseOrder(models.Model):
     supplier = models.ForeignKey(
@@ -73,7 +75,9 @@ class PurchaseOrder(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     # cached aggregate of line amounts to speed up listing and reports
-    total_amount_cached = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"), editable=False)
+    total_amount_cached = models.DecimalField(
+        max_digits=14, decimal_places=2, default=Decimal("0.00"), editable=False
+    )
 
     class Meta:
         ordering = ["-pk"]
@@ -105,13 +109,14 @@ class PurchaseOrder(models.Model):
     def total_amount(self):
         # return cached value when possible; fall back to recalculation if
         # the cache is zero (e.g., before first save) or missing.
-        if self.total_amount_cached is not None and self.total_amount_cached != Decimal("0.00"):
+        if (
+            self.total_amount_cached is not None
+            and self.total_amount_cached != Decimal("0.00")
+        ):
             return self.total_amount_cached
-        total = (
-            self.purchase_order_lines.aggregate(
-                total=Sum(F("product__cost") * F("quantity"))
-            ).get("total")
-        )
+        total = self.purchase_order_lines.aggregate(
+            total=Sum(F("product__cost") * F("quantity"))
+        ).get("total")
         if total is None:
             return Decimal("0.00")
         return Decimal(total).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
@@ -129,14 +134,14 @@ class PurchaseOrder(models.Model):
 
     def update_cached_total(self):
         """Recompute and store the aggregate amount for this order."""
-        total = (
-            self.purchase_order_lines.aggregate(
-                total=Sum(F("product__cost") * F("quantity"))
-            ).get("total")
-        )
+        total = self.purchase_order_lines.aggregate(
+            total=Sum(F("product__cost") * F("quantity"))
+        ).get("total")
         if total is None:
             total = Decimal("0.00")
-        self.total_amount_cached = Decimal(total).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        self.total_amount_cached = Decimal(total).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
         self.save(update_fields=["total_amount_cached"])
 
 
@@ -146,7 +151,7 @@ class PurchaseLedger(models.Model):
     )
     quantity = models.BigIntegerField()
     supplier = models.ForeignKey(
-        Supplier, on_delete=models.PROTECT, related_name='purchase_ledgers'
+        Supplier, on_delete=models.PROTECT, related_name="purchase_ledgers"
     )
     value = models.DecimalField(max_digits=10, decimal_places=2)
     date = models.DateTimeField(auto_now_add=True)
@@ -237,7 +242,10 @@ class PurchaseOrderLine(models.Model):
                 product=self.product.product
             )
             from django.utils import timezone
-            product_qs.update(quantity=F('quantity') + self.quantity, last_updated=timezone.now())
+
+            product_qs.update(
+                quantity=F("quantity") + self.quantity, last_updated=timezone.now()
+            )
             # record monetary value
             try:
                 self.value = self.product.cost * self.quantity
@@ -267,6 +275,7 @@ class PurchaseOrderLine(models.Model):
 # signals to keep order cache up-to-date
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+
 
 @receiver(post_save, sender=PurchaseOrderLine)
 @receiver(post_delete, sender=PurchaseOrderLine)
