@@ -22,4 +22,14 @@ urlpatterns = [
         views.PurchaseLedgerMonthArchiveView.as_view(),
         name="purchase-ledger-month",
     ),
+    path(
+        "sales/export/",
+        views.SalesLedgerExportView.as_view(),
+        name="sales-ledger-export",
+    ),
+    path(
+        "purchases/export/",
+        views.PurchaseLedgerExportView.as_view(),
+        name="purchase-ledger-export",
+    ),
 ]
