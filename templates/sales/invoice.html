@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice {{ order.order_number }}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; color: #212529; background: #fff; }
+  .page { padding: 40px 48px; max-width: 794px; margin: 0 auto; }
+
+  /* Header */
+  .inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; border-bottom: 2px solid #0d6efd; padding-bottom: 16px; }
+  .inv-branding .inv-logo { font-size: 22px; font-weight: 700; color: #0d6efd; letter-spacing: 0.5px; }
+  .inv-branding .inv-tagline { font-size: 11px; color: #6c757d; margin-top: 2px; }
+  .inv-title { text-align: right; }
+  .inv-title h1 { font-size: 28px; font-weight: 800; color: #0d6efd; letter-spacing: 2px; text-transform: uppercase; }
+  .inv-title .inv-ref { font-size: 13px; color: #495057; margin-top: 4px; }
+
+  /* Meta row */
+  .inv-meta { display: flex; justify-content: space-between; margin-bottom: 28px; gap: 16px; }
+  .inv-bill-to { flex: 1; }
+  .inv-dates { min-width: 180px; text-align: right; }
+  .inv-meta-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #6c757d; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .inv-meta-value { font-size: 12px; color: #212529; }
+  .inv-customer-name { font-size: 14px; font-weight: 700; color: #212529; }
+  .inv-dates table { width: 100%; border-collapse: collapse; }
+  .inv-dates td { padding: 3px 0; font-size: 12px; }
+  .inv-dates td:first-child { color: #6c757d; padding-right: 12px; }
+  .inv-dates td:last-child { font-weight: 600; text-align: right; }
+
+  /* Lines table */
+  .inv-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  .inv-table thead tr { background-color: #0d6efd; color: #fff; }
+  .inv-table thead th { padding: 8px 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+  .inv-table thead th:not(:first-child) { text-align: right; }
+  .inv-table tbody tr { border-bottom: 1px solid #e9ecef; }
+  .inv-table tbody tr:last-child { border-bottom: 2px solid #dee2e6; }
+  .inv-table tbody td { padding: 7px 10px; vertical-align: top; }
+  .inv-table tbody td:not(:first-child) { text-align: right; }
+  .inv-table tfoot td { padding: 6px 10px; font-size: 12px; }
+  .inv-table tfoot td:not(:first-child) { text-align: right; }
+  .inv-table .subtotal-row td { border-top: 1px solid #dee2e6; }
+  .inv-table .total-row td { font-size: 14px; font-weight: 700; color: #0d6efd; border-top: 2px solid #0d6efd; }
+
+  /* Footer */
+  .inv-footer { margin-top: 48px; border-top: 1px solid #dee2e6; padding-top: 12px; text-align: center; font-size: 10px; color: #adb5bd; }
+
+  @page { size: A4; margin: 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  {# ── Header ── #}
+  <div class="inv-header">
+    <div class="inv-branding">
+      <div class="inv-logo">ERPv</div>
+      <div class="inv-tagline">Enterprise Resource Planning</div>
+    </div>
+    <div class="inv-title">
+      <h1>Invoice</h1>
+      <div class="inv-ref">{{ order.order_number }}</div>
+    </div>
+  </div>
+
+  {# ── Meta ── #}
+  <div class="inv-meta">
+    <div class="inv-bill-to">
+      <div class="inv-meta-label">Bill To</div>
+      <div class="inv-customer-name">{{ order.customer.name }}</div>
+      {% if order.customer.address_line_1 %}
+      <div class="inv-meta-value">{{ order.customer.address_line_1 }}</div>
+      {% endif %}
+      {% if order.customer.address_line_2 %}
+      <div class="inv-meta-value">{{ order.customer.address_line_2 }}</div>
+      {% endif %}
+      {% if order.customer.city or order.customer.postal_code %}
+      <div class="inv-meta-value">{{ order.customer.city }}{% if order.customer.city and order.customer.postal_code %}, {% endif %}{{ order.customer.postal_code }}</div>
+      {% endif %}
+      {% if order.customer.country %}
+      <div class="inv-meta-value">{{ order.customer.country }}</div>
+      {% endif %}
+      {% if order.customer.email %}
+      <div class="inv-meta-value" style="margin-top:4px; color:#6c757d;">{{ order.customer.email }}</div>
+      {% endif %}
+    </div>
+    <div class="inv-dates">
+      <table>
+        <tr>
+          <td>Invoice Date:</td>
+          <td>{{ order.created_at|date:"d M Y" }}</td>
+        </tr>
+        <tr>
+          <td>Due Date:</td>
+          <td>{{ order.created_at|date:"d M Y" }}</td>
+        </tr>
+        <tr>
+          <td>Status:</td>
+          <td>{{ order.status }}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  {# ── Order Lines ── #}
+  <table class="inv-table">
+    <thead>
+      <tr>
+        <th style="width:45%">Product</th>
+        <th style="width:15%">Qty</th>
+        <th style="width:20%">Unit Price</th>
+        <th style="width:20%">Line Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for line in lines %}
+      <tr>
+        <td>{{ line.product.product.name }}</td>
+        <td>{{ line.quantity }}</td>
+        <td>£{{ line.unit_price|floatformat:2 }}</td>
+        <td>£{{ line.total_price|floatformat:2 }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" style="text-align:center; color:#6c757d; padding:16px;">No order lines.</td></tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr class="subtotal-row">
+        <td colspan="3">Subtotal</td>
+        <td>£{{ order.total_amount|floatformat:2 }}</td>
+      </tr>
+      <tr class="total-row">
+        <td colspan="3">Total</td>
+        <td>£{{ order.total_amount|floatformat:2 }}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  {# ── Footer ── #}
+  <div class="inv-footer">
+    Generated by ERPv &mdash; {{ order.order_number }} &mdash; {{ order.created_at|date:"d M Y" }}
+  </div>
+
+</div>
+</body>
+</html>

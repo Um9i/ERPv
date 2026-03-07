@@ -1,0 +1,100 @@
+{% extends "includes/card.html" %}
+{% load currency_tags %}
+{% block card_icon %}bi-clock-history{% endblock %}
+{% block card_title %}Outstanding Orders{% endblock %}
+{% block card_body %}
+
+{# ── Metric Cards ── #}
+<div class="row g-3 mb-4">
+    <div class="col-6">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--warning"><i class="bi bi-cart3"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-label">Open Sales Value</span>
+                <span class="metric-card-value">{{ open_sales_value|currency }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-6">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-bag"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-label">Open Purchases Value</span>
+                <span class="metric-card-value">{{ open_purchases_value|currency }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Tables ── #}
+<div class="row g-4">
+    {# Open Sales Orders #}
+    <div class="col-md-6">
+        <div class="detail-section h-100">
+            <div class="detail-section-header">
+                <h2 class="detail-section-title">Open Sales Orders</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Order Ref</th>
+                            <th>Date</th>
+                            <th class="text-end">Open Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in open_sales %}
+                        <tr>
+                            <td><a href="{% url 'sales:customer-detail' order.customer.pk %}">{{ order.customer.name }}</a></td>
+                            <td><a href="{% url 'sales:sales-order-detail' order.pk %}">{{ order.order_number }}</a></td>
+                            <td class="text-nowrap">{{ order.created_at|date:"d M Y" }}</td>
+                            <td class="text-end">{{ order.open_value|currency }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-muted">No open sales orders.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% include "includes/pagination.html" with page_obj=open_sales page_param="sales_page" %}
+        </div>
+    </div>
+
+    {# Open Purchase Orders #}
+    <div class="col-md-6">
+        <div class="detail-section h-100">
+            <div class="detail-section-header">
+                <h2 class="detail-section-title">Open Purchase Orders</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Supplier</th>
+                            <th>Order Ref</th>
+                            <th>Date</th>
+                            <th class="text-end">Open Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in open_purchases %}
+                        <tr>
+                            <td><a href="{% url 'procurement:supplier-detail' order.supplier.pk %}">{{ order.supplier.name }}</a></td>
+                            <td><a href="{% url 'procurement:purchase-order-detail' order.pk %}">{{ order.order_number }}</a></td>
+                            <td class="text-nowrap">{{ order.created_at|date:"d M Y" }}</td>
+                            <td class="text-end">{{ order.open_value|currency }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-muted">No open purchase orders.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% include "includes/pagination.html" with page_obj=open_purchases page_param="po_page" %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

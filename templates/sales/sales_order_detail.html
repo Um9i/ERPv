@@ -3,12 +3,15 @@
 {% block card_icon %}bi-cart4{% endblock %}
 {% block card_title %}Sales Order {{ sales_order.order_number }}{% endblock %}
 {% block card_body %}
-<p><strong>Customer:</strong> {{ sales_order.customer.name }}</p>
+<p><strong>Customer:</strong> <a href="{% url 'sales:customer-detail' sales_order.customer.pk %}">{{ sales_order.customer.name }}</a></p>
 <p><strong>Created At:</strong> {{ sales_order.created_at }}</p>
 <p><strong>Updated At:</strong> {{ sales_order.updated_at }}</p>
 <p><strong>Status:</strong> {{ sales_order.status }}</p>
 <p><strong>Total Order Value:</strong> {{ sales_order.total_amount|currency }}</p>
 <p><strong>Open Order Value:</strong> {{ sales_order.remaining_total|currency }}</p>
+<div class="mb-3">
+    <a href="{% url 'sales:sales-order-invoice' sales_order.pk %}" class="btn btn-outline-primary" target="_blank"><i class="bi bi-file-earmark-pdf me-1"></i>Download Invoice</a>
+</div>
 
 <h3>Order Lines</h3>
 <table class="table">

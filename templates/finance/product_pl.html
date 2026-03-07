@@ -1,0 +1,178 @@
+{% extends "includes/card.html" %}
+{% load currency_tags %}
+{% block card_icon %}bi-graph-up{% endblock %}
+{% block card_title %}Product P&amp;L Report{% endblock %}
+
+{% block card_body %}
+
+{# ── Summary Metric Cards ── #}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-graph-up-arrow"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-label">Total Revenue</span>
+                <span class="metric-card-value">{{ total_revenue|currency }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-graph-down-arrow"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-label">Total Cost</span>
+                <span class="metric-card-value">{{ total_cost|currency }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-wallet2"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-label">Gross Profit</span>
+                <span class="metric-card-value">{{ total_profit|currency }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="metric-card">
+            {% if avg_margin_pct is not None %}
+            {% if avg_margin_pct >= 30 %}
+            <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-percent"></i></div>
+            {% elif avg_margin_pct >= 10 %}
+            <div class="metric-card-icon metric-card-icon--warning"><i class="bi bi-percent"></i></div>
+            {% else %}
+            <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-percent"></i></div>
+            {% endif %}
+            <div class="metric-card-content">
+                <span class="metric-card-label">Avg Margin</span>
+                <span class="metric-card-value">{{ avg_margin_pct|floatformat:1 }}%</span>
+            </div>
+            {% else %}
+            <div class="metric-card-icon metric-card-icon--dark"><i class="bi bi-percent"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-label">Avg Margin</span>
+                <span class="metric-card-value">—</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{# ── Chart ── #}
+{% if chart_data.labels %}
+<div class="detail-section mb-4">
+    <div class="detail-section-header">
+        <h2 class="detail-section-title">Top 10 Products by Gross Profit</h2>
+    </div>
+    {{ chart_data|json_script:"chart-data" }}
+    <canvas id="pl-chart" height="80"></canvas>
+</div>
+{% endif %}
+
+{# ── Table ── #}
+<div class="detail-section">
+    <div class="detail-section-header">
+        <h2 class="detail-section-title">All Products with Sales</h2>
+        <div class="btn-group btn-group-sm">
+            <a href="?sort=" class="btn {% if not sort %}btn-primary{% else %}btn-outline-primary{% endif %}">Gross Profit</a>
+            <a href="?sort=margin_pct" class="btn {% if sort == 'margin_pct' %}btn-primary{% else %}btn-outline-primary{% endif %}">Margin %</a>
+            <a href="?sort=revenue" class="btn {% if sort == 'revenue' %}btn-primary{% else %}btn-outline-primary{% endif %}">Revenue</a>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th class="text-end">Unit Cost</th>
+                    <th class="text-end">Sale Price</th>
+                    <th class="text-end">Margin %</th>
+                    <th class="text-end">Units Sold</th>
+                    <th class="text-end">Revenue</th>
+                    <th class="text-end">Cost</th>
+                    <th class="text-end">Gross Profit</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td>
+                        {% if row.inventory_pk %}
+                        <a href="{% url 'inventory:inventory-detail' row.inventory_pk %}">{{ row.product.name }}</a>
+                        {% else %}
+                        {{ row.product.name }}
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ row.unit_cost|currency }}</td>
+                    <td class="text-end">{{ row.sale_price|currency }}</td>
+                    <td class="text-end">
+                        {% if row.margin_pct is not None %}
+                        {% if row.margin_pct >= 30 %}
+                        <span class="badge bg-success-subtle text-success">{{ row.margin_pct|floatformat:1 }}%</span>
+                        {% elif row.margin_pct >= 10 %}
+                        <span class="badge bg-warning-subtle text-warning">{{ row.margin_pct|floatformat:1 }}%</span>
+                        {% else %}
+                        <span class="badge bg-danger-subtle text-danger">{{ row.margin_pct|floatformat:1 }}%</span>
+                        {% endif %}
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ row.total_sold_qty }}</td>
+                    <td class="text-end">{{ row.total_revenue|currency }}</td>
+                    <td class="text-end">{{ row.total_cost|currency }}</td>
+                    <td class="text-end"><strong>{{ row.gross_profit|currency }}</strong></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-muted">No sales data available.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+{% if chart_data.labels %}
+<script>
+(function () {
+    const raw = JSON.parse(document.getElementById('chart-data').textContent);
+    const ctx = document.getElementById('pl-chart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: raw.labels,
+            datasets: [{
+                label: 'Gross Profit',
+                data: raw.values,
+                backgroundColor: raw.colors,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return '£' + ctx.parsed.x.toFixed(2);
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        callback: function(val) { return '£' + val.toFixed(0); }
+                    }
+                }
+            }
+        }
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

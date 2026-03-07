@@ -20,6 +20,7 @@ from .views import (
     SalesOrderShipView,
     SalesOrderListView,
     SalesDashboardView,
+    SalesOrderInvoiceView,
 )
 
 app_name = "sales"
@@ -99,5 +100,10 @@ urlpatterns = [
         "sales-orders/<int:pk>/ship/",
         SalesOrderShipView.as_view(),
         name="sales-order-ship",
+    ),
+    path(
+        "sales-orders/<int:pk>/invoice/",
+        SalesOrderInvoiceView.as_view(),
+        name="sales-order-invoice",
     ),
 ]

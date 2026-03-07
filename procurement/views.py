@@ -4,6 +4,7 @@ from .models import (
     SupplierProduct,
     PurchaseOrder,
     PurchaseOrderLine,
+    PurchaseLedger,
 )
 from .forms import (
     SupplierForm,
@@ -92,6 +93,8 @@ class SupplierDetailView(DetailView):
         # include related objects so the template can render tables without
         # additional queries in the template itself; add pagination
         from django.core.paginator import Paginator
+        from django.db.models import Sum
+        from decimal import Decimal
 
         context = super().get_context_data(**kwargs)
         supplier = self.object
@@ -112,6 +115,29 @@ class SupplierDetailView(DetailView):
         context["purchase_orders"] = po_paginator.get_page(po_page_number)
         context["supplier_products"] = pp_paginator.get_page(pp_page_number)
         context["supplier_contacts"] = ct_paginator.get_page(ct_page_number)
+
+        # Analytics
+        context["total_orders"] = po_list.count()
+        context["open_orders"] = (
+            po_list.filter(purchase_order_lines__complete=False).distinct().count()
+        )
+        context["total_spend"] = PurchaseLedger.objects.filter(
+            supplier=supplier
+        ).aggregate(total=Sum("value"))["total"] or Decimal("0.00")
+        context["recent_orders"] = po_list.order_by("-created_at")[:10]
+        context["top_products"] = (
+            PurchaseLedger.objects.filter(supplier=supplier)
+            .values(
+                "product__pk",
+                "product__name",
+                "product__product_inventory",
+            )
+            .annotate(
+                total_qty=Sum("quantity"),
+                total_value=Sum("value"),
+            )
+            .order_by("-total_value")[:5]
+        )
         return context
 
 

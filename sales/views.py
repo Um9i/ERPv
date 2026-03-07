@@ -4,6 +4,7 @@ from .models import (
     CustomerProduct,
     SalesOrder,
     SalesOrderLine,
+    SalesLedger,
 )
 from .forms import (
     CustomerForm,
@@ -80,6 +81,8 @@ class CustomerDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         from django.core.paginator import Paginator
+        from django.db.models import Sum
+        from decimal import Decimal
 
         context = super().get_context_data(**kwargs)
         customer = self.object
@@ -98,6 +101,29 @@ class CustomerDetailView(DetailView):
         context["sales_orders"] = order_paginator.get_page(order_page)
         context["customer_products"] = prod_paginator.get_page(prod_page)
         context["customer_contacts"] = ct_paginator.get_page(ct_page)
+
+        # Analytics
+        context["total_orders"] = order_list.count()
+        context["open_orders"] = (
+            order_list.filter(sales_order_lines__complete=False).distinct().count()
+        )
+        context["total_revenue"] = SalesLedger.objects.filter(
+            customer=customer
+        ).aggregate(total=Sum("value"))["total"] or Decimal("0.00")
+        context["recent_orders"] = order_list.order_by("-created_at")[:10]
+        context["top_products"] = (
+            SalesLedger.objects.filter(customer=customer)
+            .values(
+                "product__pk",
+                "product__name",
+                "product__product_inventory",
+            )
+            .annotate(
+                total_qty=Sum("quantity"),
+                total_value=Sum("value"),
+            )
+            .order_by("-total_value")[:5]
+        )
         return context
 
 
@@ -471,3 +497,29 @@ class SalesDashboardView(TemplateView):
         )
         context["total_customers"] = Customer.objects.count()
         return context
+
+
+class SalesOrderInvoiceView(DetailView):
+    model = SalesOrder
+
+    def get(self, request, *args, **kwargs):
+        from django.template.loader import render_to_string
+        from django.http import HttpResponse
+        from weasyprint import HTML
+
+        order = self.get_object()
+        context = {
+            "order": order,
+            "lines": order.sales_order_lines.select_related("product__product").all(),
+        }
+        html_string = render_to_string("sales/invoice.html", context, request)
+        html = HTML(
+            string=html_string,
+            base_url=request.build_absolute_uri("/"),
+        )
+        pdf_bytes = html.write_pdf()
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        response["Content-Disposition"] = (
+            f'inline; filename="invoice-{order.order_number}.pdf"'
+        )
+        return response

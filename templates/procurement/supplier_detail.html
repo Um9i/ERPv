@@ -3,6 +3,36 @@
 {% block card_icon %}bi-people-fill{% endblock %}
 {% block card_title %}{{ supplier.name }}{% endblock %}
 {% block card_body %}
+{# ── Metric Cards ── #}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-4">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-bag"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-label">Total Orders</span>
+                <span class="metric-card-value">{{ total_orders }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-4">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--warning"><i class="bi bi-hourglass-split"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-label">Open Orders</span>
+                <span class="metric-card-value">{{ open_orders }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-4">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-graph-down-arrow"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-label">Total Spend</span>
+                <span class="metric-card-value">{{ total_spend|currency }}</span>
+            </div>
+        </div>
+    </div>
+</div>
 <div class="detail-info">
     <div class="detail-info-item">
         <span class="detail-info-label">Phone</span>
@@ -62,6 +92,79 @@
 <div class="detail-actions">
     <a href="{% url 'procurement:supplier-update' supplier.id %}" class="btn btn-outline-primary"><i class="bi bi-pencil me-1"></i>Edit Supplier</a>
     <a href="{% url 'procurement:supplier-delete' supplier.id %}" class="btn btn-outline-danger"><i class="bi bi-trash me-1"></i>Delete Supplier</a>
+</div>
+
+{# ── Recent Orders ── #}
+<div class="detail-section">
+    <div class="detail-section-header">
+        <h2 class="detail-section-title">Recent Orders</h2>
+        <a href="{% url 'procurement:purchase-order-create' %}?supplier={{ supplier.id }}" class="btn btn-sm btn-success"><i class="bi bi-plus-lg me-1"></i>Create Purchase Order</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Order Ref</th>
+                    <th>Status</th>
+                    <th class="text-end">Total Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in recent_orders %}
+                <tr>
+                    <td>{{ order.created_at|date:"d M Y" }}</td>
+                    <td><a href="{% url 'procurement:purchase-order-detail' order.pk %}">{{ order.order_number }}</a></td>
+                    <td>
+                        {% if order.status == "Open" %}
+                        <span class="badge bg-warning-subtle text-warning">Open</span>
+                        {% else %}
+                        <span class="badge bg-success-subtle text-success">Closed</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ order.total_amount|currency }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-muted">No orders yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# ── Top Products ── #}
+<div class="detail-section">
+    <div class="detail-section-header">
+        <h2 class="detail-section-title">Top Products by Spend</h2>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th class="text-end">Total Qty Received</th>
+                    <th class="text-end">Total Spend</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in top_products %}
+                <tr>
+                    <td>
+                        {% if row.product__product_inventory %}
+                        <a href="{% url 'inventory:inventory-detail' row.product__product_inventory %}">{{ row.product__name }}</a>
+                        {% else %}
+                        {{ row.product__name }}
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ row.total_qty }}</td>
+                    <td class="text-end">{{ row.total_value|currency }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="text-muted">No purchases recorded.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
 {# ── Contacts ── #}

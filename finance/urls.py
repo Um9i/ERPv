@@ -32,4 +32,14 @@ urlpatterns = [
         views.PurchaseLedgerExportView.as_view(),
         name="purchase-ledger-export",
     ),
+    path(
+        "reports/outstanding/",
+        views.OutstandingOrdersView.as_view(),
+        name="outstanding-orders",
+    ),
+    path(
+        "reports/product-pl/",
+        views.ProductPLView.as_view(),
+        name="product-pl",
+    ),
 ]

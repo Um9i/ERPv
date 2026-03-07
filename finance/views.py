@@ -252,6 +252,206 @@ class PurchaseLedgerMonthArchiveView(
 # ---------------------------------------------------------------------------
 
 
+class OutstandingOrdersView(TemplateView):
+    template_name = "finance/outstanding_orders.html"
+
+    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+        from django.core.paginator import Paginator
+        from django.db.models import DecimalField, F, OuterRef, Subquery
+        from django.db.models.functions import Coalesce, Greatest
+        from sales.models import SalesOrder, SalesOrderLine
+        from procurement.models import PurchaseOrder, PurchaseOrderLine
+
+        context = super().get_context_data(**kwargs)
+
+        # Subquery: remaining value on a sales order (mirrors remaining_total property)
+        so_open_value_sq = (
+            SalesOrderLine.objects.filter(sales_order=OuterRef("pk"))
+            .values("sales_order")
+            .annotate(
+                v=Sum(
+                    F("product__price")
+                    * Greatest(F("quantity") - F("quantity_shipped"), 0)
+                )
+            )
+            .values("v")
+        )
+        open_sales_qs = (
+            SalesOrder.objects.filter(sales_order_lines__complete=False)
+            .distinct()
+            .select_related("customer")
+            .annotate(
+                open_value=Coalesce(
+                    Subquery(so_open_value_sq, output_field=DecimalField()),
+                    Decimal("0"),
+                )
+            )
+            .order_by("-open_value")
+        )
+        context["open_sales_value"] = open_sales_qs.aggregate(total=Sum("open_value"))[
+            "total"
+        ] or Decimal("0")
+        sales_paginator = Paginator(open_sales_qs, 15)
+        context["open_sales"] = sales_paginator.get_page(
+            self.request.GET.get("sales_page")
+        )
+
+        # Subquery: remaining value on a purchase order (mirrors remaining_total property)
+        po_open_value_sq = (
+            PurchaseOrderLine.objects.filter(purchase_order=OuterRef("pk"))
+            .values("purchase_order")
+            .annotate(
+                v=Sum(
+                    F("product__cost")
+                    * Greatest(F("quantity") - F("quantity_received"), 0)
+                )
+            )
+            .values("v")
+        )
+        open_purchases_qs = (
+            PurchaseOrder.objects.filter(purchase_order_lines__complete=False)
+            .distinct()
+            .select_related("supplier")
+            .annotate(
+                open_value=Coalesce(
+                    Subquery(po_open_value_sq, output_field=DecimalField()),
+                    Decimal("0"),
+                )
+            )
+            .order_by("-open_value")
+        )
+        context["open_purchases_value"] = open_purchases_qs.aggregate(
+            total=Sum("open_value")
+        )["total"] or Decimal("0")
+        po_paginator = Paginator(open_purchases_qs, 15)
+        context["open_purchases"] = po_paginator.get_page(
+            self.request.GET.get("po_page")
+        )
+
+        return context
+
+
+class ProductPLView(TemplateView):
+    template_name = "finance/product_pl.html"
+
+    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+        from django.db.models import DecimalField, OuterRef, Subquery
+        from procurement.models import SupplierProduct
+
+        context = super().get_context_data(**kwargs)
+
+        # 1. Aggregate all sales data in a single GROUP BY query
+        sales_data = SalesLedger.objects.values("product_id").annotate(
+            total_qty=Sum("quantity"),
+            total_revenue=Sum("value"),
+        )
+        sales_map = {row["product_id"]: row for row in sales_data}
+        if not sales_map:
+            context.update(
+                rows=[],
+                sort="",
+                total_revenue=Decimal("0"),
+                total_cost=Decimal("0"),
+                total_profit=Decimal("0"),
+                avg_margin_pct=None,
+                chart_data={"labels": [], "values": [], "colors": []},
+            )
+            return context
+
+        # 2. Cheapest supplier cost per product — single annotated query
+        min_cost_subq = (
+            SupplierProduct.objects.filter(product=OuterRef("pk"))
+            .order_by("cost")
+            .values("cost")[:1]
+        )
+        products = (
+            Product.objects.filter(pk__in=sales_map.keys())
+            .annotate(
+                supplier_unit_cost=Subquery(min_cost_subq, output_field=DecimalField())
+            )
+            .select_related("product_inventory")
+        )
+
+        # 3. Build rows in Python — no per-product DB hits
+        rows = []
+        for product in products:
+            data = sales_map[product.pk]
+            unit_cost = Decimal(str(product.supplier_unit_cost or 0))
+            sale_price = product.sale_price or Decimal("0")
+            total_sold_qty = data["total_qty"] or 0
+            total_revenue = data["total_revenue"] or Decimal("0")
+            total_cost = Decimal(str(total_sold_qty)) * unit_cost
+            gross_profit = total_revenue - total_cost
+            margin = sale_price - unit_cost
+            margin_pct = (
+                float(gross_profit / total_revenue * 100) if total_revenue > 0 else None
+            )
+            inventory_pk = (
+                product.product_inventory.pk
+                if hasattr(product, "product_inventory") and product.product_inventory
+                else None
+            )
+            rows.append(
+                {
+                    "product": product,
+                    "inventory_pk": inventory_pk,
+                    "unit_cost": unit_cost,
+                    "sale_price": sale_price,
+                    "margin": margin,
+                    "margin_pct": margin_pct,
+                    "total_sold_qty": total_sold_qty,
+                    "total_revenue": total_revenue,
+                    "total_cost": total_cost,
+                    "gross_profit": gross_profit,
+                }
+            )
+
+        sort = self.request.GET.get("sort", "")
+        if sort == "margin_pct":
+            rows.sort(
+                key=lambda r: r["margin_pct"] if r["margin_pct"] is not None else -999,
+                reverse=True,
+            )
+        elif sort == "revenue":
+            rows.sort(key=lambda r: r["total_revenue"] or 0, reverse=True)
+        else:
+            rows.sort(key=lambda r: r["gross_profit"] or 0, reverse=True)
+
+        total_revenue = sum((r["total_revenue"] for r in rows), Decimal("0"))
+        total_cost = sum((r["total_cost"] for r in rows), Decimal("0"))
+        total_profit = total_revenue - total_cost
+
+        avg_margin_pct = None
+        margin_values = [r["margin_pct"] for r in rows if r["margin_pct"] is not None]
+        if margin_values:
+            avg_margin_pct = sum(margin_values) / len(margin_values)
+
+        top10 = sorted(rows, key=lambda r: r["gross_profit"] or 0, reverse=True)[:10]
+        import json
+
+        chart_data = {
+            "labels": [r["product"].name for r in top10],
+            "values": [float(r["gross_profit"]) for r in top10],
+            "colors": [
+                (
+                    "#198754"
+                    if (r["margin_pct"] or 0) >= 30
+                    else "#ffc107" if (r["margin_pct"] or 0) >= 10 else "#dc3545"
+                )
+                for r in top10
+            ],
+        }
+
+        context["rows"] = rows
+        context["sort"] = sort
+        context["total_revenue"] = total_revenue
+        context["total_cost"] = total_cost
+        context["total_profit"] = total_profit
+        context["avg_margin_pct"] = avg_margin_pct
+        context["chart_data"] = chart_data
+        return context
+
+
 class SalesLedgerExportView(View):
     def get(self, request):
         qs = SalesLedger.objects.select_related("customer", "product").order_by("-date")
