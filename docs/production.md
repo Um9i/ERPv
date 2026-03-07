@@ -1,73 +1,134 @@
 # Production App
 
-Supports bill‑of‑materials (BOM) management and tracking of production jobs.
+Supports bill-of-materials (BOM) management, production job planning, and
+manufacturing lifecycle tracking including component shortage analysis, cost
+roll-up, and bin-level receiving of finished goods.
 
 ## Core Models
 
-* **BillOfMaterials** – associates a finished `Product` with component
-  `Products` via BOM items.
-* **BOMItem** – line items for a BOM, recording component product and quantity.
-* **Production** – represents a manufacturing job for a particular product.
-  It stores the quantity to be made, how many units have been received (i.e. a
-  job may be produced in batches), and flags for `complete` and `closed`.
-  Production saving logic validates received quantities against the ordered
-  amount and updates associated `InventoryLedger` entries (handled in
-  `models.py`).
+* **BillOfMaterials** – associates a finished `Product` with its component
+  `Product`s via BOM items. One-to-one with `Product`.
+
+* **BOMItem** – line items for a BOM, recording the component product and
+  quantity per unit of the finished product. `clean()` prevents self-referential
+  BOMs and detects circular references using an iterative traversal of the
+  full component tree.
+
+* **Production** – represents a manufacturing job for a specific product.
+  Stores the ordered quantity, units received (`quantity_received`), due date,
+  and flags for `complete`, `closed`, `bom_allocated`, and
+  `bom_allocated_amount`. Key properties:
+  - `remaining` – units not yet received
+  - `status` – derived human-readable status: Open, Allocated, Completing,
+    or Closed
+  - `materials_available` – whether current inventory covers the full job qty
+  - `materials_available_for_remaining` – whether inventory covers remaining qty
+  - `order_number` – zero-padded reference e.g. `PR00042`
+
+  The `save()` method is fully atomic and handles: BOM component allocation
+  (incrementing `ProductionAllocated`), inventory deduction of components on
+  receive, finished goods increment, ledger entry creation for all affected
+  products, job closure when fully received, and cache refresh for all affected
+  inventory records.
+
+  The `cancel()` method releases any outstanding allocated component quantities
+  and closes the job without affecting received inventory.
+
+## Services
+
+* **`build_bom_tree(product, quantity, visited)`** – recursively builds a
+  serialisable tree structure from a product's BOM, scaling quantities down
+  each level (`item.quantity × parent_quantity`). Each node carries `name`,
+  `quantity`, `stock`, `sufficient` (bool), and `children`. Includes a
+  circular reference guard via an immutable `visited` set copied per branch.
+  Missing `Inventory` records are treated as `stock=0`. Used by the production
+  detail view to drive the interactive BOM visualiser.
 
 ## Features & Views
 
 ### BOM Management
 
-* CRUD views for BOMs and BOM items.  List views offer search and pagination,
-  detail pages show component lists with their own pagination.
-* The BOM `create/update` forms now embed an inline formset for
-  `BOMItem` lines, allowing multiple components to be added or edited directly
-  on the same page.  A small Javascript helper replicates the last row so the
-  user can click "Add another component" to generate a new blank line.  The
-  finished product field may still be pre‑populated/hidden via query
-  parameters as before.
+* CRUD views for BOMs and BOM items. List views support search and pagination.
+* BOM detail pages show component lists and link to product inventory.
+* The BOM create/update forms embed an inline formset for `BOMItem` lines,
+  allowing multiple components to be added or edited on a single page. A
+  JavaScript helper replicates the last row for "Add another component"
+  functionality. The finished product field can be pre-populated via query
+  parameters.
 
 ### Production Jobs
 
-* `ProductionCreateView` and `UpdateView` allow starting and editing jobs.
-  Only products with an existing BOM may be selected (with the exception of an
-  existing job whose BOM has since been removed).
-* List and search pages for jobs and APIs (`ProductionListApiView`) to serve
-  incomplete jobs in JSON – used by dashboard widgets or external consumers.
-* Detail pages display job metadata and associated BOM.
-* `ProductionDetailView` supports a "complete production" action which marks
-  the job complete without adjusting inventory; actual stock changes occur via
-  the receiving flow.
+* `ProductionCreateView` and `UpdateView` for starting and editing jobs.
+  Only products with an existing BOM may be selected.
+* List view with search, status filter, and pagination. Each row shows:
+  - Due date badge colour-coded by urgency (red = overdue, amber = due within
+    7 days, muted = on track, dash = no date)
+  - Sufficient Materials indicator (green check or red warning triangle)
+    reflecting `materials_available_for_remaining`
+* Jobs are ordered by: open first, then due date ascending (nulls last), then
+  newest first — surfacing the most urgent work at the top.
+
+### Production Detail
+
+The detail page combines:
+
+* **Job metadata** – product, quantity, remaining, status, due date, created
+  and updated timestamps
+* **Cost Summary** – rendered when unit cost or sale price is available:
+  - Unit Cost and Sale Price per unit
+  - Total Job Cost (`unit_cost × quantity`) and Projected Value
+    (`sale_price × quantity`) with Projected Margin %
+  - Produced Cost and Produced Value for received units with Actual Margin %
+  - Margin percentages colour-coded: green ≥ 30%, amber ≥ 10%, red < 10%
+  - Section hidden entirely when both unit cost and sale price are zero
+* **Shortage alert banner** – shown when any component has insufficient stock
+  for the remaining quantity, with a link to the inventory low-stock view
+* **Interactive BOM Visualiser** – collapsible tree rendered client-side from
+  JSON context data. Each node shows a toggle chevron, green check or red ✗
+  status icon, product name, `Need: N` quantity (scaled to job remaining), and
+  `Stock: N` value. An Expand All button opens the full tree. Root node uses
+  `job.remaining` as the base quantity.
+* **Component Breakdown table** – flat tabular view of direct BOM components
+  with per-unit quantity, required (remaining), in-stock, and shortfall
+  columns. Rows with shortfalls are highlighted red.
+* **Action buttons** – Receive Units and Cancel Job
 
 ### Receiving Flow
 
-* `ProductionReceivingListView` shows open jobs with search and pagination.
-* `ProductionReceiveView` accepts a quantity (or "receive all") and updates
-  the `quantity_received` field.  Received quantities are sanitized to ensure
-  they do not exceed the remaining amount; validation errors during save are
-  displayed via Django messages.
-* Jobs can be partially received over time; once the received amount meets the
-  ordered quantity the job becomes complete (triggering inventory/l edger
-  updates via model logic).
+* `ProductionReceiveView` presents a form with quantity to receive (defaulting
+  to remaining) and an optional Location dropdown (all configured locations).
+* When a location is selected, receiving is handled by
+  `receive_production_into_location()` in `services.py`, which:
+  1. Updates `job.quantity_received` and calls `Production.save()` — all
+     existing BOM deduction, ledger, allocation, and closure logic fires
+  2. Routes the finished goods delta to the specified `InventoryLocation`
+     (creating it if it doesn't exist)
+  3. Tags the finished-goods `InventoryLedger` entry with the destination
+     location
+* When no location is selected, falls back to calling `Production.save()`
+  directly — existing behaviour, no location recorded.
+* Partial receiving is supported; jobs close automatically when
+  `quantity_received >= quantity`.
 
 ### Dashboard
 
-`ProductionDashboardView` summarizes:
+`ProductionDashboardView` summarises:
+* Total BOMs defined
+* Count of active (not closed) production jobs
+* Count of completed jobs
 
-* total number of BOMs defined
-* count of active (not closed) production jobs
-* count of completed jobs
+Rendered as metric cards with links to the appropriate lists.
 
-These metrics are rendered as cards with links to appropriate lists.
+## Key Features
 
-## Additional Notes
-
-* The production logic is tightly coupled to inventory via ledger entries
-  created when jobs are marked complete or received.  The `Production.save`
-  method contains validation to avoid negative inventory and maintains cache
-  values in `Inventory` where necessary.
-* All views require authentication; UI features are limited accordingly.
-* There is an AJAX‑style API for fetching open jobs, used by the front end for
-  quick lookups (e.g. auto‑populating receive forms).
-
----
+* Fully atomic `Production.save()` covering allocation, receiving, ledger,
+  and cache in a single database transaction
+* Recursive BOM cost roll-up via `Product.unit_cost` with iterative cycle
+  detection
+* Per-job margin analysis using `effective_sale_price` (sale price or last
+  sold price)
+* Interactive BOM visualiser with live stock state and quantity scaling
+* Due date urgency system with colour-coded list view badges
+* Bin-level finished goods receiving integrated with inventory location system
+* Component shortage warnings at both list and detail level
+* All views require authentication
