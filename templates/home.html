@@ -2,8 +2,8 @@
 
 {% block head %}
   <title>ERPv – Comprehensive ERP for Inventory, Sales, Procurement</title>
-  <meta name="description" content="ERPv is a lean, professional-grade ERP platform. Track inventory, manage sales and purchase orders, and optimise operations with a modern web interface.">
-  <meta name="keywords" content="ERP, inventory management, sales orders, procurement, production">
+  <meta name="description" content="ERPv is a lean, professional-grade ERP platform. Track inventory across warehouse locations, manage sales and purchase orders, and optimise production with BOM-driven work orders.">
+  <meta name="keywords" content="ERP, inventory management, warehouse locations, sales orders, procurement, production, bill of materials">
 {% endblock %}
 {% load static %}
 {% block content %}
@@ -45,8 +45,8 @@
                 <div class="metric-label">Ready to Deploy</div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="metric-value">REST</div>
-                <div class="metric-label">API Included</div>
+                <div class="metric-value">161</div>
+                <div class="metric-label">Tests Passing</div>
             </div>
         </div>
     </div>
@@ -68,8 +68,9 @@
                     </div>
                     <h5 class="feature-title">Inventory</h5>
                     <p class="feature-text">
-                        Maintain accurate stock levels across locations, set low&#8209;stock alerts,
-                        and search items by SKU or name. Supports batch and serial tracking.
+                        Track stock across a hierarchical warehouse structure — Warehouse, Zone, and Bin.
+                        Assign products to multiple locations, transfer stock between bins atomically,
+                        and monitor every movement through a full audit ledger with low-stock alerts.
                     </p>
                 </div>
             </div>
@@ -80,8 +81,9 @@
                     </div>
                     <h5 class="feature-title">Procurement</h5>
                     <p class="feature-text">
-                        Streamline purchasing with reusable templates, supplier records,
-                        automated receipt matching and cost tracking.
+                        Streamline purchasing with supplier records, reusable order templates,
+                        and automated receipt matching. Track costs per supplier and identify
+                        the best price across your supplier network automatically.
                     </p>
                 </div>
             </div>
@@ -93,7 +95,8 @@
                     <h5 class="feature-title">Sales</h5>
                     <p class="feature-text">
                         Generate quotes and orders, manage customer profiles, and print
-                        invoices or export data for accounting.
+                        invoices. Sales order lines automatically drive demand signals
+                        into inventory shortage calculations.
                     </p>
                 </div>
             </div>
@@ -104,8 +107,10 @@
                     </div>
                     <h5 class="feature-title">Production</h5>
                     <p class="feature-text">
-                        Build product structures, plan work orders, and track labor and material
-                        usage through the manufacturing lifecycle.
+                        Build recursive Bills of Materials, visualise component trees with live
+                        stock state, and plan work orders with due-date tracking. Component
+                        shortage warnings, BOM cost roll-up, margin analysis, and bin-level
+                        receiving are all built in.
                     </p>
                 </div>
             </div>
@@ -121,6 +126,104 @@
                     </p>
                 </div>
             </div>
+        </div>
+    </div>
+</section>
+
+<!-- Highlight features section -->
+<section class="features-section" id="highlights" style="padding-top:0;">
+    <div class="container">
+        <div class="section-header text-center">
+            <span class="section-label">Highlights</span>
+            <h2 class="section-title">Built for real operations</h2>
+            <p class="section-desc">The details that make ERPv production-ready.</p>
+        </div>
+        <div class="row g-3 justify-content-center">
+
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon feature-icon--green">
+                        <i class="bi bi-geo-alt"></i>
+                    </div>
+                    <h5 class="feature-title">Warehouse Locations</h5>
+                    <p class="feature-text">
+                        Hierarchical Warehouse → Zone → Bin structure. Split stock across
+                        locations, enforce quantity totals, and transfer stock between bins
+                        with full ledger traceability.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon feature-icon--amber">
+                        <i class="bi bi-diagram-3"></i>
+                    </div>
+                    <h5 class="feature-title">Interactive BOM Visualiser</h5>
+                    <p class="feature-text">
+                        Collapsible component tree with live stock state per node.
+                        Scales quantities down multi-level BOMs so you always know
+                        exactly what's needed and what's short.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon feature-icon--indigo">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <h5 class="feature-title">Cost &amp; Margin Analysis</h5>
+                    <p class="feature-text">
+                        BOM cost roll-up from supplier pricing, projected and actual
+                        margin per production job, and sale price tracking — giving
+                        you a real-time view of profitability.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon feature-icon--blue">
+                        <i class="bi bi-journal-text"></i>
+                    </div>
+                    <h5 class="feature-title">Full Audit Ledger</h5>
+                    <p class="feature-text">
+                        Every stock movement — purchase receipts, sales shipments,
+                        production runs, manual adjustments, and bin transfers —
+                        is logged with a running balance and location reference.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon feature-icon--teal">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <h5 class="feature-title">Shortage Intelligence</h5>
+                    <p class="feature-text">
+                        Demand from sales orders and production jobs is aggregated
+                        against available and incoming stock. Low-stock alerts surface
+                        the right action — buy, produce, or transfer.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon feature-icon--green">
+                        <i class="bi bi-box-seam"></i>
+                    </div>
+                    <h5 class="feature-title">Product Catalogue</h5>
+                    <p class="feature-text">
+                        Products with images, descriptions, and sale prices.
+                        Stock history charts, monthly activity breakdowns, and
+                        demand overviews on every product detail page.
+                    </p>
+                </div>
+            </div>
+
         </div>
     </div>
 </section>
@@ -183,7 +286,7 @@
                 <small class="text-muted">&copy; {% now "Y" %} ERPv project. All rights reserved.</small>
             </div>
             <div class="col-md-4 text-center text-md-end">
-                <a href="mailto:contact@example.com" class="footer-link">contact@example.com</a>
+                <a href="https://github.com/Um9i/ERPv" class="footer-link" target="_blank"><i class="bi bi-github me-1"></i>Um9i/ERPv</a>
             </div>
         </div>
     </div>
