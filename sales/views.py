@@ -496,6 +496,12 @@ class SalesDashboardView(TemplateView):
             .count()
         )
         context["total_customers"] = Customer.objects.count()
+        total_orders = context["total_orders"]
+        context["fulfillment_rate"] = (
+            round((total_orders - context["pending_shipping"]) / total_orders * 100)
+            if total_orders
+            else 0
+        )
         return context
 
 

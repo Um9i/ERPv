@@ -163,7 +163,7 @@ class TestCustomer:
         )
         assert ctx["total_customers"] == customer.__class__.objects.count()
         content = resp.content.decode()
-        assert "Total Sales Orders" in content
+        assert "Total Orders" in content
         assert "Shipped" in content
         assert "Pending Shipping" in content
         assert "Customers" in content

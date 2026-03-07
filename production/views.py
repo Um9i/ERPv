@@ -531,8 +531,14 @@ class ProductionDashboardView(TemplateView):
 
         context = super().get_context_data(**kwargs)
         context["total_boms"] = BillOfMaterials.objects.count()
+        context["total_jobs"] = Production.objects.count()
         context["active_jobs"] = Production.objects.filter(closed=False).count()
         context["completed_jobs"] = Production.objects.filter(complete=True).count()
+        context["completion_rate"] = (
+            round(context["completed_jobs"] / context["total_jobs"] * 100)
+            if context["total_jobs"]
+            else 0
+        )
         # count products that have a shortage AND have a BOM (can be produced)
         # AND are not already fully covered by active production jobs
         from inventory.models import Inventory

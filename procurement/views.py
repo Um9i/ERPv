@@ -355,6 +355,11 @@ class ProcurementDashboardView(TemplateView):
             if po_amount < required_qty:
                 purchasable_short += 1
         context["purchasable_low_stock"] = purchasable_short
+        context["receipt_rate"] = (
+            round(context["orders_received"] / context["total_purchase_orders"] * 100)
+            if context["total_purchase_orders"]
+            else 0
+        )
         return context
 
 

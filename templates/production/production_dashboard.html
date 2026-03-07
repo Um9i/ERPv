@@ -13,15 +13,206 @@
 {% block dashboard_metrics %}
 {% url 'production:bom-list' as boms_url %}
 {% url 'production:production-list' as jobs_url %}
-<div class="row">
-    {% include "includes/metric_card.html" with icon="bi-gear-fill" color="dark" label="BOMs" value=total_boms|default:'—' url=boms_url %}
-    {% include "includes/metric_card.html" with icon="bi-wrench-adjustable-circle" color="warning" label="Active Jobs" value=active_jobs|default:'—' url=jobs_url|add:'?status=active' %}
-    {% include "includes/metric_card.html" with icon="bi-check-circle" color="success" label="Completed" value=completed_jobs|default:'—' url=jobs_url|add:'?status=completed' %}
-</div>
-{% if producible_low_stock %}
-<div class="row mt-3">
-    {% url 'inventory:inventory-low-stock' as low_stock_url %}
-    {% include "includes/metric_card.html" with icon="bi-exclamation-triangle" color="danger" label="Items to Produce" value=producible_low_stock url=low_stock_url|add:'?filter=producible' %}
-</div>
-{% endif %}
+{% url 'inventory:inventory-low-stock' as low_stock_url %}
+
+{# ── Row 1: KPI cards ───────────────────────────────────────────────── #}
+<div class="row g-3">
+
+  {# BOMs #}
+  <div class="col-lg-6 col-xl-3">
+    <a href="{{ boms_url }}" class="metric-card-link">
+      <div class="metric-card">
+        <div class="metric-card-icon metric-card-icon--dark">
+          <i class="bi bi-diagram-3"></i>
+        </div>
+        <div class="metric-card-content">
+          <span class="metric-card-label">Bills of Materials</span>
+          <span class="metric-card-value">{{ total_boms|default:'—' }}</span>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  {# Active Jobs #}
+  <div class="col-lg-6 col-xl-3">
+    <a href="{{ jobs_url }}?status=active" class="metric-card-link">
+      <div class="metric-card {% if active_jobs %}border-warning{% endif %}">
+        <div class="metric-card-icon metric-card-icon--warning">
+          <i class="bi bi-wrench-adjustable-circle"></i>
+        </div>
+        <div class="metric-card-content">
+          <span class="metric-card-label">Active Jobs</span>
+          <span class="metric-card-value {% if active_jobs %}text-warning{% endif %}">{{ active_jobs|default:'0' }}</span>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  {# Completed Jobs #}
+  <div class="col-lg-6 col-xl-3">
+    <a href="{{ jobs_url }}?status=completed" class="metric-card-link">
+      <div class="metric-card">
+        <div class="metric-card-icon metric-card-icon--success">
+          <i class="bi bi-check-circle"></i>
+        </div>
+        <div class="metric-card-content w-100">
+          <span class="metric-card-label">Completed Jobs</span>
+          <div class="d-flex align-items-baseline justify-content-between">
+            <span class="metric-card-value">{{ completed_jobs|default:'0' }}</span>
+            {% if completion_rate %}<span class="badge bg-success ms-1">{{ completion_rate }}%</span>{% endif %}
+          </div>
+          {% if total_jobs %}
+          <div class="progress mt-1" style="height:5px;">
+            <div class="progress-bar bg-success" style="width:{{ completion_rate }}%"></div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </a>
+  </div>
+
+  {# Producible low stock — danger if any #}
+  <div class="col-lg-6 col-xl-3">
+    <a href="{{ low_stock_url }}?filter=producible" class="metric-card-link">
+      <div class="metric-card {% if producible_low_stock %}border-danger{% endif %}">
+        <div class="metric-card-icon metric-card-icon--danger">
+          <i class="bi bi-exclamation-triangle"></i>
+        </div>
+        <div class="metric-card-content">
+          <span class="metric-card-label">Items to Produce</span>
+          <span class="metric-card-value {% if producible_low_stock %}text-danger{% endif %}">{{ producible_low_stock|default:'0' }}</span>
+        </div>
+      </div>
+    </a>
+  </div>
+
+</div>{# /row 1 #}
+
+{# ── Row 2: action panel + job status donut ─────────────────────────── #}
+<div class="row g-3 mt-0">
+
+  {# Producible low stock alert #}
+  <div class="col-lg-7">
+    {% if producible_low_stock %}
+    <div class="panel h-100">
+      <div class="panel-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Components Needed for Production</span>
+        <a href="{{ low_stock_url }}?filter=producible" class="btn btn-sm btn-outline-danger">View {{ producible_low_stock }}</a>
+      </div>
+      <div class="panel-body">
+        <p class="mb-2">
+          <span class="fw-semibold text-danger">{{ producible_low_stock }}</span>
+          product{{ producible_low_stock|pluralize }} {{ producible_low_stock|pluralize:'is,are' }} short and
+          can be satisfied by scheduling a production job.
+        </p>
+        <a href="{% url 'production:production-create' %}" class="btn btn-sm btn-primary">Schedule a Job</a>
+        <a href="{{ low_stock_url }}?filter=producible" class="btn btn-sm btn-outline-secondary ms-2">View Shortages</a>
+      </div>
+    </div>
+    {% elif active_jobs %}
+    <div class="panel h-100">
+      <div class="panel-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-wrench-adjustable-circle text-warning me-2"></i>Jobs in Progress</span>
+        <a href="{{ jobs_url }}?status=active" class="btn btn-sm btn-outline-warning">View {{ active_jobs }}</a>
+      </div>
+      <div class="panel-body">
+        <p class="mb-2">
+          <span class="fw-semibold">{{ active_jobs }}</span> job{{ active_jobs|pluralize }} currently active.
+          <span class="fw-semibold text-success">{{ completed_jobs }}</span> completed overall.
+        </p>
+        {% if total_jobs %}
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <span class="small text-muted">Overall completion</span>
+          <span class="small text-muted">{{ completion_rate }}%</span>
+        </div>
+        <div class="progress" style="height:8px;">
+          <div class="progress-bar bg-success" style="width:{{ completion_rate }}%"></div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="panel h-100">
+      <div class="panel-header"><i class="bi bi-check-circle-fill text-success me-2"></i>Production Status</div>
+      <div class="panel-body text-center py-4 text-success">
+        <i class="bi bi-check-circle-fill fs-1 mb-2 d-block"></i>
+        <p class="mb-0 fw-semibold">No production shortages or active jobs.</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {# Job status donut #}
+  <div class="col-lg-5">
+    <div class="panel h-100">
+      <div class="panel-header">Job Status Distribution</div>
+      <div class="panel-body d-flex flex-column align-items-center">
+        <div style="max-width:200px;width:100%;">
+          <canvas id="productionStatusChart" aria-label="Production job status chart"></canvas>
+        </div>
+        <div class="mt-3 w-100">
+          <div class="d-flex flex-wrap gap-2 justify-content-center">
+            <span class="d-flex align-items-center gap-1 small">
+              <span style="width:12px;height:12px;border-radius:2px;background:#198754;display:inline-block;"></span>
+              Completed ({{ completed_jobs }})
+            </span>
+            <span class="d-flex align-items-center gap-1 small">
+              <span style="width:12px;height:12px;border-radius:2px;background:#ffc107;display:inline-block;"></span>
+              Active ({{ active_jobs }})
+            </span>
+            <span class="d-flex align-items-center gap-1 small">
+              <span style="width:12px;height:12px;border-radius:2px;background:#dee2e6;display:inline-block;"></span>
+              Other ({{ total_jobs }})
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>{# /row 2 #}
+
 {% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var ctx = document.getElementById('productionStatusChart');
+  if (!ctx) return;
+  var completed = {{ completed_jobs }};
+  var active    = {{ active_jobs }};
+  var total     = {{ total_jobs }};
+  var other     = Math.max(0, total - completed - active);
+  // active and completed can overlap; show independently scaled if needed
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Completed', 'Active', 'Other'],
+      datasets: [{
+        data: [completed, active, other],
+        backgroundColor: ['#198754', '#ffc107', '#dee2e6'],
+        borderWidth: 2,
+        borderColor: '#fff',
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              var t = ctx.dataset.data.reduce(function(a,b){return a+b;},0);
+              var pct = t > 0 ? Math.round(ctx.parsed / t * 100) : 0;
+              return ' ' + ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
+            }
+          }
+        }
+      }
+    }
+  });
+}());
+</script>
+{% endblock %}
+

@@ -11,18 +11,206 @@
 {% endblock %}
 
 {% block dashboard_metrics %}
-<div class="row">
-    {% url 'procurement:purchase-order-list' as purchase_orders_url %}
-    {% include "includes/metric_card.html" with icon="bi-cart-plus" color="dark" label="Total Purchase Orders" value=total_purchase_orders|default:'—' url=purchase_orders_url %}
-    {% include "includes/metric_card.html" with icon="bi-check2-square" color="success" label="Orders Received" value=orders_received|default:'—' url=purchase_orders_url|add:'?filter=received' %}
-    {% url 'procurement:supplier-list' as suppliers_url %}
-    {% include "includes/metric_card.html" with icon="bi-people-fill" color="dark" label="Suppliers" value=total_suppliers|default:'—' url=suppliers_url %}
-</div>
-<div class="row mt-3">
-    {% include "includes/metric_card.html" with icon="bi-cart-plus" color="warning" label="Orders Pending Receiving" value=pending_receiving|default:'—' url=purchase_orders_url|add:'?filter=pending_receiving' %}
+{% url 'procurement:purchase-order-list' as purchase_orders_url %}
+{% url 'procurement:supplier-list' as suppliers_url %}
+{% url 'inventory:inventory-low-stock' as low_stock_url %}
+
+{# ── Row 1: KPI cards ───────────────────────────────────────────────── #}
+<div class="row g-3">
+
+  {# Total POs #}
+  <div class="col-lg-6 col-xl-3">
+    <a href="{{ purchase_orders_url }}" class="metric-card-link">
+      <div class="metric-card">
+        <div class="metric-card-icon metric-card-icon--dark">
+          <i class="bi bi-cart-plus"></i>
+        </div>
+        <div class="metric-card-content">
+          <span class="metric-card-label">Total Purchase Orders</span>
+          <span class="metric-card-value">{{ total_purchase_orders|default:'—' }}</span>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  {# Received #}
+  <div class="col-lg-6 col-xl-3">
+    <a href="{{ purchase_orders_url }}?filter=received" class="metric-card-link">
+      <div class="metric-card">
+        <div class="metric-card-icon metric-card-icon--success">
+          <i class="bi bi-check2-square"></i>
+        </div>
+        <div class="metric-card-content w-100">
+          <span class="metric-card-label">Orders Received</span>
+          <div class="d-flex align-items-baseline justify-content-between">
+            <span class="metric-card-value">{{ orders_received|default:'0' }}</span>
+            {% if receipt_rate %}<span class="badge bg-success ms-1">{{ receipt_rate }}%</span>{% endif %}
+          </div>
+          {% if total_purchase_orders %}
+          <div class="progress mt-1" style="height:5px;">
+            <div class="progress-bar bg-success" style="width:{{ receipt_rate }}%"></div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </a>
+  </div>
+
+  {# Pending receiving #}
+  <div class="col-lg-6 col-xl-3">
+    <a href="{{ purchase_orders_url }}?filter=pending_receiving" class="metric-card-link">
+      <div class="metric-card {% if pending_receiving %}border-warning{% endif %}">
+        <div class="metric-card-icon metric-card-icon--warning">
+          <i class="bi bi-clock-history"></i>
+        </div>
+        <div class="metric-card-content">
+          <span class="metric-card-label">Pending Receiving</span>
+          <span class="metric-card-value {% if pending_receiving %}text-warning{% endif %}">{{ pending_receiving|default:'0' }}</span>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  {# Suppliers #}
+  <div class="col-lg-6 col-xl-3">
+    <a href="{{ suppliers_url }}" class="metric-card-link">
+      <div class="metric-card">
+        <div class="metric-card-icon metric-card-icon--dark">
+          <i class="bi bi-people-fill"></i>
+        </div>
+        <div class="metric-card-content">
+          <span class="metric-card-label">Suppliers</span>
+          <span class="metric-card-value">{{ total_suppliers|default:'—' }}</span>
+        </div>
+      </div>
+    </a>
+  </div>
+
+</div>{# /row 1 #}
+
+{# ── Row 2: action panel + PO status donut ──────────────────────────── #}
+<div class="row g-3 mt-0">
+
+  {# Reorder alert or pending receiving summary #}
+  <div class="col-lg-7">
     {% if purchasable_low_stock %}
-    {% url 'inventory:inventory-low-stock' as low_stock_url %}
-    {% include "includes/metric_card.html" with icon="bi-exclamation-triangle" color="danger" label="Items to Reorder" value=purchasable_low_stock url=low_stock_url|add:'?filter=purchasable' %}
+    <div class="panel h-100">
+      <div class="panel-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Items to Reorder</span>
+        <a href="{{ low_stock_url }}?filter=purchasable" class="btn btn-sm btn-outline-danger">View {{ purchasable_low_stock }}</a>
+      </div>
+      <div class="panel-body">
+        <p class="mb-2">
+          <span class="fw-semibold text-danger">{{ purchasable_low_stock }}</span>
+          product{{ purchasable_low_stock|pluralize }} {{ purchasable_low_stock|pluralize:'is,are' }} below
+          required stock and not covered by open purchase orders.
+        </p>
+        <a href="{% url 'procurement:purchase-order-create' %}" class="btn btn-sm btn-primary">Raise a PO</a>
+        <a href="{{ low_stock_url }}?filter=purchasable" class="btn btn-sm btn-outline-secondary ms-2">View Shortages</a>
+      </div>
+    </div>
+    {% elif pending_receiving %}
+    <div class="panel h-100">
+      <div class="panel-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-clock-history text-warning me-2"></i>Orders Awaiting Receipt</span>
+        <a href="{{ purchase_orders_url }}?filter=pending_receiving" class="btn btn-sm btn-outline-warning">View {{ pending_receiving }}</a>
+      </div>
+      <div class="panel-body">
+        <p class="mb-2">
+          <span class="fw-semibold">{{ pending_receiving }}</span> order{{ pending_receiving|pluralize }}
+          still ha{{ pending_receiving|pluralize:'s,ve' }} open lines awaiting delivery.
+        </p>
+        {% if total_purchase_orders %}
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <span class="small text-muted">Receipt completion</span>
+          <span class="small text-muted">{{ receipt_rate }}%</span>
+        </div>
+        <div class="progress" style="height:8px;">
+          <div class="progress-bar bg-success" style="width:{{ receipt_rate }}%"></div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="panel h-100">
+      <div class="panel-header"><i class="bi bi-check-circle-fill text-success me-2"></i>Procurement Status</div>
+      <div class="panel-body text-center py-4 text-success">
+        <i class="bi bi-check-circle-fill fs-1 mb-2 d-block"></i>
+        <p class="mb-0 fw-semibold">All purchase orders received, nothing to reorder.</p>
+      </div>
+    </div>
     {% endif %}
-</div>
+  </div>
+
+  {# PO status donut #}
+  <div class="col-lg-5">
+    <div class="panel h-100">
+      <div class="panel-header">Purchase Order Status</div>
+      <div class="panel-body d-flex flex-column align-items-center">
+        <div style="max-width:200px;width:100%;">
+          <canvas id="procurementStatusChart" aria-label="Purchase order status chart"></canvas>
+        </div>
+        <div class="mt-3 w-100">
+          <div class="d-flex flex-wrap gap-2 justify-content-center">
+            <span class="d-flex align-items-center gap-1 small">
+              <span style="width:12px;height:12px;border-radius:2px;background:#198754;display:inline-block;"></span>
+              Received ({{ orders_received }})
+            </span>
+            <span class="d-flex align-items-center gap-1 small">
+              <span style="width:12px;height:12px;border-radius:2px;background:#ffc107;display:inline-block;"></span>
+              Pending ({{ pending_receiving }})
+            </span>
+            <span class="d-flex align-items-center gap-1 small">
+              <span style="width:12px;height:12px;border-radius:2px;background:#dee2e6;display:inline-block;"></span>
+              No Lines ({{ total_purchase_orders }})
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>{# /row 2 #}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var ctx = document.getElementById('procurementStatusChart');
+  if (!ctx) return;
+  var received = {{ orders_received }};
+  var pending  = {{ pending_receiving }};
+  var total    = {{ total_purchase_orders }};
+  var other    = Math.max(0, total - received - pending);
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Received', 'Pending', 'No Lines'],
+      datasets: [{
+        data: [received, pending, other],
+        backgroundColor: ['#198754', '#ffc107', '#dee2e6'],
+        borderWidth: 2,
+        borderColor: '#fff',
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              var t = ctx.dataset.data.reduce(function(a,b){return a+b;},0);
+              var pct = t > 0 ? Math.round(ctx.parsed / t * 100) : 0;
+              return ' ' + ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
+            }
+          }
+        }
+      }
+    }
+  });
+}());
+</script>
 {% endblock %}
