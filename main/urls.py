@@ -16,6 +16,8 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 # from django.views.generic import TemplateView
 from django.views.generic import TemplateView
@@ -26,14 +28,18 @@ admin.site.site_header = "ERPv"
 # admin.site.site_url = None
 admin.site.index_title = ""
 
-urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("accounts/", include("django_registration.backends.one_step.urls")),
-    path("accounts/", include("django.contrib.auth.urls")),
-    path("", TemplateView.as_view(template_name="home.html"), name="home"),
-    path("inventory/", include("inventory.urls", namespace="inventory")),
-    path("procurement/", include("procurement.urls", namespace="procurement")),
-    path("sales/", include("sales.urls", namespace="sales")),
-    path("production/", include("production.urls", namespace="production")),
-    path("finance/", include("finance.urls", namespace="finance")),
-] + debug_toolbar_urls()
+urlpatterns = (
+    [
+        path("admin/", admin.site.urls),
+        path("accounts/", include("django_registration.backends.one_step.urls")),
+        path("accounts/", include("django.contrib.auth.urls")),
+        path("", TemplateView.as_view(template_name="home.html"), name="home"),
+        path("inventory/", include("inventory.urls", namespace="inventory")),
+        path("procurement/", include("procurement.urls", namespace="procurement")),
+        path("sales/", include("sales.urls", namespace="sales")),
+        path("production/", include("production.urls", namespace="production")),
+        path("finance/", include("finance.urls", namespace="finance")),
+    ]
+    + debug_toolbar_urls()
+    + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+)

@@ -5,7 +5,10 @@ from .models import Product, InventoryAdjust
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ["name"]
+        fields = ["name", "description", "image"]
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 4}),
+        }
 
     def clean_name(self):
         name = self.cleaned_data["name"].strip()

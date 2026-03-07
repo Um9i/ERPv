@@ -27,7 +27,9 @@ class ProductUpdateView(UpdateView):
     model = Product
     template_name = "inventory/product_form.html"
     form_class = ProductForm
-    success_url = reverse_lazy("inventory:inventory-list")
+
+    def get_success_url(self):
+        return reverse_lazy("inventory:inventory-detail", args=[self.object.pk])
 
 
 class ProductDeleteView(DeleteView):
