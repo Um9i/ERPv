@@ -261,11 +261,17 @@ class InventoryAdjustCreateView(CreateView):
     form_class = InventoryAdjustForm
     success_url = reverse_lazy("inventory:inventory-list")
 
+    def get_inventory(self):
+        return Inventory.objects.select_related("product").get(pk=self.kwargs.get("pk"))
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["inventory"] = self.get_inventory()
+        return kwargs
+
     def get_initial(self):
         initial = super().get_initial()
-        inventory = Inventory.objects.select_related("product").get(
-            pk=self.kwargs.get("pk")
-        )
+        inventory = self.get_inventory()
         initial["product"] = inventory.product
         return initial
 
@@ -277,12 +283,45 @@ class InventoryAdjustCreateView(CreateView):
         return form
 
     def form_valid(self, form):
-        inventory = Inventory.objects.select_related("product").get(
-            pk=self.kwargs.get("pk")
-        )
+        inventory = self.get_inventory()
         form.instance.product = inventory.product
         form.instance.complete = True
-        return super().form_valid(form)
+        location = form.cleaned_data.get("location")
+
+        # save the adjustment (updates Inventory.quantity and ledger)
+        response = super().form_valid(form)
+
+        # if a location was selected, route the delta to that bin
+        if location:
+            qty_delta = form.instance.quantity
+            inv_loc, _ = InventoryLocation.objects.get_or_create(
+                inventory=inventory,
+                location=location,
+                defaults={"quantity": 0},
+            )
+            inv_loc.quantity = max(inv_loc.quantity + qty_delta, 0)
+            inv_loc.save()
+
+            # tag the ledger entry with the location
+            from .models import InventoryLedger
+
+            entry = (
+                InventoryLedger.objects.filter(
+                    product=inventory.product,
+                    action="Inventory Adjustment",
+                    location__isnull=True,
+                )
+                .order_by("-date")
+                .first()
+            )
+            if entry:
+                entry.location = location
+                entry.save(update_fields=["location"])
+
+        return response
+
+    def get_success_url(self):
+        return reverse_lazy("inventory:inventory-detail", args=[self.kwargs.get("pk")])
 
 
 class InventoryDashboardView(TemplateView):

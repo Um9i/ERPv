@@ -866,3 +866,124 @@ class TestInventory:
         assert "LocLedgerA" in content
         assert "LocLedgerB" in content
         assert "Stock Transfer" in content
+
+
+@pytest.mark.django_db
+class TestInventoryAdjustWithLocation:
+    """Phase 3 — adjustments route deltas to InventoryLocation bins."""
+
+    def _login(self, client):
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="adjlocuser")
+        client.force_login(user)
+        return user
+
+    def _setup(self, product, create_location=True, initial_qty=0, bin_qty=0):
+        from inventory.models import Inventory, Location, InventoryLocation
+
+        inv = Inventory.objects.get(product=product)
+        if initial_qty:
+            InventoryAdjust.objects.create(
+                product=product, quantity=initial_qty, complete=True
+            )
+            inv.refresh_from_db()
+        loc = None
+        if create_location:
+            loc = Location.objects.create(name="Bin Z9")
+            InventoryLocation.objects.create(
+                inventory=inv, location=loc, quantity=bin_qty
+            )
+        return inv, loc
+
+    def test_positive_adjust_with_location(self, client, product):
+        """Adding +5 to a bin increases InventoryLocation.quantity."""
+        from django.urls import reverse
+        from inventory.models import InventoryLocation
+
+        self._login(client)
+        inv, loc = self._setup(product, bin_qty=10, initial_qty=10)
+
+        resp = client.post(
+            reverse("inventory:inventory-adjust", args=[inv.pk]),
+            {"product": product.pk, "quantity": 5, "location": loc.pk},
+        )
+        assert resp.status_code == 302
+
+        inv_loc = InventoryLocation.objects.get(inventory=inv, location=loc)
+        assert inv_loc.quantity == 15
+
+    def test_negative_adjust_with_location(self, client, product):
+        """Removing -3 from a bin decreases InventoryLocation.quantity."""
+        from django.urls import reverse
+        from inventory.models import InventoryLocation
+
+        self._login(client)
+        inv, loc = self._setup(product, bin_qty=10, initial_qty=10)
+
+        resp = client.post(
+            reverse("inventory:inventory-adjust", args=[inv.pk]),
+            {"product": product.pk, "quantity": -3, "location": loc.pk},
+        )
+        assert resp.status_code == 302
+
+        inv_loc = InventoryLocation.objects.get(inventory=inv, location=loc)
+        assert inv_loc.quantity == 7
+
+    def test_negative_adjust_rejected_insufficient_bin_stock(self, client, product):
+        """Cannot remove more units than a bin holds."""
+        from django.urls import reverse
+        from inventory.models import InventoryLocation
+
+        self._login(client)
+        inv, loc = self._setup(product, bin_qty=2, initial_qty=10)
+
+        resp = client.post(
+            reverse("inventory:inventory-adjust", args=[inv.pk]),
+            {"product": product.pk, "quantity": -5, "location": loc.pk},
+        )
+        # form re-rendered with errors
+        assert resp.status_code == 200
+        assert b"cannot remove" in resp.content.lower()
+
+        inv_loc = InventoryLocation.objects.get(inventory=inv, location=loc)
+        assert inv_loc.quantity == 2  # unchanged
+
+    def test_adjust_without_location_leaves_bins_unchanged(self, client, product):
+        """Adjusting without selecting a bin doesn't touch InventoryLocation."""
+        from django.urls import reverse
+        from inventory.models import InventoryLocation
+
+        self._login(client)
+        inv, loc = self._setup(product, bin_qty=10, initial_qty=10)
+
+        resp = client.post(
+            reverse("inventory:inventory-adjust", args=[inv.pk]),
+            {"product": product.pk, "quantity": 5, "location": ""},
+        )
+        assert resp.status_code == 302
+
+        inv_loc = InventoryLocation.objects.get(inventory=inv, location=loc)
+        assert inv_loc.quantity == 10  # untouched
+
+    def test_ledger_entry_tagged_with_location(self, client, product):
+        """When a location is chosen the ledger entry records that location."""
+        from django.urls import reverse
+
+        self._login(client)
+        inv, loc = self._setup(product, bin_qty=0, initial_qty=0)
+
+        client.post(
+            reverse("inventory:inventory-adjust", args=[inv.pk]),
+            {"product": product.pk, "quantity": 3, "location": loc.pk},
+        )
+
+        entry = (
+            InventoryLedger.objects.filter(
+                product=product, action="Inventory Adjustment"
+            )
+            .order_by("-date")
+            .first()
+        )
+        assert entry is not None
+        assert entry.location == loc

@@ -25,15 +25,53 @@ class ProductForm(forms.ModelForm):
 
 
 class InventoryAdjustForm(forms.ModelForm):
+    location = forms.ModelChoiceField(
+        queryset=Location.objects.none(),
+        required=False,
+        empty_label="— No specific location —",
+    )
+
     class Meta:
         model = InventoryAdjust
         fields = ["product", "quantity"]
+
+    def __init__(self, *args, inventory=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.inventory = inventory
+        if inventory:
+            assigned_location_ids = inventory.stock_locations.values_list(
+                "location_id", flat=True
+            )
+            self.fields["location"].queryset = Location.objects.filter(
+                pk__in=assigned_location_ids
+            )
+            if not assigned_location_ids.exists():
+                self.fields["location"].widget = forms.HiddenInput()
 
     def clean_quantity(self):
         qty = self.cleaned_data.get("quantity")
         if qty is not None and qty == 0:
             raise forms.ValidationError("Adjustment quantity cannot be zero.")
         return qty
+
+    def clean(self):
+        cleaned = super().clean()
+        qty = cleaned.get("quantity")
+        location = cleaned.get("location")
+        if location and qty and qty < 0 and self.inventory:
+            try:
+                inv_loc = InventoryLocation.objects.get(
+                    inventory=self.inventory,
+                    location=location,
+                )
+                if inv_loc.quantity + qty < 0:
+                    raise forms.ValidationError(
+                        f"Only {inv_loc.quantity} units in "
+                        f"{location} — cannot remove {abs(qty)}."
+                    )
+            except InventoryLocation.DoesNotExist:
+                raise forms.ValidationError(f"No stock assigned to {location}.")
+        return cleaned
 
 
 class LocationForm(forms.ModelForm):

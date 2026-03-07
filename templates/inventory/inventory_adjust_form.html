@@ -20,7 +20,17 @@
 {% endif %}
 <form method="post">
     {% csrf_token %}
-    {{ form|crispy }}
+    {{ form.product|as_crispy_field }}
+    {{ form.quantity|as_crispy_field }}
+    {% if form.location.field.queryset.exists %}
+    <div class="mb-3">
+        {{ form.location.label_tag }}
+        {{ form.location }}
+        <div class="form-text">
+            Optional — select a bin to apply this adjustment to.
+        </div>
+    </div>
+    {% endif %}
     <button type="submit" class="btn btn-primary">Adjust</button>
 </form>
 {% endblock %}
