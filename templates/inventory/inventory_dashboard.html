@@ -19,9 +19,56 @@
     {% include "includes/metric_card.html" with icon="bi-boxes" color="dark" label="Total Stock" value=total_quantity|default:'—' url=inventory_url %}
     {% include "includes/metric_card.html" with icon="bi-cash-stack" color="success" label="Stock Value" value=stock_value|currency|default:'—' url=inventory_url %}
 </div>
+
 {% if low_stock_count %}
-<div class="row mt-3">
-    {% include "includes/metric_card.html" with icon="bi-exclamation-triangle" color="danger" label="Low Stock Items" value=low_stock_count url=low_stock_url %}
+<div class="panel mt-3">
+    <div class="panel-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Low Stock Alert</span>
+        <a href="{{ low_stock_url }}" class="btn btn-sm btn-outline-danger">View All</a>
+    </div>
+    <div class="panel-body">
+        <div class="d-flex align-items-center justify-content-between mb-1">
+            <span class="fw-semibold text-danger">{{ low_stock_count }} of {{ total_products }} products need replenishment</span>
+            <span class="text-muted small">{{ low_stock_percentage }}%</span>
+        </div>
+        <div class="progress mb-3" style="height:10px;" role="progressbar" aria-valuenow="{{ low_stock_percentage }}" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar bg-danger" style="width:{{ low_stock_percentage }}%"></div>
+        </div>
+        {% if top_low_stock_items %}
+        <table class="table table-sm table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th class="text-end">In Stock</th>
+                    <th class="text-end">Short by</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in top_low_stock_items %}
+                <tr>
+                    <td>{{ item.product.name }}</td>
+                    <td class="text-end">{{ item.quantity }}</td>
+                    <td class="text-end text-danger fw-semibold">{{ item.required_cached }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'inventory:inventory-detail' item.pk %}" class="btn btn-xs btn-outline-secondary py-0 px-1">
+                            <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
 </div>
 {% endif %}
+
+<div class="row mt-3">
+    {% include "includes/metric_card.html" with icon="bi-arrow-down-circle" color="success" label="Stock In (30 days)" value=stock_in_30d|default:'0' %}
+    {% include "includes/metric_card.html" with icon="bi-arrow-up-circle" color="info" label="Stock Out (30 days)" value=stock_out_30d|default:'0' %}
+    {% if dead_stock_count %}
+    {% include "includes/metric_card.html" with icon="bi-archive" color="secondary" label="Dead Stock (90+ days)" value=dead_stock_count url=inventory_url %}
+    {% endif %}
+</div>
 {% endblock %}
