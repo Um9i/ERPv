@@ -1,6 +1,19 @@
 from django.shortcuts import render
-from .models import Product, Inventory, InventoryAdjust
-from .forms import ProductForm, InventoryAdjustForm
+from .models import (
+    Product,
+    Inventory,
+    InventoryAdjust,
+    Location,
+    InventoryLocation,
+    StockTransfer,
+)
+from .forms import (
+    ProductForm,
+    InventoryAdjustForm,
+    LocationForm,
+    InventoryLocationForm,
+    StockTransferForm,
+)
 from django.views.generic import (
     ListView,
     DetailView,
@@ -44,7 +57,11 @@ class InventoryListView(ListView):
     context_object_name = "inventories"
 
     def get_queryset(self):
-        qs = Inventory.objects.all().select_related("product")
+        qs = (
+            Inventory.objects.all()
+            .select_related("product")
+            .prefetch_related("stock_locations__location")
+        )
         q = self.request.GET.get("q", "").strip()
         if q:
             qs = qs.filter(product__name__icontains=q)
@@ -215,6 +232,12 @@ class InventoryDetailView(DetailView):
             inv.quantity + context["purchase_pending"] + context["production_pending"]
         )
         context["required_qty"] = max(0, context["sales_pending"] - available)
+
+        # ── Stock location allocation ──
+        context["allocated_qty"] = (
+            inv.stock_locations.aggregate(total=Sum("quantity"))["total"] or 0
+        )
+        context["unallocated_qty"] = inv.quantity - context["allocated_qty"]
 
         # bundle all chart data for json_script (consumed by static JS)
         context["chart_data"] = {
@@ -512,3 +535,135 @@ class InventoryListApiView(TemplateView):
                 }
             )
         return JsonResponse(data, safe=False)
+
+
+# ── Location CRUD ──────────────────────────────────────────────
+
+
+class LocationListView(ListView):
+    model = Location
+    template_name = "inventory/location_list.html"
+    context_object_name = "locations"
+
+    def get_queryset(self):
+        return Location.objects.filter(parent=None).prefetch_related(
+            "children", "children__children"
+        )
+
+
+class LocationCreateView(CreateView):
+    model = Location
+    form_class = LocationForm
+    template_name = "inventory/location_form.html"
+    success_url = reverse_lazy("inventory:location-list")
+
+    def get_initial(self):
+        initial = super().get_initial()
+        parent_pk = self.request.GET.get("parent")
+        if parent_pk:
+            initial["parent"] = parent_pk
+        return initial
+
+
+class LocationUpdateView(UpdateView):
+    model = Location
+    form_class = LocationForm
+    template_name = "inventory/location_form.html"
+    success_url = reverse_lazy("inventory:location-list")
+
+
+class LocationDeleteView(DeleteView):
+    model = Location
+    template_name = "inventory/location_confirm_delete.html"
+    success_url = reverse_lazy("inventory:location-list")
+
+
+# ── Stock location assignment ──────────────────────────────────
+
+
+class InventoryLocationCreateView(CreateView):
+    model = InventoryLocation
+    form_class = InventoryLocationForm
+    template_name = "inventory/inventory_location_form.html"
+
+    def get_inventory(self):
+        return Inventory.objects.select_related("product").get(pk=self.kwargs["pk"])
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["inventory"] = self.get_inventory()
+        return kwargs
+
+    def form_valid(self, form):
+        form.instance.inventory = self.get_inventory()
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy("inventory:inventory-detail", args=[self.kwargs["pk"]])
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["inventory"] = self.get_inventory()
+        return context
+
+
+class InventoryLocationUpdateView(UpdateView):
+    model = InventoryLocation
+    form_class = InventoryLocationForm
+    template_name = "inventory/inventory_location_form.html"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["inventory"] = self.object.inventory
+        return kwargs
+
+    def get_success_url(self):
+        return reverse_lazy(
+            "inventory:inventory-detail", args=[self.object.inventory.pk]
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["inventory"] = self.object.inventory
+        return context
+
+
+class InventoryLocationDeleteView(DeleteView):
+    model = InventoryLocation
+    template_name = "inventory/inventory_location_confirm_delete.html"
+
+    def get_success_url(self):
+        return reverse_lazy(
+            "inventory:inventory-detail", args=[self.object.inventory.pk]
+        )
+
+
+class StockTransferCreateView(CreateView):
+    model = StockTransfer
+    form_class = StockTransferForm
+    template_name = "inventory/stock_transfer_form.html"
+
+    def get_inventory(self):
+        return Inventory.objects.select_related("product").get(pk=self.kwargs["pk"])
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["inventory"] = self.get_inventory()
+        return kwargs
+
+    def get_form(self, *args, **kwargs):
+        form = super().get_form(*args, **kwargs)
+        form.instance.inventory = self.get_inventory()
+        return form
+
+    def form_valid(self, form):
+        form.instance.inventory = self.get_inventory()
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy("inventory:inventory-detail", args=[self.kwargs["pk"]])
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["inventory"] = self.get_inventory()
+        return context

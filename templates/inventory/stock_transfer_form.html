@@ -1,0 +1,41 @@
+{% extends "includes/card.html" %}
+{% load crispy_forms_tags %}
+{% block card_icon %}bi-arrow-left-right{% endblock %}
+{% block card_title %}Stock Transfer — {{ inventory.product.name }}{% endblock %}
+{% block card_body %}
+{% if form.errors %}
+<div class="alert alert-danger">
+    <ul class="mb-0">
+    {% for field in form %}
+        {% for error in field.errors %}
+            <li>{{ error }}</li>
+        {% endfor %}
+    {% endfor %}
+    {% for error in form.non_field_errors %}
+        <li>{{ error }}</li>
+    {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div class="alert alert-info mb-3">
+    <i class="bi bi-info-circle me-1"></i>
+    Transfers move stock between locations without changing total inventory ({{ inventory.quantity }} units).
+</div>
+
+{% if inventory.stock_locations.exists %}
+<div class="mb-3">
+    <small class="text-muted fw-semibold">Current allocation:</small>
+    {% for sl in inventory.stock_locations.all %}
+        <span class="badge bg-light text-dark border me-1">{{ sl.location }} ({{ sl.quantity }})</span>
+    {% endfor %}
+</div>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <button class="btn btn-warning" type="submit"><i class="bi bi-arrow-left-right me-1"></i>Transfer</button>
+    <a href="{% url 'inventory:inventory-detail' inventory.pk %}" class="btn btn-app-secondary ms-2">Cancel</a>
+</form>
+{% endblock %}

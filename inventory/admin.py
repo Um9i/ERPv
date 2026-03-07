@@ -1,7 +1,15 @@
 import csv
 from django.http import HttpResponse
 from django.contrib import admin
-from .models import Product, Inventory, InventoryLedger, InventoryAdjust
+from .models import (
+    Product,
+    Inventory,
+    InventoryLedger,
+    InventoryAdjust,
+    Location,
+    InventoryLocation,
+    StockTransfer,
+)
 from django_admin_inline_paginator.admin import TabularInlinePaginated
 
 
@@ -59,6 +67,45 @@ class InventoryAdjustInline(TabularInlinePaginated):
     autocomplete_fields = ["product"]
     # 'complete' and 'closed' not shown in inline
     per_page = 5
+
+
+@admin.register(Location)
+class LocationAdmin(admin.ModelAdmin):
+    list_display = ["name", "parent", "full_path"]
+    list_filter = ["parent"]
+    search_fields = ["name"]
+
+    def full_path(self, obj):
+        return obj.full_path()
+
+    full_path.short_description = "Full Path"
+
+
+@admin.register(InventoryLocation)
+class InventoryLocationAdmin(admin.ModelAdmin):
+    list_display = ["inventory", "location", "quantity", "last_updated"]
+    list_filter = ["location"]
+    search_fields = ["inventory__product__name", "location__name"]
+
+
+@admin.register(StockTransfer)
+class StockTransferAdmin(admin.ModelAdmin):
+    list_display = [
+        "inventory",
+        "from_location",
+        "to_location",
+        "quantity",
+        "transferred_at",
+    ]
+    list_filter = ["transferred_at"]
+    search_fields = ["inventory__product__name"]
+    readonly_fields = [
+        "inventory",
+        "from_location",
+        "to_location",
+        "quantity",
+        "transferred_at",
+    ]
 
 
 @admin.register(InventoryAdjust)

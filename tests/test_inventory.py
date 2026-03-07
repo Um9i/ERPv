@@ -529,3 +529,340 @@ class TestInventory:
         with django_assert_num_queries(100, exact=False):
             resp = client.get(url)
         assert resp.status_code == 200
+
+    # ── Location & Stock Transfer tests ────────────────────────
+
+    def test_location_hierarchy_full_path(self, db):
+        """Location.full_path() builds Warehouse / Zone / Bin string."""
+        from inventory.models import Location
+
+        wh = Location.objects.create(name="Warehouse A")
+        zone = Location.objects.create(name="Zone 1", parent=wh)
+        bin_ = Location.objects.create(name="Bin B2", parent=zone)
+        assert wh.full_path() == "Warehouse A"
+        assert zone.full_path() == "Warehouse A / Zone 1"
+        assert bin_.full_path() == "Warehouse A / Zone 1 / Bin B2"
+
+    def test_location_crud_views(self, client, db):
+        """Location list, create, update, delete views work."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+        from inventory.models import Location
+
+        user = User.objects.create_user(username="locuser")
+        client.force_login(user)
+
+        # create
+        resp = client.post(
+            reverse("inventory:location-create"),
+            {"name": "Warehouse X"},
+        )
+        assert resp.status_code == 302
+        wh = Location.objects.get(name="Warehouse X")
+
+        # create child with ?parent= prefill
+        resp = client.get(reverse("inventory:location-create") + f"?parent={wh.pk}")
+        assert resp.status_code == 200
+        form = resp.context["form"]
+        assert str(form.initial.get("parent")) == str(wh.pk)
+
+        # actually create the zone
+        resp = client.post(
+            reverse("inventory:location-create"),
+            {"name": "Zone A", "parent": wh.pk},
+        )
+        assert resp.status_code == 302
+        zone = Location.objects.get(name="Zone A")
+        assert zone.parent == wh
+
+        # list shows hierarchy
+        resp = client.get(reverse("inventory:location-list"))
+        assert resp.status_code == 200
+        assert "Warehouse X" in resp.content.decode()
+        assert "Zone A" in resp.content.decode()
+
+        # update
+        resp = client.post(
+            reverse("inventory:location-update", args=[zone.pk]),
+            {"name": "Zone B", "parent": wh.pk},
+        )
+        assert resp.status_code == 302
+        zone.refresh_from_db()
+        assert zone.name == "Zone B"
+
+        # delete
+        resp = client.post(reverse("inventory:location-delete", args=[zone.pk]))
+        assert resp.status_code == 302
+        assert not Location.objects.filter(pk=zone.pk).exists()
+
+    def test_inventory_location_allocation_enforced(self, client, product):
+        """Allocated qty cannot exceed stock on hand."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+        from inventory.models import Inventory, Location
+
+        user = User.objects.create_user(username="allocuser")
+        client.force_login(user)
+
+        inv = Inventory.objects.get(product=product)
+        InventoryAdjust.objects.create(product=product, quantity=10, complete=True)
+        inv.refresh_from_db()
+        assert inv.quantity == 10
+
+        bin_a = Location.objects.create(name="Bin A")
+
+        # assign 10 — should succeed
+        resp = client.post(
+            reverse("inventory:inventory-location-add", args=[inv.pk]),
+            {"location": bin_a.pk, "quantity": 10},
+        )
+        assert resp.status_code == 302
+
+        bin_b = Location.objects.create(name="Bin B")
+        # assign 1 more — should fail (total would be 11 > 10)
+        resp = client.post(
+            reverse("inventory:inventory-location-add", args=[inv.pk]),
+            {"location": bin_b.pk, "quantity": 1},
+        )
+        assert resp.status_code == 200  # re-renders form with error
+        assert "exceed stock on hand" in resp.content.decode()
+
+    def test_stock_transfer_moves_quantity(self, product):
+        """Transfer deducts from source, adds to dest, creates ledger entries."""
+        from inventory.models import (
+            Inventory,
+            Location,
+            InventoryLocation,
+            InventoryLedger,
+            StockTransfer,
+        )
+
+        inv = Inventory.objects.get(product=product)
+        InventoryAdjust.objects.create(product=product, quantity=100, complete=True)
+        inv.refresh_from_db()
+
+        bin_a = Location.objects.create(name="Bin A")
+        bin_b = Location.objects.create(name="Bin B")
+        InventoryLocation.objects.create(inventory=inv, location=bin_a, quantity=80)
+        InventoryLocation.objects.create(inventory=inv, location=bin_b, quantity=20)
+
+        ledger_before = InventoryLedger.objects.filter(product=product).count()
+
+        transfer = StockTransfer(
+            inventory=inv,
+            from_location=bin_a,
+            to_location=bin_b,
+            quantity=30,
+        )
+        transfer.save()
+
+        # location quantities updated
+        assert (
+            InventoryLocation.objects.get(inventory=inv, location=bin_a).quantity == 50
+        )
+        assert (
+            InventoryLocation.objects.get(inventory=inv, location=bin_b).quantity == 50
+        )
+
+        # total stock unchanged
+        inv.refresh_from_db()
+        assert inv.quantity == 100
+
+        # two ledger entries created (one negative, one positive)
+        new_entries = InventoryLedger.objects.filter(
+            product=product, action="Stock Transfer"
+        )
+        assert new_entries.count() == 2
+        assert new_entries.filter(quantity=-30).exists()
+        assert new_entries.filter(quantity=30).exists()
+
+    def test_stock_transfer_creates_destination_if_missing(self, product):
+        """Transfer to an unassigned location creates the InventoryLocation."""
+        from inventory.models import (
+            Inventory,
+            Location,
+            InventoryLocation,
+            StockTransfer,
+        )
+
+        inv = Inventory.objects.get(product=product)
+        InventoryAdjust.objects.create(product=product, quantity=50, complete=True)
+        inv.refresh_from_db()
+
+        bin_a = Location.objects.create(name="Bin A")
+        bin_c = Location.objects.create(name="Bin C")  # no InventoryLocation yet
+        InventoryLocation.objects.create(inventory=inv, location=bin_a, quantity=50)
+
+        StockTransfer.objects.create(
+            inventory=inv,
+            from_location=bin_a,
+            to_location=bin_c,
+            quantity=15,
+        )
+
+        assert (
+            InventoryLocation.objects.get(inventory=inv, location=bin_c).quantity == 15
+        )
+        assert (
+            InventoryLocation.objects.get(inventory=inv, location=bin_a).quantity == 35
+        )
+
+    def test_stock_transfer_rejects_insufficient_source(self, product):
+        """Transfer more than source has should raise ValidationError."""
+        from inventory.models import (
+            Inventory,
+            Location,
+            InventoryLocation,
+            StockTransfer,
+        )
+        from django.core.exceptions import ValidationError
+
+        inv = Inventory.objects.get(product=product)
+        InventoryAdjust.objects.create(product=product, quantity=10, complete=True)
+        inv.refresh_from_db()
+
+        bin_a = Location.objects.create(name="Bin A")
+        bin_b = Location.objects.create(name="Bin B")
+        InventoryLocation.objects.create(inventory=inv, location=bin_a, quantity=10)
+
+        with pytest.raises(ValidationError):
+            StockTransfer.objects.create(
+                inventory=inv,
+                from_location=bin_a,
+                to_location=bin_b,
+                quantity=999,
+            )
+        # source quantity unchanged
+        assert (
+            InventoryLocation.objects.get(inventory=inv, location=bin_a).quantity == 10
+        )
+
+    def test_stock_transfer_rejects_same_location(self, product):
+        """Transfer from and to the same location should be rejected."""
+        from inventory.models import (
+            Inventory,
+            Location,
+            InventoryLocation,
+            StockTransfer,
+        )
+        from django.core.exceptions import ValidationError
+
+        inv = Inventory.objects.get(product=product)
+        InventoryAdjust.objects.create(product=product, quantity=10, complete=True)
+        inv.refresh_from_db()
+
+        bin_a = Location.objects.create(name="Bin A")
+        InventoryLocation.objects.create(inventory=inv, location=bin_a, quantity=10)
+
+        with pytest.raises(ValidationError):
+            StockTransfer.objects.create(
+                inventory=inv,
+                from_location=bin_a,
+                to_location=bin_a,
+                quantity=5,
+            )
+
+    def test_stock_transfer_view(self, client, product):
+        """Transfer form renders and processes correctly."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+        from inventory.models import (
+            Inventory,
+            Location,
+            InventoryLocation,
+            StockTransfer,
+        )
+
+        user = User.objects.create_user(username="xferuser")
+        client.force_login(user)
+
+        inv = Inventory.objects.get(product=product)
+        InventoryAdjust.objects.create(product=product, quantity=100, complete=True)
+        inv.refresh_from_db()
+
+        bin_a = Location.objects.create(name="Bin A")
+        bin_b = Location.objects.create(name="Bin B")
+        InventoryLocation.objects.create(inventory=inv, location=bin_a, quantity=100)
+
+        url = reverse("inventory:stock-transfer", args=[inv.pk])
+
+        # GET shows the form
+        resp = client.get(url)
+        assert resp.status_code == 200
+        assert "Transfer" in resp.content.decode()
+
+        # POST creates the transfer
+        resp = client.post(
+            url,
+            {
+                "from_location": bin_a.pk,
+                "to_location": bin_b.pk,
+                "quantity": 40,
+                "note": "rebalance",
+            },
+        )
+        assert resp.status_code == 302
+        assert StockTransfer.objects.count() == 1
+        assert (
+            InventoryLocation.objects.get(inventory=inv, location=bin_a).quantity == 60
+        )
+        assert (
+            InventoryLocation.objects.get(inventory=inv, location=bin_b).quantity == 40
+        )
+
+    def test_inventory_list_shows_locations(self, client, product):
+        """Inventory list view includes location badges."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+        from inventory.models import Inventory, Location, InventoryLocation
+
+        user = User.objects.create_user(username="listlocuser")
+        client.force_login(user)
+
+        inv = Inventory.objects.get(product=product)
+        InventoryAdjust.objects.create(product=product, quantity=50, complete=True)
+        inv.refresh_from_db()
+
+        bin_x = Location.objects.create(name="Bin X")
+        InventoryLocation.objects.create(inventory=inv, location=bin_x, quantity=50)
+
+        resp = client.get(reverse("inventory:inventory-list"))
+        content = resp.content.decode()
+        assert "Bin X" in content
+        assert "(50)" in content
+
+    def test_ledger_shows_location(self, client, product):
+        """Ledger table displays location when set on an entry."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+        from inventory.models import (
+            Inventory,
+            Location,
+            InventoryLocation,
+            StockTransfer,
+        )
+
+        user = User.objects.create_user(username="ledgerlocuser")
+        client.force_login(user)
+
+        inv = Inventory.objects.get(product=product)
+        InventoryAdjust.objects.create(product=product, quantity=100, complete=True)
+        inv.refresh_from_db()
+
+        bin_a = Location.objects.create(name="LocLedgerA")
+        bin_b = Location.objects.create(name="LocLedgerB")
+        InventoryLocation.objects.create(inventory=inv, location=bin_a, quantity=100)
+
+        StockTransfer.objects.create(
+            inventory=inv,
+            from_location=bin_a,
+            to_location=bin_b,
+            quantity=10,
+        )
+
+        resp = client.get(reverse("inventory:inventory-detail", args=[inv.pk]))
+        content = resp.content.decode()
+        assert "Location" in content  # column header
+        assert "LocLedgerA" in content
+        assert "LocLedgerB" in content
+        assert "Stock Transfer" in content

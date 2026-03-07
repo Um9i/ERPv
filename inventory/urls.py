@@ -10,6 +10,14 @@ from .views import (
     InventoryDashboardView,
     InventoryListApiView,
     LowStockListView,
+    LocationListView,
+    LocationCreateView,
+    LocationUpdateView,
+    LocationDeleteView,
+    InventoryLocationCreateView,
+    InventoryLocationUpdateView,
+    InventoryLocationDeleteView,
+    StockTransferCreateView,
 )
 
 app_name = "inventory"
@@ -33,5 +41,40 @@ urlpatterns = [
         "inventories/<int:pk>/adjust/",
         InventoryAdjustCreateView.as_view(),
         name="inventory-adjust",
+    ),
+    # Locations
+    path("locations/", LocationListView.as_view(), name="location-list"),
+    path("locations/create/", LocationCreateView.as_view(), name="location-create"),
+    path(
+        "locations/<int:pk>/update/",
+        LocationUpdateView.as_view(),
+        name="location-update",
+    ),
+    path(
+        "locations/<int:pk>/delete/",
+        LocationDeleteView.as_view(),
+        name="location-delete",
+    ),
+    # Stock location assignment (scoped to an inventory item)
+    path(
+        "inventories/<int:pk>/locations/add/",
+        InventoryLocationCreateView.as_view(),
+        name="inventory-location-add",
+    ),
+    path(
+        "locations/assignment/<int:pk>/update/",
+        InventoryLocationUpdateView.as_view(),
+        name="inventory-location-update",
+    ),
+    path(
+        "locations/assignment/<int:pk>/delete/",
+        InventoryLocationDeleteView.as_view(),
+        name="inventory-location-delete",
+    ),
+    # Stock transfers
+    path(
+        "inventories/<int:pk>/transfer/",
+        StockTransferCreateView.as_view(),
+        name="stock-transfer",
     ),
 ]

@@ -1,0 +1,52 @@
+{% extends "includes/card.html" %}
+{% block card_icon %}bi-geo-alt{% endblock %}
+{% block card_title %}Locations{% endblock %}
+{% block card_body %}
+
+<div class="detail-actions mb-4">
+    <a href="{% url 'inventory:location-create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>Add Location
+    </a>
+</div>
+
+{% for warehouse in locations %}
+<div class="detail-section mb-3">
+    <div class="detail-section-header d-flex justify-content-between align-items-center">
+        <h2 class="detail-section-title mb-0">
+            <i class="bi bi-building me-2"></i>{{ warehouse.name }}
+        </h2>
+        <div>
+            <a href="{% url 'inventory:location-create' %}?parent={{ warehouse.pk }}" class="btn btn-sm btn-outline-primary me-1" title="Add Zone"><i class="bi bi-plus-lg"></i></a>
+            <a href="{% url 'inventory:location-update' warehouse.pk %}" class="btn btn-sm btn-outline-secondary me-1"><i class="bi bi-pencil"></i></a>
+            <a href="{% url 'inventory:location-delete' warehouse.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+        </div>
+    </div>
+    {% for zone in warehouse.children.all %}
+    <div class="ms-3 mt-2">
+        <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+            <span class="fw-semibold"><i class="bi bi-diagram-3 me-2 text-muted"></i>{{ zone.name }}</span>
+            <div>
+                <a href="{% url 'inventory:location-create' %}?parent={{ zone.pk }}" class="btn btn-sm btn-outline-primary me-1" title="Add Bin"><i class="bi bi-plus-lg"></i></a>
+                <a href="{% url 'inventory:location-update' zone.pk %}" class="btn btn-sm btn-outline-secondary me-1"><i class="bi bi-pencil"></i></a>
+                <a href="{% url 'inventory:location-delete' zone.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+            </div>
+        </div>
+        {% for bin in zone.children.all %}
+        <div class="ms-4 d-flex justify-content-between align-items-center py-1 border-bottom text-muted">
+            <span><i class="bi bi-inbox me-2"></i>{{ bin.name }}</span>
+            <div>
+                <a href="{% url 'inventory:location-update' bin.pk %}" class="btn btn-sm btn-outline-secondary me-1"><i class="bi bi-pencil"></i></a>
+                <a href="{% url 'inventory:location-delete' bin.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% empty %}
+    <p class="text-muted ms-3 mt-2 mb-0">No zones yet.</p>
+    {% endfor %}
+</div>
+{% empty %}
+<p class="text-muted text-center py-4">No locations defined yet. Add a warehouse to get started.</p>
+{% endfor %}
+
+{% endblock %}

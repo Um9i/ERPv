@@ -186,6 +186,47 @@ class ProductionAllocated(models.Model):
         ]
 
 
+class Location(models.Model):
+    name = models.CharField(max_length=100)
+    parent = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.CASCADE, related_name="children"
+    )
+
+    def __str__(self):
+        return self.full_path()
+
+    def full_path(self):
+        parts = []
+        node = self
+        while node:
+            parts.append(node.name)
+            node = node.parent
+        return " / ".join(reversed(parts))
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name_plural = "Locations"
+
+
+class InventoryLocation(models.Model):
+    inventory = models.ForeignKey(
+        Inventory, on_delete=models.CASCADE, related_name="stock_locations"
+    )
+    location = models.ForeignKey(
+        Location, on_delete=models.CASCADE, related_name="stock_locations"
+    )
+    quantity = models.PositiveBigIntegerField(default=0)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ["inventory", "location"]
+        ordering = ["location"]
+        verbose_name_plural = "Inventory Locations"
+
+    def __str__(self):
+        return f"{self.inventory.product.name} @ {self.location}"
+
+
 class InventoryLedger(models.Model):
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name="inventory_ledger"
@@ -194,6 +235,13 @@ class InventoryLedger(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     action = models.CharField(max_length=128)
     transaction_id = models.PositiveBigIntegerField()
+    location = models.ForeignKey(
+        "Location",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="ledger_entries",
+    )
 
     def __str__(self) -> str:
         return f"{self.product}"
@@ -281,3 +329,79 @@ def _update_required_from_sales(sender, instance, **kwargs):
         inv.update_required_cached()
     except Inventory.DoesNotExist:
         pass
+
+
+class StockTransfer(models.Model):
+    inventory = models.ForeignKey(
+        Inventory, on_delete=models.CASCADE, related_name="transfers"
+    )
+    from_location = models.ForeignKey(
+        Location, on_delete=models.CASCADE, related_name="transfers_out"
+    )
+    to_location = models.ForeignKey(
+        Location, on_delete=models.CASCADE, related_name="transfers_in"
+    )
+    quantity = models.PositiveBigIntegerField()
+    transferred_at = models.DateTimeField(auto_now_add=True)
+    note = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-transferred_at"]
+        verbose_name_plural = "Stock Transfers"
+
+    def __str__(self):
+        return (
+            f"{self.inventory.product.name}: {self.quantity} "
+            f"{self.from_location} → {self.to_location}"
+        )
+
+    def clean(self):
+        if self.from_location_id == self.to_location_id:
+            raise ValidationError(_("Source and destination must be different."))
+        try:
+            src = InventoryLocation.objects.get(
+                inventory=self.inventory, location=self.from_location
+            )
+        except InventoryLocation.DoesNotExist:
+            raise ValidationError(_("No stock at the source location."))
+        if src.quantity < self.quantity:
+            raise ValidationError(
+                _(f"Only {src.quantity} available at {self.from_location}.")
+            )
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        if self.pk is None:
+            # deduct from source
+            src = InventoryLocation.objects.select_for_update().get(
+                inventory=self.inventory, location=self.from_location
+            )
+            src.quantity -= self.quantity
+            src.save(update_fields=["quantity", "last_updated"])
+
+            # add to destination (create if needed)
+            dest, _ = InventoryLocation.objects.select_for_update().get_or_create(
+                inventory=self.inventory,
+                location=self.to_location,
+                defaults={"quantity": 0},
+            )
+            dest.quantity += self.quantity
+            dest.save(update_fields=["quantity", "last_updated"])
+
+            # ledger: two entries, net zero on total stock
+            InventoryLedger.objects.create(
+                product=self.inventory.product,
+                quantity=-self.quantity,
+                action="Stock Transfer",
+                transaction_id=self.inventory.pk,
+                location=self.from_location,
+            )
+            InventoryLedger.objects.create(
+                product=self.inventory.product,
+                quantity=self.quantity,
+                action="Stock Transfer",
+                transaction_id=self.inventory.pk,
+                location=self.to_location,
+            )
+        super().save(*args, **kwargs)

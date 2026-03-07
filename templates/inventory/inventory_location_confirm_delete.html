@@ -1,0 +1,5 @@
+{% extends "confirm_delete_base.html" %}
+
+{% block delete_title %}Remove Stock Location{% endblock %}
+{% block delete_message %}Are you sure you want to remove "{{ object.inventory.product.name }}" from "{{ object.location }}"?{% endblock %}
+{% block delete_cancel_url %}{% url 'inventory:inventory-detail' object.inventory.pk %}{% endblock %}

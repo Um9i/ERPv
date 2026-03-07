@@ -1,0 +1,5 @@
+{% extends "confirm_delete_base.html" %}
+
+{% block delete_title %}Delete Location{% endblock %}
+{% block delete_message %}Are you sure you want to delete "{{ object }}"? All child locations will also be removed.{% endblock %}
+{% block delete_cancel_url %}{% url 'inventory:location-list' %}{% endblock %}

@@ -1,5 +1,6 @@
 from django import forms
-from .models import Product, InventoryAdjust
+from django.db import models
+from .models import Product, InventoryAdjust, Location, InventoryLocation, StockTransfer
 
 
 class ProductForm(forms.ModelForm):
@@ -33,3 +34,72 @@ class InventoryAdjustForm(forms.ModelForm):
         if qty is not None and qty == 0:
             raise forms.ValidationError("Adjustment quantity cannot be zero.")
         return qty
+
+
+class LocationForm(forms.ModelForm):
+    class Meta:
+        model = Location
+        fields = ["name", "parent"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["parent"].required = False
+        self.fields["parent"].empty_label = "— None (top-level) —"
+        if self.instance.pk:
+            self.fields["parent"].queryset = Location.objects.exclude(
+                pk=self.instance.pk
+            )
+
+
+class InventoryLocationForm(forms.ModelForm):
+    class Meta:
+        model = InventoryLocation
+        fields = ["location", "quantity"]
+
+    def __init__(self, *args, inventory=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.inventory = inventory
+        self.fields["location"].queryset = Location.objects.all()
+        self.fields["location"].empty_label = "Select a location\u2026"
+
+    def clean(self):
+        cleaned = super().clean()
+        qty = cleaned.get("quantity")
+        location = cleaned.get("location")
+        if self.inventory is None:
+            return cleaned
+        qs = InventoryLocation.objects.filter(inventory=self.inventory)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        other_qty = qs.aggregate(total=models.Sum("quantity"))["total"] or 0
+        total = other_qty + (qty or 0)
+        if total > self.inventory.quantity:
+            raise forms.ValidationError(
+                f"Total allocated ({total}) would exceed stock on hand "
+                f"({self.inventory.quantity}). Adjust stock first."
+            )
+        return cleaned
+
+
+class StockTransferForm(forms.ModelForm):
+    class Meta:
+        model = StockTransfer
+        fields = ["from_location", "to_location", "quantity", "note"]
+        widgets = {
+            "note": forms.Textarea(attrs={"rows": 2}),
+        }
+
+    def __init__(self, *args, inventory=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.inventory = inventory
+        # only show locations that have stock for this inventory
+        if inventory:
+            assigned_location_ids = InventoryLocation.objects.filter(
+                inventory=inventory, quantity__gt=0
+            ).values_list("location_id", flat=True)
+            self.fields["from_location"].queryset = Location.objects.filter(
+                pk__in=assigned_location_ids
+            )
+        self.fields["from_location"].empty_label = "Select source\u2026"
+        self.fields["to_location"].queryset = Location.objects.all()
+        self.fields["to_location"].empty_label = "Select destination\u2026"
