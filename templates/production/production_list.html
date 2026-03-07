@@ -42,7 +42,13 @@
         <td>{{ job.product.name }}</td>
         <td>{{ job.quantity }}</td>
         <td>{{ job.remaining }}</td>
-        <td>{% if job.materials_ok %}✓{% else %}✗{% endif %}</td>
+        <td>
+          {% if job.materials_ok %}
+            <i class="bi bi-check-circle-fill text-success" title="Materials available"></i>
+          {% else %}
+            <i class="bi bi-exclamation-triangle-fill text-danger" title="Insufficient components"></i>
+          {% endif %}
+        </td>
         <td>
           {% if job.due_date %}
             {% if not job.closed and job.due_date < today %}

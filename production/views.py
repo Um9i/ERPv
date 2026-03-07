@@ -410,12 +410,38 @@ class ProductionDetailView(DetailView):
     def get_context_data(self, **kwargs):
         from datetime import timedelta
         from django.utils import timezone
+        from inventory.models import Inventory
 
         context = super().get_context_data(**kwargs)
-        production = self.object
-        context["bom"] = production.bom()
+        job = self.object
+        context["bom"] = job.bom()
         context["today"] = timezone.now().date()
         context["today_plus_7"] = timezone.now().date() + timedelta(days=7)
+
+        components = []
+        if job.bom():
+            for item in job.bom():
+                try:
+                    inv = Inventory.objects.get(product=item.product)
+                    stock = inv.quantity
+                except Inventory.DoesNotExist:
+                    stock = 0
+                required = item.quantity * job.quantity
+                required_remaining = item.quantity * job.remaining
+                shortfall = max(required_remaining - stock, 0)
+                components.append(
+                    {
+                        "product": item.product,
+                        "per_unit": item.quantity,
+                        "required": required,
+                        "required_remaining": required_remaining,
+                        "stock": stock,
+                        "shortfall": shortfall,
+                        "ok": shortfall == 0,
+                    }
+                )
+        context["components"] = components
+        context["any_shortage"] = any(not c["ok"] for c in components)
         return context
 
 

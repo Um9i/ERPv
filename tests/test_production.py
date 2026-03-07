@@ -552,3 +552,124 @@ class TestProduction:
         content = resp.content.decode()
         assert 'name="due_date"' in content
         assert 'type="date"' in content
+
+    # --- component shortage warning tests ---
+
+    def test_components_list_correct_quantities(self, client, product, bom, bom_item):
+        """Detail view builds component list with correct per_unit, required, stock."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="shortage1")
+        client.force_login(user)
+        job = Production.objects.create(product=product, quantity=5)
+        url = reverse("production:production-detail", args=[job.pk])
+        resp = client.get(url)
+        components = resp.context["components"]
+        assert len(components) > 0
+        for c in components:
+            assert "per_unit" in c
+            assert "required" in c
+            assert "required_remaining" in c
+            assert "stock" in c
+            assert c["required"] == c["per_unit"] * job.quantity
+
+    def test_shortfall_zero_when_stock_sufficient(self, client, product, bom, bom_item):
+        """When stock covers the job, shortfall is 0 and ok is True."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="shortage2")
+        client.force_login(user)
+        # fixture seeds 100 units per component; small job should be fine
+        job = Production.objects.create(product=product, quantity=1)
+        url = reverse("production:production-detail", args=[job.pk])
+        resp = client.get(url)
+        for c in resp.context["components"]:
+            assert c["shortfall"] == 0
+            assert c["ok"] is True
+
+    def test_shortfall_correct_when_stock_insufficient(
+        self, client, product, bom, bom_item
+    ):
+        """When stock cannot cover the job, shortfall equals the deficit."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="shortage3")
+        client.force_login(user)
+        # quantity=1000 with bom_item.quantity=10 needs 10000 but only 100 in stock
+        job = Production.objects.create(product=product, quantity=1000)
+        url = reverse("production:production-detail", args=[job.pk])
+        resp = client.get(url)
+        short_components = [c for c in resp.context["components"] if not c["ok"]]
+        assert len(short_components) > 0
+        for c in short_components:
+            assert c["shortfall"] == c["required_remaining"] - c["stock"]
+            assert c["shortfall"] > 0
+
+    def test_any_shortage_true_when_component_short(
+        self, client, product, bom, bom_item
+    ):
+        """any_shortage is True when at least one component is short."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="shortage4")
+        client.force_login(user)
+        job = Production.objects.create(product=product, quantity=1000)
+        url = reverse("production:production-detail", args=[job.pk])
+        resp = client.get(url)
+        assert resp.context["any_shortage"] is True
+
+    def test_any_shortage_false_when_all_covered(self, client, product, bom, bom_item):
+        """any_shortage is False when all components have enough stock."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="shortage5")
+        client.force_login(user)
+        job = Production.objects.create(product=product, quantity=1)
+        url = reverse("production:production-detail", args=[job.pk])
+        resp = client.get(url)
+        assert resp.context["any_shortage"] is False
+
+    def test_missing_inventory_treated_as_zero(self, product, bom, bom_item):
+        """Component with no Inventory record has stock=0 and shortfall."""
+        from inventory.models import Product as P
+
+        # create a fresh component with NO inventory record
+        orphan = P.objects.create(name="orphan component")
+        bom_obj = BillOfMaterials.objects.get(product=product)
+        BOMItem.objects.create(bom=bom_obj, product=orphan, quantity=1)
+        job = Production.objects.create(product=product, quantity=5)
+
+        # exercise the view logic manually via the view's get_context_data
+        from django.test import RequestFactory
+        from production.views import ProductionDetailView
+
+        factory = RequestFactory()
+        request = factory.get("/")
+        view = ProductionDetailView()
+        view.object = job
+        view.request = request
+        view.kwargs = {"pk": job.pk}
+        ctx = view.get_context_data()
+        orphan_comp = [c for c in ctx["components"] if c["product"] == orphan]
+        assert len(orphan_comp) == 1
+        assert orphan_comp[0]["stock"] == 0
+        assert orphan_comp[0]["shortfall"] == 5
+
+    def test_warning_icon_on_list_for_shortage(self, client, product, bom, bom_item):
+        """List view shows warning icon for jobs with insufficient materials."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="shortage7")
+        client.force_login(user)
+        Production.objects.create(product=product, quantity=1000)
+        url = reverse("production:production-list")
+        resp = client.get(url)
+        content = resp.content.decode()
+        assert "bi-exclamation-triangle-fill" in content
+        assert "Insufficient components" in content

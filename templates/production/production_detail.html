@@ -21,28 +21,58 @@
 </p>
 <p><strong>Created:</strong> {{ production.created_at }}</p>
 <p><strong>Updated:</strong> {{ production.updated_at }}</p>
-<h3>Bill of Materials</h3>
+
+{% if any_shortage %}
+<div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    <div>Insufficient components for remaining quantity.
+    <a href="{% url 'inventory:inventory-low-stock' %}" class="alert-link">View shortages →</a></div>
+</div>
+{% endif %}
+
+{% if components %}
+<div class="detail-section mb-4">
+    <div class="detail-section-header">
+        <h2 class="detail-section-title">Bill of Materials</h2>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Component</th>
+                    <th class="text-end">Per Unit</th>
+                    <th class="text-end">Required (remaining)</th>
+                    <th class="text-end">In Stock</th>
+                    <th class="text-end">Shortfall</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in components %}
+                <tr class="{% if not c.ok %}table-danger{% endif %}">
+                    <td>
+                        <a href="{% url 'inventory:inventory-detail' c.product.product_inventory.pk %}">
+                            {{ c.product.name }}
+                        </a>
+                    </td>
+                    <td class="text-end">{{ c.per_unit }}</td>
+                    <td class="text-end">{{ c.required_remaining }}</td>
+                    <td class="text-end">{{ c.stock }}</td>
+                    <td class="text-end">
+                        {% if c.ok %}
+                            <span class="text-success"><i class="bi bi-check-lg"></i></span>
+                        {% else %}
+                            <span class="text-danger fw-semibold">-{{ c.shortfall }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
 {% if bom %}
-<table class="table">
-    <thead>
-        <tr>
-            <th>Component</th>
-            <th>Component Stock</th>
-            <th>Qty per unit</th>
-            <th>Required for Job</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for item in bom %}
-        <tr>
-            <td>{{ item.product.name }}</td>
-            <td>{{ item.product.product_inventory.quantity }}</td>
-            <td>{{ item.quantity }}</td>
-            <td>{% widthratio production.remaining 1 item.quantity %}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
 {% if production.status != 'Closed' %}
     {% if production.materials_available_for_remaining %}
     <a href="{% url 'production:production-receive' production.id %}" class="btn btn-success">Complete Job</a>
