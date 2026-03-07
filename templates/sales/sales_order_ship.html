@@ -19,27 +19,50 @@
         </ul>
     </div>
     {% endif %}
+    {% if any_shortage %}
+    <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <div>Insufficient stock for one or more lines. Quantities have been capped to available inventory.</div>
+    </div>
+    {% endif %}
     <table class="table">
         <thead>
             <tr>
                 <th>Product</th>
                 <th>Quantity</th>
                 <th>Shipped</th>
-                <th>Quantity Shipped</th>
+                <th>In Stock</th>
+                <th>Quantity to Ship</th>
             </tr>
         </thead>
         <tbody>
-            {% for line in sales_order.sales_order_lines.all %}
-            <tr>
+            {% for line in lines %}
+            <tr{% if not line.complete and not line.stock_ok %} class="table-danger"{% endif %}>
                 <td>{{ line.product.product.name }}</td>
                 <td>{{ line.quantity }}</td>
                 <td>{{ line.quantity_shipped }}</td>
-                <td><input type="number" name="shipped_{{ line.id }}" min="0" max="{{ line.remaining }}" value="0">
+                <td>
+                    {% if line.complete %}
+                        <span class="text-muted">—</span>
+                    {% elif line.stock_ok %}
+                        <span class="text-success fw-semibold">{{ line.stock }}</span>
+                    {% else %}
+                        <span class="text-danger fw-semibold">{{ line.stock }}</span>
+                        <small class="text-danger">(need {{ line.remaining }})</small>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if not line.complete %}
+                    <input type="number" name="shipped_{{ line.id }}" min="0" max="{{ line.max_shippable }}" value="0"
+                        {% if line.max_shippable == 0 %}disabled{% endif %}>
+                    {% else %}
+                        <span class="text-muted">—</span>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="7">No lines.</td>
+                <td colspan="5">No lines.</td>
             </tr>
             {% endfor %}
         </tbody>

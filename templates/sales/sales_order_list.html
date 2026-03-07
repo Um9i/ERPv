@@ -28,6 +28,7 @@
             <th>ID</th>
             <th>Customer</th>
             <th>Status</th>
+            <th>Stock Available</th>
             <th>Created At</th>
             <th>Actions</th>
         </tr>
@@ -38,6 +39,15 @@
             <td>{{ order.order_number }}</td>
             <td>{{ order.customer.name }}</td>
             <td>{% if order.has_open_lines %}Open{% else %}Closed{% endif %}</td>
+            <td>
+              {% if order.stock_ok is None %}
+                <span class="text-muted">—</span>
+              {% elif order.stock_ok %}
+                <i class="bi bi-check-circle-fill text-success" title="Stock available"></i>
+              {% else %}
+                <i class="bi bi-exclamation-triangle-fill text-danger" title="Insufficient stock"></i>
+              {% endif %}
+            </td>
             <td>{{ order.created_at }}</td>
             <td class="text-end">
                 {% if order.has_open_lines %}

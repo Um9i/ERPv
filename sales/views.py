@@ -350,12 +350,69 @@ class SalesOrderListView(ListView):
 
     def get_context_data(self, **kwargs):
         from django.core.paginator import Paginator
+        from inventory.models import Inventory
 
         context = super().get_context_data(**kwargs)
         qs = self.get_queryset()
         page = self.request.GET.get("page")
         paginator = Paginator(qs, 15)
-        context["sales_orders"] = paginator.get_page(page)
+        page_obj = paginator.get_page(page)
+
+        orders = list(page_obj.object_list)
+        order_ids = [o.pk for o in orders]
+
+        # Bulk-load open lines for this page to avoid N+1 queries
+        # Each line: (sales_order_id, product__product_id, remaining_qty)
+        open_lines = (
+            SalesOrderLine.objects.filter(
+                sales_order_id__in=order_ids,
+                complete=False,
+            )
+            .select_related("product__product")
+            .values_list(
+                "sales_order_id",
+                "product__product_id",
+                "quantity",
+                "quantity_shipped",
+            )
+        )
+
+        # group demand by order
+        from collections import defaultdict
+
+        demand_map = defaultdict(list)  # order_id -> [(product_id, remaining)]
+        product_ids = set()
+        for order_id, prod_id, qty, shipped in open_lines:
+            remaining = max(qty - shipped, 0)
+            if remaining > 0:
+                demand_map[order_id].append((prod_id, remaining))
+                product_ids.add(prod_id)
+
+        # single inventory query for all required products
+        inv_map = (
+            dict(
+                Inventory.objects.filter(product_id__in=product_ids).values_list(
+                    "product_id", "quantity"
+                )
+            )
+            if product_ids
+            else {}
+        )
+
+        for order in orders:
+            lines = demand_map.get(order.pk, [])
+            if not order.has_open_lines:
+                # closed order — no stock check needed
+                order.stock_ok = None
+            elif not lines:
+                order.stock_ok = True
+            else:
+                order.stock_ok = all(
+                    inv_map.get(prod_id, 0) >= needed for prod_id, needed in lines
+                )
+
+        page_obj.object_list = orders
+        context["sales_orders"] = page_obj
         context["q"] = self.request.GET.get("q", "")
         context["status"] = self.request.GET.get("status", "").lower()
         return context
@@ -391,6 +448,42 @@ class SalesOrderShipView(DetailView):
     model = SalesOrder
     template_name = "sales/sales_order_ship.html"
     context_object_name = "sales_order"
+
+    def get_context_data(self, **kwargs):
+        from inventory.models import Inventory
+
+        context = super().get_context_data(**kwargs)
+        all_lines = list(
+            self.object.sales_order_lines.select_related("product__product").all()
+        )
+        open_product_ids = {
+            line.product.product_id for line in all_lines if not line.complete
+        }
+        inv_map = (
+            dict(
+                Inventory.objects.filter(product_id__in=open_product_ids).values_list(
+                    "product_id", "quantity"
+                )
+            )
+            if open_product_ids
+            else {}
+        )
+        any_shortage = False
+        for line in all_lines:
+            if line.complete:
+                line.stock = None
+                line.stock_ok = None
+                line.max_shippable = 0
+            else:
+                stock = inv_map.get(line.product.product_id, 0)
+                line.stock = stock
+                line.stock_ok = stock >= line.remaining
+                line.max_shippable = min(line.remaining, max(stock, 0))
+                if not line.stock_ok:
+                    any_shortage = True
+        context["lines"] = all_lines
+        context["any_shortage"] = any_shortage
+        return context
 
     def post(self, request, *args, **kwargs):
         # wrap whole operation in a transaction so select_for_update works
