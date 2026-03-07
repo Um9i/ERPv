@@ -2,10 +2,63 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Sum, F
 
-from inventory.models import Inventory
+from inventory.models import Inventory, InventoryLedger, InventoryLocation, Location
 from production.models import BillOfMaterials, Production
+
+
+@transaction.atomic
+def receive_production_into_location(production_id, quantity_to_receive, location_id):
+    """Receive finished goods from a production job into a specific inventory location.
+
+    This wraps Production.save() with the delta, then adjusts InventoryLocation.
+    The total Inventory.quantity is already updated by Production.save() —
+    we just need to route that quantity to the right bin.
+    """
+    job = Production.objects.select_for_update().get(pk=production_id)
+    location = Location.objects.get(pk=location_id)
+
+    if quantity_to_receive <= 0:
+        raise ValidationError("Quantity must be positive.")
+    if quantity_to_receive > job.remaining:
+        raise ValidationError(
+            f"Cannot receive {quantity_to_receive} — only {job.remaining} remaining."
+        )
+
+    # let Production.save() handle all the BOM deductions, ledger entries,
+    # allocation updates, and closing logic
+    prev_received = job.quantity_received
+    job.quantity_received = prev_received + quantity_to_receive
+    job.save()  # all existing logic fires here
+
+    # now route the finished goods to the specified location
+    inv = Inventory.objects.get(product=job.product)
+    inv_loc, _ = InventoryLocation.objects.get_or_create(
+        inventory=inv,
+        location=location,
+        defaults={"quantity": 0},
+    )
+    inv_loc.quantity += quantity_to_receive
+    inv_loc.save()
+
+    # tag the ledger entry that Production.save() just created
+    # with the destination location
+    entry = (
+        InventoryLedger.objects.filter(
+            product=job.product,
+            action="Production",
+            transaction_id=job.pk,
+            location__isnull=True,
+        )
+        .order_by("-date")
+        .first()
+    )
+    if entry:
+        entry.location = location
+        entry.save(update_fields=["location"])
 
 
 def bom_product_ids(product_ids: Iterable[int]) -> set[int]:

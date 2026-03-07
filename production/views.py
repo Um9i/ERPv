@@ -8,6 +8,7 @@ from .forms import (
     BOMItemForm,
     ProductionForm,
     ProductionUpdateForm,
+    ProductionReceiveForm,
 )
 from django.views.generic import (
     ListView,
@@ -448,9 +449,38 @@ class ProductionDetailView(DetailView):
         context["bom_tree"] = build_bom_tree(job.product, quantity=job.remaining)
 
         unit_cost = job.product.unit_cost
-        context["unit_cost"] = unit_cost
-        context["job_cost"] = unit_cost * job.quantity
-        context["produced_cost"] = unit_cost * job.quantity_received
+        sale_price = job.product.effective_sale_price
+
+        total_cost = unit_cost * job.quantity
+        produced_cost = unit_cost * job.quantity_received
+        produced_value = sale_price * job.quantity_received
+
+        if produced_value and produced_value > 0:
+            margin_pct = ((produced_value - produced_cost) / produced_value) * 100
+        else:
+            margin_pct = None
+
+        if sale_price and sale_price > 0:
+            projected_value = sale_price * job.quantity
+            projected_margin_pct = (
+                (projected_value - total_cost) / projected_value
+            ) * 100
+        else:
+            projected_value = None
+            projected_margin_pct = None
+
+        context.update(
+            {
+                "unit_cost": unit_cost,
+                "sale_price": sale_price,
+                "total_cost": total_cost,
+                "produced_cost": produced_cost,
+                "produced_value": produced_value,
+                "margin_pct": margin_pct,
+                "projected_value": projected_value,
+                "projected_margin_pct": projected_margin_pct,
+            }
+        )
         return context
 
 
@@ -459,38 +489,38 @@ class ProductionReceiveView(DetailView):
     template_name = "production/production_receive.html"
     context_object_name = "production"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if "form" not in kwargs:
+            context["form"] = ProductionReceiveForm(instance=self.object)
+        return context
+
     def post(self, request, *args, **kwargs):
-        # handle receiving of a specified quantity (or all remaining)
         from django.contrib import messages
+        from .services import receive_production_into_location
 
         self.object = self.get_object()
-        received = 0
-        if "receive_all" in request.POST:
-            received = self.object.remaining
-        else:
-            try:
-                received = int(request.POST.get("received", 0))
-            except TypeError, ValueError:
-                received = 0
-            # sanitize input: cannot be negative or exceed remaining
-            if received < 0:
-                received = 0
-            if received > self.object.remaining:
-                received = self.object.remaining
-        if received > 0:
-            self.object.quantity_received = self.object.quantity_received + received
-            try:
+        form = ProductionReceiveForm(request.POST, instance=self.object)
+        if not form.is_valid():
+            return self.render_to_response(self.get_context_data(form=form))
+
+        location = form.cleaned_data.get("location")
+        quantity = form.cleaned_data["quantity_to_receive"]
+
+        try:
+            if location:
+                receive_production_into_location(self.object.pk, quantity, location.pk)
+            else:
+                self.object.quantity_received += quantity
                 self.object.save()
-            except Exception as e:
-                # swallow validation error and inform user
-                messages.error(request, str(e))
-                return redirect(request.path)
+        except Exception as e:
+            messages.error(request, str(e))
+            return redirect(request.path)
+
         return redirect(self.get_success_url())
 
     def get_success_url(self):
-        # after receiving we no longer have a dedicated list; return to
-        # the main job log so the updated status is visible.
-        return reverse_lazy("production:production-list")
+        return reverse_lazy("production:production-detail", args=[self.object.pk])
 
 
 class ProductionDashboardView(TemplateView):

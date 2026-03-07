@@ -6,7 +6,7 @@ from .models import Product, InventoryAdjust, Location, InventoryLocation, Stock
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ["name", "description", "image"]
+        fields = ["name", "description", "image", "sale_price"]
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4}),
         }

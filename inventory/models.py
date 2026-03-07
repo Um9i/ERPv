@@ -11,9 +11,29 @@ class Product(models.Model):
     name = models.CharField(max_length=256, unique=True)
     description = models.TextField(blank=True, default="")
     image = models.ImageField(upload_to="products/", blank=True, null=True)
+    sale_price = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
 
     def __str__(self) -> str:
         return self.name
+
+    @property
+    def last_sale_price(self):
+        from sales.models import SalesOrderLine
+
+        last = (
+            SalesOrderLine.objects.filter(product__product=self)
+            .order_by("-sales_order__created_at")
+            .values_list("product__price", flat=True)
+            .first()
+        )
+        return last
+
+    @property
+    def effective_sale_price(self):
+        """sale_price if set, otherwise fall back to last sold price."""
+        return self.sale_price or self.last_sale_price or 0
 
     @property
     def unit_cost(self):

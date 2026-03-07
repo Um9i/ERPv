@@ -22,12 +22,14 @@
 <p><strong>Created:</strong> {{ production.created_at }}</p>
 <p><strong>Updated:</strong> {{ production.updated_at }}</p>
 
-{% if unit_cost %}
+{% if unit_cost or sale_price %}
 <div class="detail-section mb-4">
     <div class="detail-section-header">
         <h2 class="detail-section-title">Cost Summary</h2>
     </div>
     <div class="row g-3">
+
+        {# ── Per unit ── #}
         <div class="col-auto">
             <div class="metric-card">
                 <div class="metric-card-content">
@@ -36,22 +38,86 @@
                 </div>
             </div>
         </div>
+        {% if sale_price %}
         <div class="col-auto">
             <div class="metric-card">
                 <div class="metric-card-content">
-                    <span class="metric-card-value">£{{ job_cost|floatformat:2 }}</span>
+                    <span class="metric-card-value">£{{ sale_price|floatformat:2 }}</span>
+                    <span class="metric-card-label">Sale Price</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Projected (full job) ── #}
+        <div class="col-auto">
+            <div class="metric-card">
+                <div class="metric-card-content">
+                    <span class="metric-card-value">£{{ total_cost|floatformat:2 }}</span>
                     <span class="metric-card-label">Total Job Cost</span>
                 </div>
             </div>
         </div>
+        {% if projected_value %}
+        <div class="col-auto">
+            <div class="metric-card">
+                <div class="metric-card-content">
+                    <span class="metric-card-value">£{{ projected_value|floatformat:2 }}</span>
+                    <span class="metric-card-label">Projected Value</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-auto">
+            <div class="metric-card">
+                <div class="metric-card-content">
+                    <span class="metric-card-value
+                        {% if projected_margin_pct >= 30 %}text-success
+                        {% elif projected_margin_pct >= 10 %}text-warning
+                        {% else %}text-danger{% endif %}">
+                        {{ projected_margin_pct|floatformat:1 }}%
+                    </span>
+                    <span class="metric-card-label">Projected Margin</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Actual (received so far) — only show when something received ── #}
+        {% if production.quantity_received > 0 %}
+        <div class="col-12"><hr class="my-1"></div>
         <div class="col-auto">
             <div class="metric-card">
                 <div class="metric-card-content">
                     <span class="metric-card-value">£{{ produced_cost|floatformat:2 }}</span>
+                    <span class="metric-card-label">Produced Cost</span>
+                </div>
+            </div>
+        </div>
+        {% if produced_value %}
+        <div class="col-auto">
+            <div class="metric-card">
+                <div class="metric-card-content">
+                    <span class="metric-card-value">£{{ produced_value|floatformat:2 }}</span>
                     <span class="metric-card-label">Produced Value</span>
                 </div>
             </div>
         </div>
+        <div class="col-auto">
+            <div class="metric-card">
+                <div class="metric-card-content">
+                    <span class="metric-card-value
+                        {% if margin_pct >= 30 %}text-success
+                        {% elif margin_pct >= 10 %}text-warning
+                        {% else %}text-danger{% endif %}">
+                        {{ margin_pct|floatformat:1 }}%
+                    </span>
+                    <span class="metric-card-label">Actual Margin</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+
     </div>
 </div>
 {% endif %}
@@ -122,9 +188,13 @@
 {% if bom %}
 {% if production.status != 'Closed' %}
     {% if production.materials_available_for_remaining %}
-    <a href="{% url 'production:production-receive' production.id %}" class="btn btn-success">Complete Job</a>
+    <a href="{% url 'production:production-receive' production.id %}" class="btn btn-success">
+        <i class="bi bi-check-lg me-1"></i>Receive Units
+    </a>
     {% else %}
-    <button class="btn btn-success" disabled title="Insufficient materials to complete remaining quantity">Complete Job</button>
+    <button class="btn btn-success" disabled title="Insufficient materials to complete remaining quantity">
+        <i class="bi bi-check-lg me-1"></i>Receive Units
+    </button>
     {% endif %}
     <form method="post" class="d-inline">
         {% csrf_token %}

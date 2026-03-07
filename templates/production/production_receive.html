@@ -1,6 +1,6 @@
 {% extends "includes/card.html" %}
 {% block card_icon %}bi-gear-fill{% endblock %}
-{% block card_title %}Production Job Completion - {{ production.order_number }}{% endblock %}
+{% block card_title %}Receive Production — {{ production.order_number }}{% endblock %}
 {% block card_body %}
 {% if form.errors %}
 <div class="alert alert-danger">
@@ -16,19 +16,31 @@
     </ul>
 </div>
 {% endif %}
-<p><strong>Product:</strong> {{ production.product.name }}</p>
-<p><strong>Quantity:</strong> {{ production.quantity }}</p>
-<p><strong>Status:</strong> {{ production.status }}</p>
+
+<div class="mb-3">
+    <strong>Product:</strong> {{ production.product.name }}<br>
+    <strong>Remaining:</strong> {{ production.remaining }} units
+</div>
+
 <form method="post">
     {% csrf_token %}
     <div class="mb-3">
-        <label for="id_received">Quantity completed</label>
-        <input type="number" id="id_received" name="received" min="0" max="{{ production.remaining }}" value="{{ production.remaining }}" class="form-control">
+        {{ form.quantity_to_receive.label_tag }}
+        {{ form.quantity_to_receive }}
+        {% if form.quantity_to_receive.errors %}
+            <div class="text-danger small">{{ form.quantity_to_receive.errors }}</div>
+        {% endif %}
     </div>
-    <button type="submit" class="btn btn-success" name="receive">Complete</button>
-    <button type="submit" class="btn btn-danger" name="receive_all" value="1"
-        onclick="return confirm('Complete all remaining quantity?');">
-        Complete All
+    <div class="mb-3">
+        {{ form.location.label_tag }}
+        {{ form.location }}
+        <div class="form-text">Optional — select a bin to receive finished goods into.</div>
+    </div>
+    <button type="submit" class="btn btn-success">
+        <i class="bi bi-check-lg me-1"></i>Receive
     </button>
+    <a href="{% url 'production:production-detail' production.pk %}" class="btn btn-outline-secondary ms-2">
+        Cancel
+    </a>
 </form>
 {% endblock %}

@@ -304,17 +304,21 @@ class TestProduction:
         assert str(job.remaining) in content
         # partial complete one unit
         url = reverse("production:production-receive", args=[job.pk])
-        resp = client.post(url, {"received": "1"})
-        # page should offer a Complete button
-        assert "Complete" in resp.content.decode() if resp.content else True
+        resp = client.post(url, {"quantity_to_receive": "1"})
         assert resp.status_code == 302
         job.refresh_from_db()
         assert job.quantity_received == 1
-        # negative receive should not alter inventory or qty
-        resp_neg = client.post(url, {"received": "-5"})
+        # negative receive should not alter inventory or qty (form rejects it)
+        resp_neg = client.post(url, {"quantity_to_receive": "-5"})
         job.refresh_from_db()
         assert job.quantity_received == 1
-        resp_big = client.post(url, {"received": "1000"})
+        # over-remaining receive should be rejected by form validation
+        resp_big = client.post(url, {"quantity_to_receive": "1000"})
+        job.refresh_from_db()
+        assert job.quantity_received == 1  # unchanged
+        # receive remaining to complete job
+        resp_rest = client.post(url, {"quantity_to_receive": str(job.remaining)})
+        assert resp_rest.status_code == 302
         job.refresh_from_db()
         assert job.quantity_received == job.quantity
         # full receive should mark job complete
@@ -327,19 +331,13 @@ class TestProduction:
         comp_inv = Inventory.objects.get(product=bom_item.product)
         comp_inv.quantity = 0
         comp_inv.save()
-        resp_err = client.post(url2, {"received": "1"})
+        resp_err = client.post(url2, {"quantity_to_receive": "1"})
         # view swallows validation error and redirects back
         job2.refresh_from_db()
         assert job2.quantity_received == 0
-        # inventory should have increased by the two previous receives (1 then 2)
+        # inventory should have increased by the previous receives (1 then 2)
         fin = Inventory.objects.get(product=product)
         assert fin.quantity == 100 + 3
-        # component quantity may now be zero after manual drain; do not assert
-        # complete the rest with receive_all
-        resp3 = client.post(url, {"receive_all": "1"})
-        assert resp3.status_code == 302
-        job.refresh_from_db()
-        assert job.complete
 
     def test_bom_views(self, client, product):
         from django.urls import reverse
@@ -759,7 +757,7 @@ class TestProduction:
     def test_job_cost_equals_unit_times_quantity(
         self, client, product, bom, bom_item, supplier, supplier_product
     ):
-        """job_cost = unit_cost * quantity."""
+        """total_cost = unit_cost * quantity."""
         from django.urls import reverse
         from django.contrib.auth.models import User
 
@@ -769,7 +767,7 @@ class TestProduction:
         url = reverse("production:production-detail", args=[job.pk])
         resp = client.get(url)
         ctx = resp.context
-        assert ctx["job_cost"] == ctx["unit_cost"] * 8
+        assert ctx["total_cost"] == ctx["unit_cost"] * 8
 
     def test_cost_section_hidden_when_zero(self, client, product, bom, bom_item):
         """Cost Summary section is not rendered when unit_cost is 0."""
@@ -778,6 +776,186 @@ class TestProduction:
 
         user = User.objects.create_user(username="cost3")
         client.force_login(user)
+        job = Production.objects.create(product=product, quantity=3)
+        url = reverse("production:production-detail", args=[job.pk])
+        resp = client.get(url)
+        content = resp.content.decode()
+        assert "Cost Summary" not in content
+
+
+@pytest.mark.django_db
+class TestReceiveIntoLocation:
+    """Tests for receiving production into a specific inventory location."""
+
+    def test_receive_routes_to_correct_location(self, product, bom, bom_item, location):
+        """Receiving routes quantity to the correct InventoryLocation."""
+        from inventory.models import Inventory, InventoryLocation
+        from production.services import receive_production_into_location
+
+        job = Production.objects.create(product=product, quantity=5)
+        receive_production_into_location(job.pk, 3, location.pk)
+
+        inv = Inventory.objects.get(product=product)
+        inv_loc = InventoryLocation.objects.get(inventory=inv, location=location)
+        assert inv_loc.quantity == 3
+        # total inventory also increased
+        assert inv.quantity == 100 + 3
+
+    def test_receive_creates_inventory_location(self, product, bom, bom_item, location):
+        """InventoryLocation is created if it doesn't exist yet."""
+        from inventory.models import Inventory, InventoryLocation
+        from production.services import receive_production_into_location
+
+        inv = Inventory.objects.get(product=product)
+        assert not InventoryLocation.objects.filter(
+            inventory=inv, location=location
+        ).exists()
+
+        job = Production.objects.create(product=product, quantity=5)
+        receive_production_into_location(job.pk, 2, location.pk)
+
+        assert InventoryLocation.objects.filter(
+            inventory=inv, location=location
+        ).exists()
+        inv_loc = InventoryLocation.objects.get(inventory=inv, location=location)
+        assert inv_loc.quantity == 2
+
+    def test_receive_without_location_fallback(self, product, bom, bom_item):
+        """Receiving without a location (via the view) falls back gracefully."""
+        from inventory.models import Inventory
+
+        job = Production.objects.create(product=product, quantity=5)
+        # simulate the view's no-location path
+        job.quantity_received += 2
+        job.save()
+        job.refresh_from_db()
+        assert job.quantity_received == 2
+        inv = Inventory.objects.get(product=product)
+        assert inv.quantity == 100 + 2
+
+    def test_cannot_receive_more_than_remaining(self, product, bom, bom_item, location):
+        """Receiving more than remaining raises ValidationError."""
+        from django.core.exceptions import ValidationError
+        from production.services import receive_production_into_location
+
+        job = Production.objects.create(product=product, quantity=5)
+        with pytest.raises(ValidationError):
+            receive_production_into_location(job.pk, 10, location.pk)
+
+    def test_ledger_entry_tagged_with_location(self, product, bom, bom_item, location):
+        """The finished-good ledger entry gets location tagged correctly."""
+        from inventory.models import InventoryLedger
+        from production.services import receive_production_into_location
+
+        job = Production.objects.create(product=product, quantity=5)
+        receive_production_into_location(job.pk, 3, location.pk)
+
+        entry = InventoryLedger.objects.filter(
+            product=product,
+            action="Production",
+            transaction_id=job.pk,
+            quantity__gt=0,
+        ).first()
+        assert entry is not None
+        assert entry.location == location
+
+    def test_job_closes_when_fully_received(self, product, bom, bom_item, location):
+        """Job closes automatically when fully received via location service."""
+        from production.services import receive_production_into_location
+
+        job = Production.objects.create(product=product, quantity=3)
+        receive_production_into_location(job.pk, 3, location.pk)
+        job.refresh_from_db()
+        assert job.closed is True
+        assert job.complete is True
+        assert job.remaining == 0
+
+
+@pytest.mark.django_db
+class TestCostSummary:
+    """Tests for sale_price, effective_sale_price, and cost summary logic."""
+
+    def test_effective_sale_price_returns_sale_price_when_set(self, product):
+        """effective_sale_price returns sale_price when it is set."""
+        from decimal import Decimal
+
+        product.sale_price = Decimal("125.00")
+        product.save()
+        assert product.effective_sale_price == Decimal("125.00")
+
+    def test_effective_sale_price_falls_back_to_last_sold(self, product):
+        """effective_sale_price falls back to last sales order line price."""
+        from decimal import Decimal
+        from sales.models import Customer, CustomerProduct, SalesOrder, SalesOrderLine
+
+        customer = Customer.objects.create(name="Test Buyer")
+        cp = CustomerProduct.objects.create(
+            customer=customer, product=product, price=Decimal("99.50")
+        )
+        so = SalesOrder.objects.create(customer=customer)
+        SalesOrderLine.objects.create(sales_order=so, product=cp, quantity=1)
+        # no sale_price set on product
+        assert product.sale_price is None
+        assert product.effective_sale_price == Decimal("99.50")
+
+    def test_effective_sale_price_zero_when_none_set(self, product):
+        """effective_sale_price returns 0 when neither sale_price nor sales exist."""
+        assert product.sale_price is None
+        assert product.effective_sale_price == 0
+
+    def test_projected_margin_computes_correctly(
+        self, client, product, bom, bom_item, supplier_product
+    ):
+        """projected_margin_pct = (value - cost) / value × 100."""
+        from decimal import Decimal
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        product.sale_price = Decimal("125.00")
+        product.save()
+
+        user = User.objects.create_user(username="margin_test")
+        client.force_login(user)
+
+        job = Production.objects.create(product=product, quantity=10)
+        url = reverse("production:production-detail", args=[job.pk])
+        resp = client.get(url)
+        ctx = resp.context
+
+        unit_cost = product.unit_cost
+        projected_value = Decimal("125.00") * 10
+        expected_margin = ((projected_value - unit_cost * 10) / projected_value) * 100
+
+        assert ctx["projected_value"] == projected_value
+        assert round(float(ctx["projected_margin_pct"]), 1) == round(
+            float(expected_margin), 1
+        )
+
+    def test_margin_pct_none_when_no_sale_price(self, client, product, bom, bom_item):
+        """margin_pct is None when no sale price exists."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="no_price")
+        client.force_login(user)
+
+        job = Production.objects.create(product=product, quantity=5)
+        url = reverse("production:production-detail", args=[job.pk])
+        resp = client.get(url)
+        ctx = resp.context
+
+        assert ctx["margin_pct"] is None
+        assert ctx["projected_value"] is None
+        assert ctx["projected_margin_pct"] is None
+
+    def test_cost_section_hidden_when_both_zero(self, client, product):
+        """Cost summary section hidden when both unit_cost and sale_price are 0."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="zero_cost")
+        client.force_login(user)
+
         job = Production.objects.create(product=product, quantity=3)
         url = reverse("production:production-detail", args=[job.pk])
         resp = client.get(url)

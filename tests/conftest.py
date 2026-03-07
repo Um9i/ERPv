@@ -128,3 +128,10 @@ def sales_order_line_complete(db, sales_order_line):
 def production_job(db, product):
     # create simple production job without BOM
     return Production.objects.create(product=product, quantity=5)
+
+
+@pytest.fixture
+def location(db):
+    from inventory.models import Location
+
+    return Location.objects.create(name="Bin A1")

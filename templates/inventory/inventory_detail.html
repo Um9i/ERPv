@@ -55,6 +55,19 @@
         </div>
     </div>
     {% endif %}
+    {% if inventory.product.sale_price %}
+    <div class="col-6 col-lg">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--success">
+                <i class="bi bi-tag"></i>
+            </div>
+            <div class="metric-card-content">
+                <span class="metric-card-value">£{{ inventory.product.sale_price|floatformat:2 }}</span>
+                <span class="metric-card-label">Sale Price</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 {# ── Product info: image + description + actions ── #}
