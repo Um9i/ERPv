@@ -409,13 +409,17 @@ class TestProduction:
         assert job.order_number in html
         assert "Sufficient Materials" in html
         # flag should reflect job‑level availability rather than single unit
-        expected_flag = "✓" if job.materials_available else "✗"
-        assert expected_flag in html
+        expected_icon = (
+            "bi-check-circle-fill"
+            if job.materials_available
+            else "bi-exclamation-triangle-fill"
+        )
+        assert expected_icon in html
         # create a second job that exceeds inventory to ensure the flag goes
         # false for larger quantities
         job2 = Production.objects.create(product=product, quantity=1000)
         resp3 = client.get(url)
-        assert "✗" in resp3.content.decode()
+        assert "bi-exclamation-triangle-fill" in resp3.content.decode()
         # detail and complete
         url = reverse("production:production-detail", args=[job.pk])
         resp = client.get(url)
@@ -673,3 +677,63 @@ class TestProduction:
         content = resp.content.decode()
         assert "bi-exclamation-triangle-fill" in content
         assert "Insufficient components" in content
+
+    # --- BOM tree visualiser tests ---
+
+    def test_bom_tree_root_node(self, product, bom, bom_item):
+        """build_bom_tree returns root with correct name, quantity and stock."""
+        from production.services import build_bom_tree
+
+        tree = build_bom_tree(product, quantity=10)
+        assert tree["name"] == product.name
+        assert tree["quantity"] == 10
+        assert tree["id"] == product.pk
+        assert "stock" in tree
+        assert "sufficient" in tree
+        assert "children" in tree
+
+    def test_bom_tree_children_nested(self, product, bom, bom_item):
+        """Children are nested with scaled quantities for a two-level BOM."""
+        from production.services import build_bom_tree
+
+        tree = build_bom_tree(product, quantity=5)
+        assert len(tree["children"]) > 0
+        for child in tree["children"]:
+            assert child["quantity"] > 0
+            assert child["name"]
+            # quantity should be per_unit * parent quantity
+            bom_items = {
+                i.product.pk: i.quantity
+                for i in product.billofmaterials.bom_items.all()
+            }
+            if child["id"] in bom_items:
+                assert child["quantity"] == bom_items[child["id"]] * 5
+
+    def test_bom_tree_sufficient_false_when_short(self, product, bom, bom_item):
+        """sufficient is False when stock < scaled quantity."""
+        from production.services import build_bom_tree
+
+        # quantity=1000 means components need 10000+ but fixture has 100
+        tree = build_bom_tree(product, quantity=1000)
+        short_children = [c for c in tree["children"] if not c["sufficient"]]
+        assert len(short_children) > 0
+
+    def test_bom_tree_circular_reference_guard(self, product, bom):
+        """Circular reference returns None and does not infinite-loop."""
+        from production.services import build_bom_tree
+
+        # Mark product as already visited to simulate circular ref
+        tree = build_bom_tree(product, quantity=1, visited={product.pk})
+        assert tree is None
+
+    def test_bom_tree_leaf_node_no_bom(self):
+        """Product without a BOM returns a leaf node with empty children."""
+        from inventory.models import Product as P
+        from production.services import build_bom_tree
+
+        leaf = P.objects.create(name="leaf product")
+        tree = build_bom_tree(leaf, quantity=3)
+        assert tree is not None
+        assert tree["name"] == "leaf product"
+        assert tree["quantity"] == 3
+        assert tree["children"] == []

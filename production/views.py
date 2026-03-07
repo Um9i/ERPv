@@ -442,6 +442,10 @@ class ProductionDetailView(DetailView):
                 )
         context["components"] = components
         context["any_shortage"] = any(not c["ok"] for c in components)
+
+        from .services import build_bom_tree
+
+        context["bom_tree"] = build_bom_tree(job.product, quantity=job.remaining)
         return context
 
 
