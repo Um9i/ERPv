@@ -23,7 +23,10 @@ class BOMItemForm(forms.ModelForm):
 class ProductionForm(forms.ModelForm):
     class Meta:
         model = Production
-        fields = ["product", "quantity"]
+        fields = ["product", "quantity", "due_date"]
+        widgets = {
+            "due_date": forms.DateInput(attrs={"type": "date"}),
+        }
 
     def clean_quantity(self):
         qty = self.cleaned_data.get("quantity")
@@ -37,7 +40,10 @@ class ProductionUpdateForm(forms.ModelForm):
 
     class Meta:
         model = Production
-        fields = ["product", "quantity", "complete"]
+        fields = ["product", "quantity", "due_date", "complete"]
+        widgets = {
+            "due_date": forms.DateInput(attrs={"type": "date"}),
+        }
 
     def clean_quantity(self):
         qty = self.cleaned_data.get("quantity")

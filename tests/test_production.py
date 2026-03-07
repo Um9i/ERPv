@@ -465,3 +465,90 @@ class TestProduction:
         content = resp.content.decode()
         assert str(product.pk) in content
         assert f'value="{other.pk}"' not in content
+
+    # --- due date tests ---
+
+    def test_due_date_saves_and_roundtrips(self, product, bom, bom_item):
+        """due_date persists through create and refresh."""
+        import datetime
+
+        job = Production.objects.create(
+            product=product, quantity=1, due_date=datetime.date(2026, 4, 1)
+        )
+        job.refresh_from_db()
+        assert job.due_date == datetime.date(2026, 4, 1)
+
+    def test_due_date_nullable(self, product, bom, bom_item):
+        """Jobs without a due_date default to None."""
+        job = Production.objects.create(product=product, quantity=1)
+        job.refresh_from_db()
+        assert job.due_date is None
+
+    def test_overdue_badge_in_list(self, client, product, bom, bom_item):
+        """Past-due open jobs render with a danger badge."""
+        import datetime
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="due_test")
+        client.force_login(user)
+        Production.objects.create(
+            product=product,
+            quantity=1,
+            due_date=datetime.date(2020, 1, 1),
+        )
+        url = reverse("production:production-list")
+        resp = client.get(url)
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert "bg-danger-subtle" in content
+
+    def test_no_due_date_renders_dash(self, client, product, bom, bom_item):
+        """Jobs without a due_date show a dash in the list."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="due_test2")
+        client.force_login(user)
+        Production.objects.create(product=product, quantity=1)
+        url = reverse("production:production-list")
+        resp = client.get(url)
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert "\u2014" in content  # em-dash
+
+    def test_list_ordering_overdue_before_no_date(self, client, product, bom, bom_item):
+        """Open jobs with a due date sort before those without one."""
+        import datetime
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="due_test3")
+        client.force_login(user)
+        no_date = Production.objects.create(product=product, quantity=1)
+        dated = Production.objects.create(
+            product=product,
+            quantity=1,
+            due_date=datetime.date(2020, 1, 1),
+        )
+        url = reverse("production:production-list")
+        resp = client.get(url)
+        jobs = list(resp.context["productions"])
+        # dated job should appear before the no-date job
+        dated_idx = next(i for i, j in enumerate(jobs) if j.pk == dated.pk)
+        no_date_idx = next(i for i, j in enumerate(jobs) if j.pk == no_date.pk)
+        assert dated_idx < no_date_idx
+
+    def test_due_date_form_field_present(self, client, product, bom):
+        """Create form includes a date input for due_date."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="due_test4")
+        client.force_login(user)
+        url = reverse("production:production-create")
+        resp = client.get(url)
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert 'name="due_date"' in content
+        assert 'type="date"' in content

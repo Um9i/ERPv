@@ -290,7 +290,15 @@ class ProductionListView(ListView):
     context_object_name = "productions"
 
     def get_queryset(self):
-        qs = Production.objects.all().order_by("-created_at").select_related("product")
+        qs = (
+            Production.objects.all()
+            .order_by(
+                "closed",
+                F("due_date").asc(nulls_last=True),
+                "-pk",
+            )
+            .select_related("product")
+        )
         status = self.request.GET.get("status", "").lower()
         if status == "active":
             qs = qs.filter(closed=False)
@@ -303,7 +311,9 @@ class ProductionListView(ListView):
 
     def get_context_data(self, **kwargs):
         from collections import defaultdict
+        from datetime import timedelta
         from django.core.paginator import Paginator
+        from django.utils import timezone
         from inventory.models import Inventory
 
         context = super().get_context_data(**kwargs)
@@ -354,6 +364,8 @@ class ProductionListView(ListView):
         context["productions"] = page_obj
         context["q"] = self.request.GET.get("q", "")
         context["status"] = self.request.GET.get("status", "").lower()
+        context["today"] = timezone.now().date()
+        context["today_plus_7"] = timezone.now().date() + timedelta(days=7)
         return context
 
 
@@ -396,9 +408,14 @@ class ProductionDetailView(DetailView):
         return super().post(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
+        from datetime import timedelta
+        from django.utils import timezone
+
         context = super().get_context_data(**kwargs)
         production = self.object
         context["bom"] = production.bom()
+        context["today"] = timezone.now().date()
+        context["today_plus_7"] = timezone.now().date() + timedelta(days=7)
         return context
 
 

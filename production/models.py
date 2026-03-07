@@ -83,6 +83,7 @@ class Production(models.Model):
     # how many units of the finished product have actually been received
     quantity_received = models.PositiveBigIntegerField(default=0)
     complete = models.BooleanField(default=False)
+    due_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     closed = models.BooleanField(default=False)

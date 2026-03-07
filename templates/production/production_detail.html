@@ -6,6 +6,19 @@
 <p><strong>Quantity:</strong> {{ production.quantity }}</p>
 <p><strong>Qty Remaining:</strong> {{ production.remaining }}</p>
 <p><strong>Status:</strong> {{ production.status }}</p>
+<p><strong>Due Date:</strong>
+  {% if production.due_date %}
+    {% if not production.closed and production.due_date < today %}
+      <span class="badge bg-danger-subtle text-danger">{{ production.due_date }}</span>
+    {% elif not production.closed and production.due_date <= today_plus_7 %}
+      <span class="badge bg-warning-subtle text-warning">{{ production.due_date }}</span>
+    {% else %}
+      <span class="text-muted">{{ production.due_date }}</span>
+    {% endif %}
+  {% else %}
+    <span class="text-muted">—</span>
+  {% endif %}
+</p>
 <p><strong>Created:</strong> {{ production.created_at }}</p>
 <p><strong>Updated:</strong> {{ production.updated_at }}</p>
 <h3>Bill of Materials</h3>
