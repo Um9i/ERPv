@@ -409,12 +409,26 @@ class InventoryDashboardView(TemplateView):
             else 0
         )
 
-        # top 5 most-needed low stock items
-        context["top_low_stock_items"] = (
+        # top 5 most-needed low stock items — enriched with fill_pct for progress bars
+        raw_low_stock = list(
             Inventory.objects.select_related("product")
             .filter(required_cached__gt=0)
             .order_by("-required_cached")[:5]
         )
+        enriched_low_stock = []
+        for _item in raw_low_stock:
+            _denom = _item.quantity + _item.required_cached
+            _fill = round(_item.quantity / _denom * 100) if _denom else 0
+            enriched_low_stock.append(
+                {
+                    "pk": _item.pk,
+                    "product": _item.product,
+                    "quantity": _item.quantity,
+                    "required_cached": _item.required_cached,
+                    "fill_pct": _fill,
+                }
+            )
+        context["top_low_stock_items"] = enriched_low_stock
 
         # 30-day stock movement from ledger
         cutoff_30d = timezone.now() - timedelta(days=30)
@@ -425,7 +439,7 @@ class InventoryDashboardView(TemplateView):
         context["stock_in_30d"] = ledger_30d["stock_in"] or 0
         context["stock_out_30d"] = abs(ledger_30d["stock_out"] or 0)
 
-        # dead stock: products with quantity > 0 and no ledger activity in 90 days
+        # dead stock: products with quantity > 0, no demand, no ledger activity in 90 days
         cutoff_90d = timezone.now() - timedelta(days=90)
         active_product_ids = (
             InventoryLedger.objects.filter(date__gte=cutoff_90d)
@@ -433,9 +447,55 @@ class InventoryDashboardView(TemplateView):
             .distinct()
         )
         context["dead_stock_count"] = (
-            Inventory.objects.filter(quantity__gt=0)
+            Inventory.objects.filter(quantity__gt=0, required_cached=0)
             .exclude(product_id__in=active_product_ids)
             .count()
+        )
+
+        # stock health buckets for donut chart (mutually exclusive, priority-ordered)
+        context["chart_low_stock"] = context["low_stock_count"]
+        context["chart_zero_stock"] = Inventory.objects.filter(
+            quantity=0, required_cached=0
+        ).count()
+        context["chart_dead_stock"] = context["dead_stock_count"]
+        context["chart_healthy"] = max(
+            0,
+            total_products
+            - context["chart_low_stock"]
+            - context["chart_zero_stock"]
+            - context["chart_dead_stock"],
+        )
+
+        # trend arrows: compare last 30d vs prior 30d for movement metrics
+        cutoff_60d = timezone.now() - timedelta(days=60)
+        ledger_prev = InventoryLedger.objects.filter(
+            date__gte=cutoff_60d, date__lt=cutoff_30d
+        ).aggregate(
+            stock_in=Sum("quantity", filter=Q(quantity__gt=0)),
+            stock_out=Sum("quantity", filter=Q(quantity__lt=0)),
+        )
+        prev_in = ledger_prev["stock_in"] or 0
+        prev_out = abs(ledger_prev["stock_out"] or 0)
+
+        def _trend(cur, prev):
+            if cur > prev:
+                return "up"
+            if cur < prev:
+                return "down"
+            return "neutral"
+
+        context["trend_stock_in"] = _trend(context["stock_in_30d"], prev_in)
+        context["trend_stock_out"] = _trend(context["stock_out_30d"], prev_out)
+
+        # net 7-day movement for total stock trend arrow
+        net_7d = (
+            InventoryLedger.objects.filter(
+                date__gte=timezone.now() - timedelta(days=7)
+            ).aggregate(net=Sum("quantity"))["net"]
+            or 0
+        )
+        context["trend_quantity"] = (
+            "up" if net_7d > 0 else ("down" if net_7d < 0 else "neutral")
         )
 
         # when ?required=1 is passed, include low-stock items in context

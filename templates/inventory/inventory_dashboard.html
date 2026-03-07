@@ -14,61 +14,294 @@
 {% block dashboard_metrics %}
 {% url 'inventory:inventory-list' as inventory_url %}
 {% url 'inventory:inventory-low-stock' as low_stock_url %}
-<div class="row">
-    {% include "includes/metric_card.html" with icon="bi-box-seam" color="dark" label="Products" value=total_products|default:'—' url=inventory_url %}
-    {% include "includes/metric_card.html" with icon="bi-boxes" color="dark" label="Total Stock" value=total_quantity|default:'—' url=inventory_url %}
-    {% include "includes/metric_card.html" with icon="bi-cash-stack" color="success" label="Stock Value" value=stock_value|currency|default:'—' url=inventory_url %}
-</div>
 
-{% if low_stock_count %}
-<div class="panel mt-3">
-    <div class="panel-header d-flex align-items-center justify-content-between">
-        <span><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Low Stock Alert</span>
-        <a href="{{ low_stock_url }}" class="btn btn-sm btn-outline-danger">View All</a>
-    </div>
-    <div class="panel-body">
-        <div class="d-flex align-items-center justify-content-between mb-1">
-            <span class="fw-semibold text-danger">{{ low_stock_count }} of {{ total_products }} products need replenishment</span>
-            <span class="text-muted small">{{ low_stock_percentage }}%</span>
+{# ── Row 1: KPI cards ─────────────────────────────────────────────────── #}
+<div class="row g-3">
+
+  {# Products #}
+  <div class="col-lg-6 col-xl-3">
+    <a href="{{ inventory_url }}" class="metric-card-link">
+      <div class="metric-card">
+        <div class="metric-card-icon metric-card-icon--dark">
+          <i class="bi bi-box-seam"></i>
         </div>
-        <div class="progress mb-3" style="height:10px;" role="progressbar" aria-valuenow="{{ low_stock_percentage }}" aria-valuemin="0" aria-valuemax="100">
+        <div class="metric-card-content">
+          <span class="metric-card-label">Products</span>
+          <span class="metric-card-value">{{ total_products|default:'—' }}</span>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  {# Total Stock with 7-day trend #}
+  <div class="col-lg-6 col-xl-3">
+    <a href="{{ inventory_url }}" class="metric-card-link">
+      <div class="metric-card">
+        <div class="metric-card-icon metric-card-icon--dark">
+          <i class="bi bi-boxes"></i>
+        </div>
+        <div class="metric-card-content">
+          <span class="metric-card-label">Total Stock</span>
+          <div class="d-flex align-items-baseline gap-2">
+            <span class="metric-card-value">{{ total_quantity|default:'—' }}</span>
+            {% if trend_quantity == "up" %}
+              <span class="text-success small fw-semibold"><i class="bi bi-arrow-up-right"></i> 7d</span>
+            {% elif trend_quantity == "down" %}
+              <span class="text-danger small fw-semibold"><i class="bi bi-arrow-down-right"></i> 7d</span>
+            {% else %}
+              <span class="text-muted small"><i class="bi bi-dash"></i> 7d</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  {# Stock Value #}
+  <div class="col-lg-6 col-xl-3">
+    <a href="{{ inventory_url }}" class="metric-card-link">
+      <div class="metric-card">
+        <div class="metric-card-icon metric-card-icon--success">
+          <i class="bi bi-cash-stack"></i>
+        </div>
+        <div class="metric-card-content">
+          <span class="metric-card-label">Stock Value</span>
+          <span class="metric-card-value">{{ stock_value|currency|default:'—' }}</span>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  {# Low Stock % — danger card #}
+  <div class="col-lg-6 col-xl-3">
+    <a href="{{ low_stock_url }}" class="metric-card-link">
+      <div class="metric-card {% if low_stock_count %}border-danger{% endif %}">
+        <div class="metric-card-icon metric-card-icon--danger">
+          <i class="bi bi-exclamation-triangle"></i>
+        </div>
+        <div class="metric-card-content w-100">
+          <span class="metric-card-label">Low Stock</span>
+          <div class="d-flex align-items-baseline justify-content-between">
+            <span class="metric-card-value {% if low_stock_count %}text-danger{% endif %}">
+              {{ low_stock_count|default:'0' }}
+              <small class="fs-6 fw-normal text-muted">/ {{ total_products }}</small>
+            </span>
+            {% if low_stock_percentage %}
+              <span class="badge bg-danger ms-1">{{ low_stock_percentage }}%</span>
+            {% endif %}
+          </div>
+          {% if low_stock_count %}
+          <div class="progress mt-1" style="height:5px;">
             <div class="progress-bar bg-danger" style="width:{{ low_stock_percentage }}%"></div>
+          </div>
+          {% endif %}
         </div>
-        {% if top_low_stock_items %}
-        <table class="table table-sm table-hover mb-0">
-            <thead>
-                <tr>
-                    <th>Product</th>
-                    <th class="text-end">In Stock</th>
-                    <th class="text-end">Short by</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in top_low_stock_items %}
-                <tr>
-                    <td>{{ item.product.name }}</td>
-                    <td class="text-end">{{ item.quantity }}</td>
-                    <td class="text-end text-danger fw-semibold">{{ item.required_cached }}</td>
-                    <td class="text-end">
-                        <a href="{% url 'inventory:inventory-detail' item.pk %}" class="btn btn-xs btn-outline-secondary py-0 px-1">
-                            <i class="bi bi-arrow-right"></i>
-                        </a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% endif %}
-    </div>
-</div>
-{% endif %}
+      </div>
+    </a>
+  </div>
 
-<div class="row mt-3">
-    {% include "includes/metric_card.html" with icon="bi-arrow-down-circle" color="success" label="Stock In (30 days)" value=stock_in_30d|default:'0' %}
-    {% include "includes/metric_card.html" with icon="bi-arrow-up-circle" color="info" label="Stock Out (30 days)" value=stock_out_30d|default:'0' %}
-    {% if dead_stock_count %}
-    {% include "includes/metric_card.html" with icon="bi-archive" color="secondary" label="Dead Stock (90+ days)" value=dead_stock_count url=inventory_url %}
+</div>{# /row 1 #}
+
+{# ── Row 2: Low-stock detail + donut chart ───────────────────────────── #}
+<div class="row g-3 mt-0">
+
+  {# Low-stock alert with per-product progress bars #}
+  <div class="col-lg-7">
+    {% if low_stock_count %}
+    <div class="panel h-100">
+      <div class="panel-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Low Stock — Top Shortfalls</span>
+        <a href="{{ low_stock_url }}" class="btn btn-sm btn-outline-danger">View All {{ low_stock_count }}</a>
+      </div>
+      <div class="panel-body p-0">
+        <table class="table table-sm mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-3">Product</th>
+              <th class="text-end">In Stock</th>
+              <th class="text-end">Short by</th>
+              <th class="ps-3" style="min-width:120px;">Coverage</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in top_low_stock_items %}
+            <tr>
+              <td class="ps-3 fw-medium">{{ item.product.name }}</td>
+              <td class="text-end">{{ item.quantity }}</td>
+              <td class="text-end text-danger fw-semibold">−{{ item.required_cached }}</td>
+              <td class="ps-3">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="progress flex-grow-1" style="height:8px;">
+                    <div class="progress-bar {% if item.fill_pct < 25 %}bg-danger{% elif item.fill_pct < 60 %}bg-warning{% else %}bg-success{% endif %}"
+                         style="width:{{ item.fill_pct }}%"
+                         title="{{ item.fill_pct }}% of demand covered"></div>
+                  </div>
+                  <span class="text-muted" style="font-size:0.75rem;min-width:2.5rem;">{{ item.fill_pct }}%</span>
+                </div>
+              </td>
+              <td class="text-end pe-2">
+                <a href="{% url 'inventory:inventory-detail' item.pk %}" class="btn btn-sm btn-outline-secondary py-0 px-2">
+                  <i class="bi bi-arrow-right"></i>
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% else %}
+    <div class="panel h-100">
+      <div class="panel-header"><i class="bi bi-check-circle-fill text-success me-2"></i>Stock Health</div>
+      <div class="panel-body text-center py-4 text-success">
+        <i class="bi bi-check-circle-fill fs-1 mb-2 d-block"></i>
+        <p class="mb-0 fw-semibold">All products are sufficiently stocked.</p>
+      </div>
+    </div>
     {% endif %}
-</div>
+  </div>
+
+  {# Stock health donut chart #}
+  <div class="col-lg-5">
+    <div class="panel h-100">
+      <div class="panel-header">Stock Health Distribution</div>
+      <div class="panel-body d-flex flex-column align-items-center">
+        <div style="max-width:200px;width:100%;">
+          <canvas id="stockHealthChart" aria-label="Stock health donut chart"></canvas>
+        </div>
+        <div class="mt-3 w-100">
+          <div class="d-flex flex-wrap gap-2 justify-content-center">
+            <span class="d-flex align-items-center gap-1 small">
+              <span style="width:12px;height:12px;border-radius:2px;background:#198754;display:inline-block;"></span>
+              Healthy ({{ chart_healthy }})
+            </span>
+            <span class="d-flex align-items-center gap-1 small">
+              <span style="width:12px;height:12px;border-radius:2px;background:#dc3545;display:inline-block;"></span>
+              Low Stock ({{ chart_low_stock }})
+            </span>
+            <span class="d-flex align-items-center gap-1 small">
+              <span style="width:12px;height:12px;border-radius:2px;background:#6c757d;display:inline-block;"></span>
+              Dead Stock ({{ chart_dead_stock }})
+            </span>
+            <span class="d-flex align-items-center gap-1 small">
+              <span style="width:12px;height:12px;border-radius:2px;background:#dee2e6;display:inline-block;"></span>
+              Zero Stock ({{ chart_zero_stock }})
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>{# /row 2 #}
+
+{# ── Row 3: Movement metrics ─────────────────────────────────────────── #}
+<div class="row g-3 mt-0">
+
+  {# Stock In 30d with trend #}
+  <div class="col-lg-6 col-xl-4">
+    <div class="metric-card">
+      <div class="metric-card-icon metric-card-icon--success">
+        <i class="bi bi-arrow-down-circle"></i>
+      </div>
+      <div class="metric-card-content">
+        <span class="metric-card-label">Stock In (30 days)</span>
+        <div class="d-flex align-items-baseline gap-2">
+          <span class="metric-card-value">{{ stock_in_30d|default:'0' }}</span>
+          {% if trend_stock_in == "up" %}
+            <span class="text-success small fw-semibold"><i class="bi bi-arrow-up-right"></i> vs prev</span>
+          {% elif trend_stock_in == "down" %}
+            <span class="text-danger small fw-semibold"><i class="bi bi-arrow-down-right"></i> vs prev</span>
+          {% else %}
+            <span class="text-muted small"><i class="bi bi-dash"></i> vs prev</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Stock Out 30d with trend #}
+  <div class="col-lg-6 col-xl-4">
+    <div class="metric-card">
+      <div class="metric-card-icon metric-card-icon--primary">
+        <i class="bi bi-arrow-up-circle"></i>
+      </div>
+      <div class="metric-card-content">
+        <span class="metric-card-label">Stock Out (30 days)</span>
+        <div class="d-flex align-items-baseline gap-2">
+          <span class="metric-card-value">{{ stock_out_30d|default:'0' }}</span>
+          {% if trend_stock_out == "up" %}
+            <span class="text-success small fw-semibold"><i class="bi bi-arrow-up-right"></i> vs prev</span>
+          {% elif trend_stock_out == "down" %}
+            <span class="text-danger small fw-semibold"><i class="bi bi-arrow-down-right"></i> vs prev</span>
+          {% else %}
+            <span class="text-muted small"><i class="bi bi-dash"></i> vs prev</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Dead stock — only if present #}
+  {% if dead_stock_count %}
+  <div class="col-lg-6 col-xl-4">
+    <a href="{{ inventory_url }}" class="metric-card-link">
+      <div class="metric-card border-warning">
+        <div class="metric-card-icon metric-card-icon--warning">
+          <i class="bi bi-archive"></i>
+        </div>
+        <div class="metric-card-content">
+          <span class="metric-card-label">Dead Stock (90+ days)</span>
+          <span class="metric-card-value text-warning">{{ dead_stock_count }}</span>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+
+</div>{# /row 3 #}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var ctx = document.getElementById('stockHealthChart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Healthy', 'Low Stock', 'Dead Stock', 'Zero Stock'],
+      datasets: [{
+        data: [
+          {{ chart_healthy }},
+          {{ chart_low_stock }},
+          {{ chart_dead_stock }},
+          {{ chart_zero_stock }}
+        ],
+        backgroundColor: ['#198754', '#dc3545', '#6c757d', '#dee2e6'],
+        borderWidth: 2,
+        borderColor: '#fff',
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              var total = ctx.dataset.data.reduce(function(a, b){ return a + b; }, 0);
+              var pct = total > 0 ? Math.round(ctx.parsed / total * 100) : 0;
+              return ' ' + ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
+            }
+          }
+        }
+      }
+    }
+  });
+}());
+</script>
 {% endblock %}
