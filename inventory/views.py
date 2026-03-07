@@ -3,6 +3,7 @@ from .models import (
     Product,
     Inventory,
     InventoryAdjust,
+    InventoryLedger,
     Location,
     InventoryLocation,
     StockTransfer,
@@ -330,16 +331,20 @@ class InventoryDashboardView(TemplateView):
     template_name = "inventory/inventory_dashboard.html"
 
     def get_context_data(self, **kwargs):
+        from datetime import timedelta
+
         from django.db.models import (
             DecimalField,
             F,
             Min,
             OuterRef,
+            Q,
             Subquery,
             Sum,
             Value,
         )
         from django.db.models.functions import Coalesce
+        from django.utils import timezone
         from procurement.models import SupplierProduct
         from production.models import BillOfMaterials, BOMItem
 
@@ -396,6 +401,42 @@ class InventoryDashboardView(TemplateView):
         context["low_stock_count"] = Inventory.objects.filter(
             required_cached__gt=0
         ).count()
+
+        total_products = context["total_products"]
+        context["low_stock_percentage"] = (
+            round(context["low_stock_count"] / total_products * 100)
+            if total_products
+            else 0
+        )
+
+        # top 5 most-needed low stock items
+        context["top_low_stock_items"] = (
+            Inventory.objects.select_related("product")
+            .filter(required_cached__gt=0)
+            .order_by("-required_cached")[:5]
+        )
+
+        # 30-day stock movement from ledger
+        cutoff_30d = timezone.now() - timedelta(days=30)
+        ledger_30d = InventoryLedger.objects.filter(date__gte=cutoff_30d).aggregate(
+            stock_in=Sum("quantity", filter=Q(quantity__gt=0)),
+            stock_out=Sum("quantity", filter=Q(quantity__lt=0)),
+        )
+        context["stock_in_30d"] = ledger_30d["stock_in"] or 0
+        context["stock_out_30d"] = abs(ledger_30d["stock_out"] or 0)
+
+        # dead stock: products with quantity > 0 and no ledger activity in 90 days
+        cutoff_90d = timezone.now() - timedelta(days=90)
+        active_product_ids = (
+            InventoryLedger.objects.filter(date__gte=cutoff_90d)
+            .values_list("product_id", flat=True)
+            .distinct()
+        )
+        context["dead_stock_count"] = (
+            Inventory.objects.filter(quantity__gt=0)
+            .exclude(product_id__in=active_product_ids)
+            .count()
+        )
 
         # when ?required=1 is passed, include low-stock items in context
         if getattr(self, "request", None) and self.request.GET.get("required"):
