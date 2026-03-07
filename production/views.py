@@ -446,6 +446,11 @@ class ProductionDetailView(DetailView):
         from .services import build_bom_tree
 
         context["bom_tree"] = build_bom_tree(job.product, quantity=job.remaining)
+
+        unit_cost = job.product.unit_cost
+        context["unit_cost"] = unit_cost
+        context["job_cost"] = unit_cost * job.quantity
+        context["produced_cost"] = unit_cost * job.quantity_received
         return context
 
 

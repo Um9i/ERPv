@@ -737,3 +737,49 @@ class TestProduction:
         assert tree["name"] == "leaf product"
         assert tree["quantity"] == 3
         assert tree["children"] == []
+
+    # --- cost roll-up display tests ---
+
+    def test_unit_cost_in_context(
+        self, client, product, bom, bom_item, supplier, supplier_product
+    ):
+        """unit_cost from supplier cost appears in the detail context."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="cost1")
+        client.force_login(user)
+        job = Production.objects.create(product=product, quantity=5)
+        url = reverse("production:production-detail", args=[job.pk])
+        resp = client.get(url)
+        ctx = resp.context
+        assert ctx["unit_cost"] == product.unit_cost
+        assert ctx["unit_cost"] > 0
+
+    def test_job_cost_equals_unit_times_quantity(
+        self, client, product, bom, bom_item, supplier, supplier_product
+    ):
+        """job_cost = unit_cost * quantity."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="cost2")
+        client.force_login(user)
+        job = Production.objects.create(product=product, quantity=8)
+        url = reverse("production:production-detail", args=[job.pk])
+        resp = client.get(url)
+        ctx = resp.context
+        assert ctx["job_cost"] == ctx["unit_cost"] * 8
+
+    def test_cost_section_hidden_when_zero(self, client, product, bom, bom_item):
+        """Cost Summary section is not rendered when unit_cost is 0."""
+        from django.urls import reverse
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="cost3")
+        client.force_login(user)
+        job = Production.objects.create(product=product, quantity=3)
+        url = reverse("production:production-detail", args=[job.pk])
+        resp = client.get(url)
+        content = resp.content.decode()
+        assert "Cost Summary" not in content
