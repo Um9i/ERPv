@@ -508,6 +508,11 @@ class SalesOrderShipView(DetailView):
                     except ValueError:
                         continue
                 if qty <= 0:
+                    # line may be fully shipped but not yet flagged complete
+                    if line.quantity_shipped >= line.quantity:
+                        line.complete = True
+                        line.closed = True
+                        line.save(update_fields=["complete", "closed"])
                     continue
                 # before we touch inventory ensure sufficient quantity exists
                 from inventory.models import Inventory, InventoryLedger

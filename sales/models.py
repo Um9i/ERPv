@@ -102,7 +102,13 @@ class SalesOrder(models.Model):
 
     @property
     def status(self):
-        if self.sales_order_lines.filter(complete=False).exists():
+        from django.db.models import F
+
+        if (
+            self.sales_order_lines.filter(complete=False)
+            .exclude(quantity_shipped__gte=F("quantity"))
+            .exists()
+        ):
             return "Open"
         return "Closed"
 

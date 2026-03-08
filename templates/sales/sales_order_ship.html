@@ -30,7 +30,7 @@
             <tr>
                 <th>Product</th>
                 <th>Quantity</th>
-                <th>Shipped</th>
+                <th>Quantity Shipped</th>
                 <th>In Stock</th>
                 <th>Quantity to Ship</th>
             </tr>
@@ -52,11 +52,11 @@
                     {% endif %}
                 </td>
                 <td>
-                    {% if not line.complete %}
+                    {% if line.complete %}
+                    <input type="number" name="shipped_{{ line.id }}" min="0" max="0" value="0" disabled>
+                    {% else %}
                     <input type="number" name="shipped_{{ line.id }}" min="0" max="{{ line.max_shippable }}" value="0"
                         {% if line.max_shippable == 0 %}disabled{% endif %}>
-                    {% else %}
-                        <span class="text-muted">—</span>
                     {% endif %}
                 </td>
             </tr>
