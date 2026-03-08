@@ -175,6 +175,7 @@ class BOMDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         from django.core.paginator import Paginator
+        from .services import build_bom_tree
 
         context = super().get_context_data(**kwargs)
         bom = self.object
@@ -182,6 +183,7 @@ class BOMDetailView(DetailView):
         page = self.request.GET.get("page")
         paginator = Paginator(items, 10)
         context["bom_items"] = paginator.get_page(page)
+        context["bom_tree"] = build_bom_tree(bom.product)
         return context
 
 
