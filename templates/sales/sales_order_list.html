@@ -22,6 +22,7 @@
         </div>
     </div>
 </form>
+<div class="table-responsive">
 <table class="table">
     <thead>
         <tr>
@@ -68,5 +69,6 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% include "includes/pagination.html" with page_obj=sales_orders %}
 {% endblock %}
