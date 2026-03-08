@@ -14,7 +14,7 @@ django-debug-toolbar==6.2.0
 django-registration==5.2.1
 django-silk==5.4.3
 factory_boy==3.3.3
-Faker==40.4.0
+Faker==40.8.0
 fonttools==4.61.1
 gprof2dot==2025.4.14
 gunicorn==25.0.2
