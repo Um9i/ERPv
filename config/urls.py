@@ -35,4 +35,9 @@ urlpatterns = [
         views.ImportAsSupplierView.as_view(),
         name="import-as-supplier",
     ),
+    path(
+        "paired/<int:pk>/catalogue/",
+        views.BrowseCatalogueView.as_view(),
+        name="paired-instance-browse-catalogue",
+    ),
 ]

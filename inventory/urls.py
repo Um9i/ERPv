@@ -18,11 +18,13 @@ from .views import (
     InventoryLocationUpdateView,
     InventoryLocationDeleteView,
     StockTransferCreateView,
+    CatalogueApiView,
 )
 
 app_name = "inventory"
 
 urlpatterns = [
+    path("api/catalogue/", CatalogueApiView.as_view(), name="catalogue-api"),
     path("", InventoryDashboardView.as_view(), name="inventory-dashboard"),
     path("low-stock/", LowStockListView.as_view(), name="inventory-low-stock"),
     path("products/create/", ProductCreateView.as_view(), name="product-create"),

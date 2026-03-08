@@ -211,3 +211,46 @@ class ImportAsSupplierView(LoginRequiredMixin, UserPassesTestMixin, View):
         return redirect(
             f"{reverse_lazy('procurement:supplier-create')}?{urlencode(params)}"
         )
+
+
+class BrowseCatalogueView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Fetch and display the remote catalogue from a paired instance."""
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def get(self, request, pk, *args, **kwargs):
+        from django.shortcuts import render
+
+        instance = get_object_or_404(PairedInstance, pk=pk)
+        if instance.status == "pending":
+            messages.error(
+                request,
+                f'"{instance.name}" is not yet active \u2014 enter their API key first.',
+            )
+            return redirect(reverse_lazy("config:paired-instance-list"))
+        catalogue = None
+        error = None
+        try:
+            resp = httpx.get(
+                f"{instance.url.rstrip('/')}/inventory/api/catalogue/",
+                headers={"Authorization": f"Bearer {instance.api_key}"},
+                timeout=5.0,
+            )
+            if resp.status_code != 200:
+                error = f"Remote server returned {resp.status_code}."
+            else:
+                catalogue = resp.json()
+        except httpx.TimeoutException:
+            error = f"Request to {instance.name} timed out."
+        except Exception as exc:
+            error = f"Could not fetch catalogue from {instance.name}: {exc}"
+        return render(
+            request,
+            "config/paired_instance_catalogue.html",
+            {
+                "instance": instance,
+                "catalogue": catalogue,
+                "error": error,
+            },
+        )

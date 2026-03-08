@@ -68,6 +68,17 @@
         </div>
     </div>
     {% endif %}
+    {% if inventory.product.catalogue_item %}
+    <div class="col-6 col-lg">
+        <div class="metric-card">
+            <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-book"></i></div>
+            <div class="metric-card-content">
+                <span class="metric-card-value"><i class="bi bi-check-circle-fill text-success"></i></span>
+                <span class="metric-card-label">Catalogue Item</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 {# ── Product info: image + description + actions ── #}

@@ -127,11 +127,13 @@ class ProductAdmin(admin.ModelAdmin):
     inlines = [
         InventoryLedgerInline,
     ]
-    list_display = ["name", "inventory_quantity", "required"]
+    list_display = ["name", "inventory_quantity", "required", "catalogue_item"]
+    list_filter = ["catalogue_item"]
     list_per_page = 15
     search_fields = ["name"]
     fields = (
         ("name"),
+        ("sale_price", "catalogue_item"),
         ("inventory_quantity", "planned_production", "production_allocated"),
         ("on_sales_order", "on_purchase_order", "required"),
     )

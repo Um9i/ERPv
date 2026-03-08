@@ -25,6 +25,11 @@ from django.views.generic import (
 )
 from django.urls import reverse_lazy
 from django.http import JsonResponse
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+
+from config.models import PairedInstance
 
 
 class ProductCreateView(CreateView):
@@ -807,3 +812,27 @@ class StockTransferCreateView(CreateView):
         context = super().get_context_data(**kwargs)
         context["inventory"] = self.get_inventory()
         return context
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class CatalogueApiView(View):
+    """Public endpoint — returns catalogue products to paired instances."""
+
+    def get(self, request, *args, **kwargs):
+        auth = request.META.get("HTTP_AUTHORIZATION", "")
+        if not auth.startswith("Bearer "):
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+        key = auth[len("Bearer ") :]
+        if not PairedInstance.objects.filter(our_key=key).exists():
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+        products = Product.objects.filter(catalogue_item=True, sale_price__isnull=False)
+        data = [
+            {
+                "name": p.name,
+                "description": p.description,
+                "sale_price": f"{p.sale_price:.2f}",
+                "sku": None,
+            }
+            for p in products
+        ]
+        return JsonResponse(data, safe=False)

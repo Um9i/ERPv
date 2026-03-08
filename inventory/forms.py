@@ -6,10 +6,16 @@ from .models import Product, InventoryAdjust, Location, InventoryLocation, Stock
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ["name", "description", "image", "sale_price"]
+        fields = ["name", "description", "image", "sale_price", "catalogue_item"]
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get("catalogue_item") and not cleaned_data.get("sale_price"):
+            self.add_error("catalogue_item", "A catalogue item must have a sale price.")
+        return cleaned_data
 
     def clean_name(self):
         name = self.cleaned_data["name"].strip()

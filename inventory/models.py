@@ -14,6 +14,16 @@ class Product(models.Model):
     sale_price = models.DecimalField(
         max_digits=12, decimal_places=2, null=True, blank=True
     )
+    catalogue_item = models.BooleanField(
+        default=False,
+        help_text=_("List this product in the catalogue. Requires a sale price."),
+    )
+
+    def clean(self):
+        if self.catalogue_item and not self.sale_price:
+            raise ValidationError(
+                {"catalogue_item": _("A catalogue item must have a sale price.")}
+            )
 
     def __str__(self) -> str:
         return self.name

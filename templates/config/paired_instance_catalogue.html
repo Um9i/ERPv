@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="detail-section">
+  <div class="detail-section-header d-flex justify-content-between align-items-start">
+    <div>
+      <h1>Catalogue — {{ instance.name }}</h1>
+      <p class="text-muted">Remote product catalogue from <a href="{{ instance.url }}" target="_blank" rel="noopener noreferrer">{{ instance.url }}</a>.</p>
+    </div>
+    <a href="{% url 'config:paired-instance-list' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Back to Paired Instances
+    </a>
+  </div>
+
+  {% if error %}
+    <div class="alert alert-danger" role="alert">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+    </div>
+  {% elif catalogue is not None %}
+    {% if catalogue %}
+      <div class="table-responsive mt-3">
+        <table class="table table-striped align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Name</th>
+              <th>Description</th>
+              <th class="text-end">Sale Price</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in catalogue %}
+            <tr>
+              <td><strong>{{ item.name }}</strong></td>
+              <td>{{ item.description }}</td>
+              <td class="text-end">£{{ item.sale_price }}</td>
+              <td class="text-end">
+                <button class="btn btn-outline-primary btn-sm" disabled
+                        title="Coming soon">
+                  <i class="bi bi-plus"></i> Import as Supplier Product
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted mt-3">No catalogue items available from this partner.</p>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}
