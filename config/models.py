@@ -66,6 +66,20 @@ class PairedInstance(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     notes = models.TextField(blank=True)
+    supplier = models.ForeignKey(
+        "procurement.Supplier",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="paired_instances",
+    )
+    customer = models.ForeignKey(
+        "sales.Customer",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="paired_instances",
+    )
 
     class Meta:
         ordering = ["name"]

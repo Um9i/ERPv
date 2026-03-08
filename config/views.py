@@ -14,6 +14,7 @@ from django.views.generic.edit import UpdateView
 
 from .forms import CompanyConfigForm, CompletePairingForm, PairedInstanceForm
 from .models import CompanyConfig, PairedInstance
+from .notifications import _notify_remote_customer, _notify_remote_customer_product
 
 _IMPORT_FIELDS = [
     "name",
@@ -180,6 +181,22 @@ class ImportAsCustomerView(LoginRequiredMixin, UserPassesTestMixin, View):
             messages.error(request, f"Could not fetch data from {instance.name}: {exc}")
             return redirect(reverse_lazy("config:paired-instance-list"))
         params = {f: data.get(f, "") for f in _IMPORT_FIELDS}
+        remote_name = data.get("name", "").strip()
+
+        if remote_name:
+            from sales.models import Customer as _Customer
+
+            existing = _Customer.objects.filter(name__iexact=remote_name).first()
+            if existing and not instance.customer:
+                instance.customer = existing
+                instance.save(update_fields=["customer"])
+                messages.success(
+                    request,
+                    f'Linked existing customer "{existing.name}" to {instance.name}.',
+                )
+                return redirect(reverse_lazy("config:paired-instance-list"))
+
+        self.request.session["link_customer_to_paired"] = pk
         return redirect(f"{reverse_lazy('sales:customer-create')}?{urlencode(params)}")
 
 
@@ -208,9 +225,215 @@ class ImportAsSupplierView(LoginRequiredMixin, UserPassesTestMixin, View):
             messages.error(request, f"Could not fetch data from {instance.name}: {exc}")
             return redirect(reverse_lazy("config:paired-instance-list"))
         params = {f: data.get(f, "") for f in _IMPORT_FIELDS}
+        remote_name = data.get("name", "").strip()
+
+        # If a supplier with this name already exists, link it directly without
+        # redirecting to the create form (avoids UniqueConstraint violation).
+        if remote_name:
+            from procurement.models import Supplier as _Supplier
+
+            existing = _Supplier.objects.filter(name__iexact=remote_name).first()
+            if existing and not instance.supplier:
+                instance.supplier = existing
+                instance.save(update_fields=["supplier"])
+                messages.success(
+                    request,
+                    f'Linked existing supplier "{existing.name}" to {instance.name}.',
+                )
+                if not _notify_remote_customer(instance):
+                    messages.warning(
+                        request,
+                        f"Could not notify {instance.name} of customer link — check connectivity.",
+                    )
+                return redirect(
+                    reverse_lazy(
+                        "config:paired-instance-browse-catalogue", kwargs={"pk": pk}
+                    )
+                )
+
+        self.request.session["link_supplier_to_paired"] = pk
         return redirect(
             f"{reverse_lazy('procurement:supplier-create')}?{urlencode(params)}"
         )
+
+
+class ImportCatalogueProductView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """POST-only: import a remote catalogue item as a local Product + SupplierProduct."""
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def post(self, request, pk, *args, **kwargs):
+        from decimal import Decimal, InvalidOperation
+
+        from procurement.models import Supplier, SupplierProduct
+        from inventory.models import Product
+
+        instance = get_object_or_404(PairedInstance, pk=pk)
+        browse_url = reverse_lazy(
+            "config:paired-instance-browse-catalogue", kwargs={"pk": pk}
+        )
+
+        if instance.status == "pending":
+            messages.error(request, f'"{instance.name}" is not yet active.')
+            return redirect(reverse_lazy("config:paired-instance-list"))
+
+        name = request.POST.get("name", "").strip()
+        description = request.POST.get("description", "").strip()
+        sale_price_raw = request.POST.get("sale_price", "").strip()
+        supplier_id = request.POST.get("supplier_id", "").strip()
+
+        if not name or not supplier_id:
+            messages.error(request, "Missing required fields (name or supplier_id).")
+            return redirect(browse_url)
+
+        try:
+            cost = Decimal(sale_price_raw)
+        except InvalidOperation:
+            messages.error(request, f"Invalid sale price: {sale_price_raw!r}")
+            return redirect(browse_url)
+
+        try:
+            supplier = Supplier.objects.get(pk=int(supplier_id))
+        except (Supplier.DoesNotExist, ValueError):
+            messages.error(request, f"Supplier with id {supplier_id!r} not found.")
+            return redirect(browse_url)
+
+        existing = Product.objects.filter(name__iexact=name).first()
+        if existing:
+            product = existing
+        else:
+            product = Product.objects.create(
+                name=name,
+                description=description,
+                sale_price=cost,
+                catalogue_item=False,
+            )
+
+        supplier_product, created = SupplierProduct.objects.get_or_create(
+            supplier=supplier,
+            product=product,
+            defaults={"cost": cost},
+        )
+        if not created:
+            supplier_product.cost = cost
+            supplier_product.save(update_fields=["cost"])
+
+        messages.success(
+            request,
+            f"Imported {product.name} as supplier product for {supplier.name}.",
+        )
+        if not _notify_remote_customer_product(instance, product.name, cost):
+            messages.warning(
+                request,
+                f"Could not notify {instance.name} of product link — check connectivity.",
+            )
+        return redirect(browse_url)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class NotifyCustomerView(View):
+    """Inbound: remote tells us to create/link them as a Customer here."""
+
+    def post(self, request, *args, **kwargs):
+        import json
+
+        from sales.models import Customer
+
+        auth = request.META.get("HTTP_AUTHORIZATION", "")
+        if not auth.startswith("Bearer "):
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+        key = auth[len("Bearer ") :]
+        try:
+            paired_instance = PairedInstance.objects.get(our_key=key)
+        except PairedInstance.DoesNotExist:
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        name = (data.get("name") or "").strip()
+        if not name:
+            return JsonResponse({"error": "name is required"}, status=400)
+
+        existing = Customer.objects.filter(name__iexact=name).first()
+        if existing:
+            customer = existing
+            created = False
+        else:
+            customer = Customer.objects.create(
+                name=name,
+                address_line_1=data.get("address_line_1", ""),
+                address_line_2=data.get("address_line_2", ""),
+                city=data.get("city", ""),
+                state=data.get("state", ""),
+                postal_code=data.get("postal_code", ""),
+                country=data.get("country", ""),
+                phone=data.get("phone", ""),
+                email=data.get("email", ""),
+                website=data.get("website", ""),
+            )
+            created = True
+
+        paired_instance.customer = customer
+        paired_instance.save(update_fields=["customer"])
+        return JsonResponse({"status": "ok", "created": created})
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class NotifyCustomerProductView(View):
+    """Inbound: remote tells us to create/link a CustomerProduct here."""
+
+    def post(self, request, *args, **kwargs):
+        import json
+        from decimal import Decimal, InvalidOperation
+
+        from sales.models import CustomerProduct
+        from inventory.models import Product
+
+        auth = request.META.get("HTTP_AUTHORIZATION", "")
+        if not auth.startswith("Bearer "):
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+        key = auth[len("Bearer ") :]
+        try:
+            paired_instance = PairedInstance.objects.get(our_key=key)
+        except PairedInstance.DoesNotExist:
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+
+        if not paired_instance.customer:
+            return JsonResponse(
+                {"error": "Customer not linked to this paired instance"}, status=400
+            )
+
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        product_name = (data.get("product_name") or "").strip()
+        price_raw = str(data.get("price", "")).strip()
+
+        product = Product.objects.filter(name__iexact=product_name).first()
+        if not product:
+            return JsonResponse({"error": "Product not found"}, status=400)
+
+        try:
+            price = Decimal(price_raw)
+        except InvalidOperation:
+            return JsonResponse({"error": f"Invalid price: {price_raw!r}"}, status=400)
+
+        cp, created = CustomerProduct.objects.get_or_create(
+            customer=paired_instance.customer,
+            product=product,
+            defaults={"price": price},
+        )
+        if not created:
+            cp.price = price
+            cp.save(update_fields=["price"])
+
+        return JsonResponse({"status": "ok", "created": created})
 
 
 class BrowseCatalogueView(LoginRequiredMixin, UserPassesTestMixin, View):
@@ -245,6 +468,19 @@ class BrowseCatalogueView(LoginRequiredMixin, UserPassesTestMixin, View):
             error = f"Request to {instance.name} timed out."
         except Exception as exc:
             error = f"Could not fetch catalogue from {instance.name}: {exc}"
+
+        if catalogue and instance.supplier:
+            from procurement.models import SupplierProduct as _SP
+
+            imported_names = set(
+                name.lower()
+                for name in _SP.objects.filter(supplier=instance.supplier).values_list(
+                    "product__name", flat=True
+                )
+            )
+            for item in catalogue:
+                item["already_imported"] = item["name"].lower() in imported_names
+
         return render(
             request,
             "config/paired_instance_catalogue.html",
@@ -252,5 +488,6 @@ class BrowseCatalogueView(LoginRequiredMixin, UserPassesTestMixin, View):
                 "instance": instance,
                 "catalogue": catalogue,
                 "error": error,
+                "supplier": instance.supplier,
             },
         )

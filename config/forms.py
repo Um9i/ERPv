@@ -44,7 +44,11 @@ class CompanyConfigForm(forms.ModelForm):
 class PairedInstanceForm(forms.ModelForm):
     class Meta:
         model = PairedInstance
-        fields = ["name", "url", "notes"]
+        fields = [
+            "name",
+            "url",
+            "notes",
+        ]  # supplier is set programmatically, not by user
         widgets = {
             "name": forms.TextInput(attrs={"class": "form-control"}),
             "url": forms.URLInput(attrs={"class": "form-control"}),

@@ -53,6 +53,17 @@ class CustomerCreateView(CreateView):
                 initial[field] = self.request.GET[field]
         return initial
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        paired_pk = self.request.session.pop("link_customer_to_paired", None)
+        if paired_pk:
+            from config.models import PairedInstance
+
+            PairedInstance.objects.filter(pk=paired_pk, customer__isnull=True).update(
+                customer=self.object
+            )
+        return response
+
     def get_success_url(self):
         return reverse_lazy("sales:customer-detail", args=[self.object.pk])
 

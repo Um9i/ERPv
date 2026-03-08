@@ -8,6 +8,16 @@ urlpatterns = [
     path("company/", views.CompanyConfigView.as_view(), name="company-config"),
     path("api/company/", views.CompanyApiView.as_view(), name="company-api"),
     path(
+        "api/notify/customer/",
+        views.NotifyCustomerView.as_view(),
+        name="notify-customer",
+    ),
+    path(
+        "api/notify/customer-product/",
+        views.NotifyCustomerProductView.as_view(),
+        name="notify-customer-product",
+    ),
+    path(
         "paired/", views.PairedInstanceListView.as_view(), name="paired-instance-list"
     ),
     path(
@@ -39,5 +49,10 @@ urlpatterns = [
         "paired/<int:pk>/catalogue/",
         views.BrowseCatalogueView.as_view(),
         name="paired-instance-browse-catalogue",
+    ),
+    path(
+        "paired/<int:pk>/catalogue/import/",
+        views.ImportCatalogueProductView.as_view(),
+        name="paired-instance-import-product",
     ),
 ]

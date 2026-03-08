@@ -54,6 +54,26 @@ class SupplierCreateView(CreateView):
                 initial[field] = self.request.GET[field]
         return initial
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        paired_pk = self.request.session.pop("link_supplier_to_paired", None)
+        if paired_pk:
+            from config.models import PairedInstance
+            from config.notifications import _notify_remote_customer
+
+            PairedInstance.objects.filter(pk=paired_pk, supplier__isnull=True).update(
+                supplier=self.object
+            )
+            paired_instance = PairedInstance.objects.filter(pk=paired_pk).first()
+            if paired_instance and not _notify_remote_customer(paired_instance):
+                from django.contrib import messages
+
+                messages.warning(
+                    self.request,
+                    f"Could not notify {paired_instance.name} of customer link — check connectivity.",
+                )
+        return response
+
     def get_success_url(self):
         # after creating a supplier return to that supplier's detail
         return reverse_lazy("procurement:supplier-detail", args=[self.object.pk])

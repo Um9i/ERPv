@@ -76,12 +76,26 @@
                   <i class="bi bi-truck"></i> Import as Supplier
                 </button>
               {% else %}
-                <a href="{% url 'config:import-as-customer' inst.pk %}" class="btn btn-sm btn-outline-indigo me-1">
-                  <i class="bi bi-person-plus"></i> Import as Customer
-                </a>
-                <a href="{% url 'config:import-as-supplier' inst.pk %}" class="btn btn-sm btn-outline-primary me-1">
-                  <i class="bi bi-truck"></i> Import as Supplier
-                </a>
+                {% if inst.customer %}
+                  <button class="btn btn-sm btn-outline-secondary me-1" disabled
+                          title="Already imported as {{ inst.customer.name }}">
+                    <i class="bi bi-person-check"></i> Customer Imported
+                  </button>
+                {% else %}
+                  <a href="{% url 'config:import-as-customer' inst.pk %}" class="btn btn-sm btn-outline-indigo me-1">
+                    <i class="bi bi-person-plus"></i> Import as Customer
+                  </a>
+                {% endif %}
+                {% if inst.supplier %}
+                  <button class="btn btn-sm btn-outline-secondary me-1" disabled
+                          title="Already imported as {{ inst.supplier.name }}">
+                    <i class="bi bi-truck"></i> Supplier Imported
+                  </button>
+                {% else %}
+                  <a href="{% url 'config:import-as-supplier' inst.pk %}" class="btn btn-sm btn-outline-primary me-1">
+                    <i class="bi bi-truck"></i> Import as Supplier
+                  </a>
+                {% endif %}
                 <a href="{% url 'config:paired-instance-browse-catalogue' inst.pk %}" class="btn btn-sm btn-outline-secondary me-1">
                   <i class="bi bi-grid"></i> Browse Catalogue
                 </a>
