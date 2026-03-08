@@ -482,6 +482,7 @@ class PurchaseOrderCreateView(CreateView):
         # let the template know whether the supplier is already chosen so it
         # can show the line-items section immediately
         context["supplier_known"] = bool(supplier_id)
+        context["has_suppliers"] = Supplier.objects.exists()
 
         return context
 

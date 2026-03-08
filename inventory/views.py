@@ -28,8 +28,10 @@ from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib import messages
 
 from config.models import PairedInstance
+from config.notifications import _notify_remote_customer_product
 
 
 class ProductCreateView(CreateView):
@@ -46,6 +48,47 @@ class ProductUpdateView(UpdateView):
     model = Product
     template_name = "inventory/product_form.html"
     form_class = ProductForm
+
+    def form_valid(self, form):
+        old_price = (
+            Product.objects.filter(pk=self.object.pk)
+            .values_list("sale_price", flat=True)
+            .first()
+        )
+
+        response = super().form_valid(form)
+        product = self.object
+
+        if (
+            product.catalogue_item
+            and product.sale_price is not None
+            and product.sale_price != old_price
+        ):
+            paired_instances = PairedInstance.objects.filter(
+                supplier__supplier_products__product=product,
+                api_key__gt="",
+            ).distinct()
+
+            failed = []
+            for pi in paired_instances:
+                ok = _notify_remote_customer_product(
+                    pi, product.name, product.sale_price
+                )
+                if not ok:
+                    failed.append(pi.name)
+
+            if failed:
+                messages.warning(
+                    self.request,
+                    f"Price updated locally, but failed to notify: {', '.join(failed)}.",
+                )
+            elif paired_instances.exists():
+                messages.success(
+                    self.request,
+                    "Price updated and paired instances notified.",
+                )
+
+        return response
 
     def get_success_url(self):
         return reverse_lazy("inventory:inventory-detail", args=[self.object.pk])

@@ -30,11 +30,18 @@
     {# ── Step 1: Select customer ── #}
     <div class="mb-4">
         <h5 class="mb-3"><span class="badge bg-primary me-2">1</span> Select Customer</h5>
-        {{ form|crispy }}
+        {% if has_customers %}
+            {{ form|crispy }}
+        {% else %}
+            <div class="alert alert-warning">
+                No customers exist yet.
+                <a href="{% url 'sales:customer-create' %}" class="alert-link">Create a customer</a> before placing a sales order.
+            </div>
+        {% endif %}
     </div>
 
     {# ── Step 2: Add line items ── #}
-    <div id="lines-section" {% if not customer_known %}style="display:none"{% endif %}>
+    <div id="lines-section" {% if not customer_known or not has_customers %}style="display:none"{% endif %}>
         <h5 class="mb-3"><span class="badge bg-primary me-2">2</span> Add Line Items</h5>
         {{ lines_formset.management_form }}
         <div id="lines-container">
@@ -66,7 +73,7 @@
     </div>
 
     {# ── Submit ── #}
-    <div id="submit-section" {% if not customer_known %}style="display:none"{% endif %}>
+    <div id="submit-section" {% if not customer_known or not has_customers %}style="display:none"{% endif %}>
         <hr>
         <button type="submit" class="btn btn-success">
             <i class="bi bi-check-lg me-1"></i> Create Sales Order

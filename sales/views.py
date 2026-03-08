@@ -331,6 +331,7 @@ class SalesOrderCreateView(CreateView):
         # let the template know whether the customer is already chosen so it
         # can show the line-items section immediately
         context["customer_known"] = bool(customer_id)
+        context["has_customers"] = Customer.objects.exists()
 
         return context
 
