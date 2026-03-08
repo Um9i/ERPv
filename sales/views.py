@@ -27,7 +27,6 @@ from django import forms
 from django.forms.models import inlineformset_factory
 from django.db.models import F
 
-
 _CUSTOMER_PREFILL_FIELDS = [
     "name",
     "phone",

@@ -28,7 +28,6 @@ from django.forms.models import inlineformset_factory
 from django.db.models import F
 from django.http import JsonResponse
 
-
 _SUPPLIER_PREFILL_FIELDS = [
     "name",
     "phone",
