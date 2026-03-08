@@ -27,6 +27,9 @@ from django import forms
 from django.forms.models import inlineformset_factory
 from django.db.models import F
 from django.http import JsonResponse
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 _SUPPLIER_PREFILL_FIELDS = [
     "name",
@@ -692,3 +695,54 @@ class PurchaseOrderReceiveView(DetailView):
         # after receiving, go back to the full PO list (no standalone
         # receiving page exists any longer)
         return reverse_lazy("procurement:purchase-order-list")
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class NotifySupplierProductView(View):
+    """Inbound: remote tells us to update the cost of a SupplierProduct."""
+
+    def post(self, request, *args, **kwargs):
+        import json
+        from decimal import Decimal, InvalidOperation
+        from config.models import PairedInstance
+
+        auth = request.META.get("HTTP_AUTHORIZATION", "")
+        if not auth.startswith("Bearer "):
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+        key = auth[len("Bearer ") :]
+        try:
+            paired_instance = PairedInstance.objects.get(our_key=key)
+        except PairedInstance.DoesNotExist:
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+
+        if not paired_instance.supplier:
+            return JsonResponse(
+                {"error": "Supplier not linked to this paired instance"}, status=400
+            )
+
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        product_name = (data.get("product_name") or "").strip()
+        cost_raw = str(data.get("cost", "")).strip()
+
+        if not product_name:
+            return JsonResponse({"error": "product_name is required"}, status=400)
+
+        try:
+            cost = Decimal(cost_raw)
+        except InvalidOperation:
+            return JsonResponse({"error": f"Invalid cost: {cost_raw!r}"}, status=400)
+
+        sp = SupplierProduct.objects.filter(
+            supplier=paired_instance.supplier,
+            product__name__iexact=product_name,
+        ).first()
+        if not sp:
+            return JsonResponse({"error": "SupplierProduct not found"}, status=400)
+
+        sp.cost = cost
+        sp.save(update_fields=["cost"])
+        return JsonResponse({"status": "ok"})

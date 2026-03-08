@@ -31,7 +31,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 
 from config.models import PairedInstance
-from config.notifications import _notify_remote_customer_product
+from config.notifications import (
+    _notify_remote_customer_product,
+    _notify_remote_supplier_product_cost,
+)
 
 
 class ProductCreateView(CreateView):
@@ -71,10 +74,13 @@ class ProductUpdateView(UpdateView):
 
             failed = []
             for pi in paired_instances:
-                ok = _notify_remote_customer_product(
+                ok1 = _notify_remote_customer_product(
                     pi, product.name, product.sale_price
                 )
-                if not ok:
+                ok2 = _notify_remote_supplier_product_cost(
+                    pi, product.name, product.sale_price
+                )
+                if not ok1 or not ok2:
                     failed.append(pi.name)
 
             if failed:

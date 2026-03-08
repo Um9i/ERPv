@@ -21,6 +21,7 @@ from .views import (
     PurchaseOrderListView,
     PurchaseOrderDeleteView,
     ProcurementDashboardView,
+    NotifySupplierProductView,
 )
 
 app_name = "procurement"
@@ -107,5 +108,10 @@ urlpatterns = [
         "purchase-orders/<int:pk>/delete/",
         PurchaseOrderDeleteView.as_view(),
         name="purchase-order-delete",
+    ),
+    path(
+        "api/notify/supplier-product/",
+        NotifySupplierProductView.as_view(),
+        name="api-notify-supplier-product",
     ),
 ]

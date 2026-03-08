@@ -17,7 +17,12 @@ class LoginRequiredMiddleware:
         # ensure reverse is available
         self.exempt_urls = [reverse("home")]
         # allow any URL under accounts (login/logout/registration)
-        self.exempt_prefixes = ["/accounts/", "/config/api/", "/inventory/api/"]
+        self.exempt_prefixes = [
+            "/accounts/",
+            "/config/api/",
+            "/inventory/api/",
+            "/procurement/api/",
+        ]
 
     def __call__(self, request):
         path = request.path_info
