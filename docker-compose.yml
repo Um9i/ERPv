@@ -15,9 +15,13 @@ services:
 
   web:
     build: .
-    command: gunicorn main.wsgi:application --bind 0.0.0.0:8000 --workers 3
+    command: >
+      sh -c "python manage.py collectstatic --noinput &&
+             gunicorn main.wsgi:application --bind 0.0.0.0:8000 --workers 3"
     volumes:
       - .:/app:Z
+      - staticfiles:/app/staticfiles
+      - media:/app/media
     ports:
       - "8000:8000"
     environment:
@@ -30,3 +34,5 @@ services:
 
 volumes:
   postgres_data:
+  staticfiles:
+  media:
