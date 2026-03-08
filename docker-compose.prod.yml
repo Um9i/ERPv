@@ -2,5 +2,5 @@ services:
   web:
     volumes:
       - .:/app:Z
-      - /var/www/erpv/staticfiles:/app/staticfiles
-      - /var/www/erpv/media:/app/media
+      - /var/www/erpv/staticfiles:/app/staticfiles:z
+      - /var/www/erpv/media:/app/media:z
