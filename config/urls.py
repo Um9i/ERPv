@@ -21,6 +21,11 @@ urlpatterns = [
         name="paired-instance-delete",
     ),
     path(
+        "paired/<int:pk>/complete/",
+        views.PairedInstanceCompleteView.as_view(),
+        name="paired-instance-complete",
+    ),
+    path(
         "paired/<int:pk>/import-customer/",
         views.ImportAsCustomerView.as_view(),
         name="import-as-customer",

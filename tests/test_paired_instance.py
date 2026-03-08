@@ -11,7 +11,6 @@ class PairedInstanceModelTest(TestCase):
         instance = PairedInstance.objects.create(
             name="Test Partner",
             url="https://partner.example.com",
-            api_key="their-key-abc",
         )
         self.assertTrue(instance.our_key)
         self.assertGreater(len(instance.our_key), 0)
@@ -20,7 +19,6 @@ class PairedInstanceModelTest(TestCase):
         instance = PairedInstance.objects.create(
             name="Test Partner",
             url="https://partner.example.com",
-            api_key="their-key-abc",
             our_key="fixed-custom-key",
         )
         self.assertEqual(instance.our_key, "fixed-custom-key")
@@ -28,6 +26,22 @@ class PairedInstanceModelTest(TestCase):
     def test_our_key_preview_shows_first_8_chars(self):
         instance = PairedInstance(our_key="abcdefghijklmnop")
         self.assertEqual(instance.our_key_preview, "abcdefgh\u2026")
+
+    def test_status_is_pending_when_api_key_blank(self):
+        instance = PairedInstance(
+            name="Pending Partner",
+            url="https://pending.example.com",
+            api_key="",
+        )
+        self.assertEqual(instance.status, "pending")
+
+    def test_status_is_active_when_api_key_set(self):
+        instance = PairedInstance(
+            name="Active Partner",
+            url="https://active.example.com",
+            api_key="some-real-key-here",
+        )
+        self.assertEqual(instance.status, "active")
 
 
 class CompanyApiViewTest(TestCase):
@@ -107,3 +121,61 @@ class PairedInstanceListViewTest(TestCase):
         self.client.login(username="staffuser", password="testpass123")
         response = self.client.get(reverse("config:paired-instance-list"))
         self.assertEqual(response.status_code, 200)
+
+
+class CompletePairingViewTest(TestCase):
+
+    def setUp(self):
+        self.staff_user = User.objects.create_user(
+            "staffuser2", password="testpass123", is_staff=True
+        )
+        self.instance = PairedInstance.objects.create(
+            name="Pending Partner",
+            url="https://pending.example.com",
+        )
+
+    def test_complete_pairing_sets_api_key(self):
+        self.client.login(username="staffuser2", password="testpass123")
+        response = self.client.post(
+            reverse("config:paired-instance-complete", args=[self.instance.pk]),
+            {"api_key": "newly-received-key"},
+        )
+        self.assertRedirects(response, reverse("config:paired-instance-list"))
+        self.instance.refresh_from_db()
+        self.assertEqual(self.instance.api_key, "newly-received-key")
+
+    def test_complete_pairing_rejects_blank_api_key(self):
+        self.client.login(username="staffuser2", password="testpass123")
+        response = self.client.post(
+            reverse("config:paired-instance-complete", args=[self.instance.pk]),
+            {"api_key": ""},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.instance.refresh_from_db()
+        self.assertEqual(self.instance.api_key, "")
+
+
+class ImportGuardTest(TestCase):
+
+    def setUp(self):
+        self.staff_user = User.objects.create_user(
+            "staffuser3", password="testpass123", is_staff=True
+        )
+        self.pending_instance = PairedInstance.objects.create(
+            name="Pending",
+            url="https://pending.example.com",
+        )
+
+    def test_import_customer_blocked_when_api_key_blank(self):
+        self.client.login(username="staffuser3", password="testpass123")
+        response = self.client.get(
+            reverse("config:import-as-customer", args=[self.pending_instance.pk])
+        )
+        self.assertRedirects(response, reverse("config:paired-instance-list"))
+
+    def test_import_supplier_blocked_when_api_key_blank(self):
+        self.client.login(username="staffuser3", password="testpass123")
+        response = self.client.get(
+            reverse("config:import-as-supplier", args=[self.pending_instance.pk])
+        )
+        self.assertRedirects(response, reverse("config:paired-instance-list"))

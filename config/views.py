@@ -12,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import ListView, CreateView, DeleteView
 from django.views.generic.edit import UpdateView
 
-from .forms import CompanyConfigForm, PairedInstanceForm
+from .forms import CompanyConfigForm, CompletePairingForm, PairedInstanceForm
 from .models import CompanyConfig, PairedInstance
 
 _IMPORT_FIELDS = [
@@ -119,6 +119,42 @@ class PairedInstanceDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteVi
         return self.request.user.is_staff
 
 
+class PairedInstanceCompleteView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Phase 2 — enter the remote api_key once the partner has shared it."""
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def get(self, request, pk, *args, **kwargs):
+        instance = get_object_or_404(PairedInstance, pk=pk)
+        form = CompletePairingForm()
+        return self._render(request, instance, form)
+
+    def post(self, request, pk, *args, **kwargs):
+        instance = get_object_or_404(PairedInstance, pk=pk)
+        form = CompletePairingForm(request.POST)
+        if form.is_valid():
+            instance.api_key = form.cleaned_data["api_key"]
+            instance.save()
+            messages.success(
+                request, f'Pairing with "{instance.name}" is now complete.'
+            )
+            return redirect(reverse_lazy("config:paired-instance-list"))
+        return self._render(request, instance, form)
+
+    def _render(self, request, instance, form):
+        from django.shortcuts import render
+
+        return render(
+            request,
+            "config/paired_instance_complete.html",
+            {
+                "instance": instance,
+                "form": form,
+            },
+        )
+
+
 class ImportAsCustomerView(LoginRequiredMixin, UserPassesTestMixin, View):
     """Fetch remote company data and redirect to Customer create form pre-filled."""
 
@@ -127,6 +163,11 @@ class ImportAsCustomerView(LoginRequiredMixin, UserPassesTestMixin, View):
 
     def get(self, request, pk, *args, **kwargs):
         instance = get_object_or_404(PairedInstance, pk=pk)
+        if not instance.api_key:
+            messages.error(
+                request, "Pairing is not complete \u2014 enter their API key first."
+            )
+            return redirect(reverse_lazy("config:paired-instance-list"))
         try:
             resp = httpx.get(
                 f"{instance.url.rstrip('/')}/config/api/company/",
@@ -150,6 +191,11 @@ class ImportAsSupplierView(LoginRequiredMixin, UserPassesTestMixin, View):
 
     def get(self, request, pk, *args, **kwargs):
         instance = get_object_or_404(PairedInstance, pk=pk)
+        if not instance.api_key:
+            messages.error(
+                request, "Pairing is not complete \u2014 enter their API key first."
+            )
+            return redirect(reverse_lazy("config:paired-instance-list"))
         try:
             resp = httpx.get(
                 f"{instance.url.rstrip('/')}/config/api/company/",

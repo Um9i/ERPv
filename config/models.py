@@ -56,7 +56,10 @@ class PairedInstance(models.Model):
         help_text="Base URL of the remote instance, e.g. https://acme.example.com"
     )
     api_key = models.CharField(
-        max_length=64, help_text="The key they gave us to authenticate our requests"
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="The key they gave us to authenticate our requests",
     )
     our_key = models.CharField(
         max_length=64, blank=True, help_text="The key we generated for them to call us"
@@ -78,3 +81,7 @@ class PairedInstance(models.Model):
     @property
     def our_key_preview(self):
         return self.our_key[:8] + "…" if self.our_key else ""
+
+    @property
+    def status(self):
+        return "active" if self.api_key else "pending"

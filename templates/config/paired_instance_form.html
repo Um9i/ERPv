@@ -27,15 +27,6 @@
         {% endif %}
       </div>
 
-      <div class="col-md-12">
-        <label class="form-label">Their API Key <span class="text-danger">*</span></label>
-        {{ form.api_key }}
-        <div class="form-text">The key they gave you — used when <em>your</em> instance calls theirs.</div>
-        {% if form.api_key.errors %}
-          <div class="text-danger small mt-1">{{ form.api_key.errors.as_text }}</div>
-        {% endif %}
-      </div>
-
       <div class="col-12">
         <label class="form-label">Notes</label>
         {{ form.notes }}

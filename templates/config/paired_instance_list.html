@@ -41,6 +41,7 @@
             <th>Name</th>
             <th>URL</th>
             <th>Our Key (preview)</th>
+            <th>Status</th>
             <th>Created</th>
             <th class="text-end">Actions</th>
           </tr>
@@ -53,14 +54,35 @@
             </td>
             <td><a href="{{ inst.url }}" target="_blank" rel="noopener noreferrer">{{ inst.url }}</a></td>
             <td><code>{{ inst.our_key_preview }}</code></td>
+            <td>
+              {% if inst.status == "active" %}
+                <span class="badge bg-success-subtle text-success">Active</span>
+              {% else %}
+                <span class="badge bg-warning-subtle text-warning">Pending</span>
+              {% endif %}
+            </td>
             <td>{{ inst.created_at|date:"d M Y" }}</td>
             <td class="text-end">
-              <a href="{% url 'config:import-as-customer' inst.pk %}" class="btn btn-sm btn-outline-indigo me-1">
-                <i class="bi bi-person-plus"></i> Import as Customer
-              </a>
-              <a href="{% url 'config:import-as-supplier' inst.pk %}" class="btn btn-sm btn-outline-primary me-1">
-                <i class="bi bi-truck"></i> Import as Supplier
-              </a>
+              {% if inst.status == "pending" %}
+                <a href="{% url 'config:paired-instance-complete' inst.pk %}" class="btn btn-sm btn-warning me-1">
+                  <i class="bi bi-key"></i> Enter Their Key
+                </a>
+                <button class="btn btn-sm btn-outline-secondary me-1" disabled
+                        title="Complete pairing first">
+                  <i class="bi bi-person-plus"></i> Import as Customer
+                </button>
+                <button class="btn btn-sm btn-outline-secondary me-1" disabled
+                        title="Complete pairing first">
+                  <i class="bi bi-truck"></i> Import as Supplier
+                </button>
+              {% else %}
+                <a href="{% url 'config:import-as-customer' inst.pk %}" class="btn btn-sm btn-outline-indigo me-1">
+                  <i class="bi bi-person-plus"></i> Import as Customer
+                </a>
+                <a href="{% url 'config:import-as-supplier' inst.pk %}" class="btn btn-sm btn-outline-primary me-1">
+                  <i class="bi bi-truck"></i> Import as Supplier
+                </a>
+              {% endif %}
               <a href="{% url 'config:paired-instance-delete' inst.pk %}" class="btn btn-sm btn-outline-danger">
                 <i class="bi bi-trash"></i>
               </a>

@@ -44,10 +44,25 @@ class CompanyConfigForm(forms.ModelForm):
 class PairedInstanceForm(forms.ModelForm):
     class Meta:
         model = PairedInstance
-        fields = ["name", "url", "api_key", "notes"]
+        fields = ["name", "url", "notes"]
         widgets = {
             "name": forms.TextInput(attrs={"class": "form-control"}),
             "url": forms.URLInput(attrs={"class": "form-control"}),
-            "api_key": forms.TextInput(attrs={"class": "form-control"}),
             "notes": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
         }
+
+
+class CompletePairingForm(forms.Form):
+    api_key = forms.CharField(
+        max_length=64,
+        required=True,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        label="Their API Key",
+        help_text="The key the remote instance generated for you.",
+    )
+
+    def clean_api_key(self):
+        key = self.cleaned_data["api_key"].strip()
+        if not key:
+            raise forms.ValidationError("API key is required.")
+        return key
