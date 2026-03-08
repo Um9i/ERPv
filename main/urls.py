@@ -39,6 +39,7 @@ urlpatterns = (
         path("sales/", include("sales.urls", namespace="sales")),
         path("production/", include("production.urls", namespace="production")),
         path("finance/", include("finance.urls", namespace="finance")),
+        path("config/", include("config.urls", namespace="config")),
     ]
     + debug_toolbar_urls()
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

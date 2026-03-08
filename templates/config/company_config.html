@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="detail-section">
+  <div class="detail-section-header">
+    <h1>Company Configuration</h1>
+    <p class="text-muted">Your company details used on invoices and reports.</p>
+  </div>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="row g-3">
+
+      <div class="col-md-6">
+        <label class="form-label">Company Name</label>
+        {{ form.name }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">VAT Number</label>
+        {{ form.vat_number }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Company Number</label>
+        {{ form.company_number }}
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Phone</label>
+        {{ form.phone }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Email</label>
+        {{ form.email }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Website</label>
+        {{ form.website }}
+      </div>
+
+      <div class="col-12"><hr><h6>Address</h6></div>
+      <div class="col-md-6">
+        <label class="form-label">Address Line 1</label>
+        {{ form.address_line_1 }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Address Line 2</label>
+        {{ form.address_line_2 }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">City</label>
+        {{ form.city }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">State / Region</label>
+        {{ form.state }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Postal Code</label>
+        {{ form.postal_code }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Country</label>
+        {{ form.country }}
+      </div>
+
+      <div class="col-12"><hr><h6>Logo</h6></div>
+      <div class="col-md-6">
+        {% if form.instance.logo %}
+          <img src="{{ form.instance.logo.url }}" alt="Company logo"
+               style="max-height:80px; margin-bottom:0.5rem; display:block;">
+        {% endif %}
+        {{ form.logo }}
+      </div>
+
+    </div>
+    <div class="mt-4">
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

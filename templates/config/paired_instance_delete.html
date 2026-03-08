@@ -1,0 +1,8 @@
+{% extends "confirm_delete_base.html" %}
+{% block delete_title %}Delete Paired Instance{% endblock %}
+{% block delete_message %}
+  Are you sure you want to delete <strong>{{ object.name }}</strong>?
+  Their API key will be revoked and they will no longer be able to call your company API.
+  This action cannot be undone.
+{% endblock %}
+{% block delete_cancel_url %}{% url 'config:paired-instance-list' %}{% endblock %}

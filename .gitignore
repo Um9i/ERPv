@@ -8,3 +8,4 @@ staticfiles
 .venv
 venv
 .vscode
+TODO.md

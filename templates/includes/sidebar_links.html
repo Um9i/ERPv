@@ -28,3 +28,17 @@
         <span class="sidebar-label">Finance</span>
     </a>
 </li>
+{% if request.user.is_staff %}
+<li class="nav-item">
+    <a href="{% url 'config:company-config' %}" class="nav-link sidebar-link">
+        <span class="sidebar-icon sidebar-icon--secondary"><i class="bi bi-gear"></i></span>
+        <span class="sidebar-label">Settings</span>
+    </a>
+</li>
+<li class="nav-item">
+    <a href="{% url 'config:paired-instance-list' %}" class="nav-link sidebar-link">
+        <span class="sidebar-icon sidebar-icon--secondary"><i class="bi bi-diagram-2"></i></span>
+        <span class="sidebar-label">Paired Instances</span>
+    </a>
+</li>
+{% endif %}

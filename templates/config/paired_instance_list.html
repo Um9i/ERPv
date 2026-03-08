@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="detail-section">
+  <div class="detail-section-header d-flex justify-content-between align-items-start">
+    <div>
+      <h1>Paired Instances</h1>
+      <p class="text-muted">Remote ERPv instances that can exchange company data with you.</p>
+    </div>
+    <a href="{% url 'config:paired-instance-create' %}" class="btn btn-primary">
+      <i class="bi bi-plus-lg"></i> Add Paired Instance
+    </a>
+  </div>
+
+  {% if new_our_key %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+      <strong><i class="bi bi-key-fill"></i> Your API key has been generated.</strong>
+      Send this key to your partner — it will <strong>not</strong> be shown in full again.
+      <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
+        <code id="new-our-key" class="fs-6 user-select-all">{{ new_our_key }}</code>
+        <button type="button" class="btn btn-sm btn-outline-secondary"
+                onclick="navigator.clipboard.writeText(document.getElementById('new-our-key').innerText)">
+          <i class="bi bi-clipboard"></i> Copy
+        </button>
+      </div>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% endif %}
+
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% endfor %}
+
+  {% if instances %}
+    <div class="table-responsive mt-3">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Name</th>
+            <th>URL</th>
+            <th>Our Key (preview)</th>
+            <th>Created</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inst in instances %}
+          <tr>
+            <td><strong>{{ inst.name }}</strong>
+              {% if inst.notes %}<br><small class="text-muted">{{ inst.notes|truncatechars:60 }}</small>{% endif %}
+            </td>
+            <td><a href="{{ inst.url }}" target="_blank" rel="noopener noreferrer">{{ inst.url }}</a></td>
+            <td><code>{{ inst.our_key_preview }}</code></td>
+            <td>{{ inst.created_at|date:"d M Y" }}</td>
+            <td class="text-end">
+              <a href="{% url 'config:import-as-customer' inst.pk %}" class="btn btn-sm btn-outline-indigo me-1">
+                <i class="bi bi-person-plus"></i> Import as Customer
+              </a>
+              <a href="{% url 'config:import-as-supplier' inst.pk %}" class="btn btn-sm btn-outline-primary me-1">
+                <i class="bi bi-truck"></i> Import as Supplier
+              </a>
+              <a href="{% url 'config:paired-instance-delete' inst.pk %}" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash"></i>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-diagram-2 fs-1"></i>
+      <p class="mt-2">No paired instances yet. Add one to get started.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

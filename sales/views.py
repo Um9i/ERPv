@@ -28,10 +28,31 @@ from django.forms.models import inlineformset_factory
 from django.db.models import F
 
 
+_CUSTOMER_PREFILL_FIELDS = [
+    "name",
+    "phone",
+    "email",
+    "website",
+    "address_line_1",
+    "address_line_2",
+    "city",
+    "state",
+    "postal_code",
+    "country",
+]
+
+
 class CustomerCreateView(CreateView):
     model = Customer
     template_name = "sales/customer_form.html"
     form_class = CustomerForm
+
+    def get_initial(self):
+        initial = super().get_initial()
+        for field in _CUSTOMER_PREFILL_FIELDS:
+            if field in self.request.GET:
+                initial[field] = self.request.GET[field]
+        return initial
 
     def get_success_url(self):
         return reverse_lazy("sales:customer-detail", args=[self.object.pk])

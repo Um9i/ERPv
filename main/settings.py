@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "production.apps.ProductionConfig",
     "sales.apps.SalesConfig",
     "finance.apps.FinanceConfig",
+    "config.apps.ConfigConfig",
     "debug_toolbar",
 ]
 
@@ -85,6 +86,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "config.context_processors.company_config",
             ],
         },
     },

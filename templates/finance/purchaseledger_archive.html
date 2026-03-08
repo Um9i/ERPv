@@ -61,7 +61,7 @@
         {% for row in object_list %}
         <tr>
             <td>{{ row.date|date:"Y-m-d H:i" }}</td>
-            <td>{{ row.supplier }}</td>
+            <td><a href="{% url 'procurement:supplier-detail' row.supplier.pk %}">{{ row.supplier }}</a></td>
             <td>{{ row.product }}</td>
             <td class="text-end">{{ row.quantity }}</td>
             <td class="text-end">{{ row.value|currency }}</td>

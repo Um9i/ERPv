@@ -29,10 +29,31 @@ from django.db.models import F
 from django.http import JsonResponse
 
 
+_SUPPLIER_PREFILL_FIELDS = [
+    "name",
+    "phone",
+    "email",
+    "website",
+    "address_line_1",
+    "address_line_2",
+    "city",
+    "state",
+    "postal_code",
+    "country",
+]
+
+
 class SupplierCreateView(CreateView):
     model = Supplier
     template_name = "procurement/supplier_form.html"
     form_class = SupplierForm
+
+    def get_initial(self):
+        initial = super().get_initial()
+        for field in _SUPPLIER_PREFILL_FIELDS:
+            if field in self.request.GET:
+                initial[field] = self.request.GET[field]
+        return initial
 
     def get_success_url(self):
         # after creating a supplier return to that supplier's detail
