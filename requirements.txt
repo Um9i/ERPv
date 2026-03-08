@@ -34,7 +34,7 @@ pytest-django==4.11.1
 python-dotenv==1.2.1
 sqlparse==0.5.5
 tinycss2==1.5.1
-tinyhtml5==2.0.0
+tinyhtml5==2.1.0
 weasyprint==68.1
 webencodings==0.5.1
 whitenoise==6.11.0
