@@ -10,7 +10,7 @@ from main.factories import ProductFactory, CustomerFactory, SupplierFactory
 
 @pytest.mark.django_db
 def test_finance_dashboard_shows_totals(client):
-    user = User.objects.create_user(username="finance", password="pw")
+    user = User.objects.create_user(username="finance")
     client.force_login(user)
     product = ProductFactory()
     customer = CustomerFactory()
@@ -39,7 +39,7 @@ def test_finance_dashboard_shows_totals(client):
 
 @pytest.mark.django_db
 def test_sales_ledger_archive_lists_entry(client):
-    user = User.objects.create_user(username="archive", password="pw")
+    user = User.objects.create_user(username="archive")
     client.force_login(user)
     product = ProductFactory()
     customer = CustomerFactory()

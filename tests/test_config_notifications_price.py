@@ -10,9 +10,7 @@ from procurement.models import Supplier, SupplierProduct
 
 @pytest.fixture
 def staff_user(django_user_model):
-    return django_user_model.objects.create_user(
-        username="staff", password="pass", is_staff=True
-    )
+    return django_user_model.objects.create_user(username="staff", is_staff=True)
 
 
 @pytest.fixture

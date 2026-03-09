@@ -3,14 +3,14 @@ from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
 from config.models import PairedInstance
 from inventory.models import Product
 
 
-class ProductCatalogueCleanTest(TestCase):
+class ProductCatalogueCleanTest(SimpleTestCase):
     """Model-level validation for catalogue_item field."""
 
     def test_catalogue_item_true_with_no_sale_price_fails_clean(self):
@@ -28,30 +28,31 @@ class ProductCatalogueCleanTest(TestCase):
 
 class CatalogueApiViewTest(TestCase):
 
-    def setUp(self):
-        self.paired = PairedInstance.objects.create(
+    @classmethod
+    def setUpTestData(cls):
+        cls.paired = PairedInstance.objects.create(
             name="Partner",
             url="https://partner.example.com",
             api_key="their-key",
         )
-        self.url = reverse("inventory:catalogue-api")
+        cls.url = reverse("inventory:catalogue-api")
 
         # A valid catalogue product
-        self.product_a = Product.objects.create(
+        cls.product_a = Product.objects.create(
             name="Widget A",
             description="A fine widget",
             sale_price=Decimal("12.50"),
             catalogue_item=True,
         )
         # Not a catalogue item — should be excluded
-        self.product_b = Product.objects.create(
+        cls.product_b = Product.objects.create(
             name="Internal Part",
             description="",
             sale_price=Decimal("5.00"),
             catalogue_item=False,
         )
         # No sale price — should be excluded
-        self.product_c = Product.objects.create(
+        cls.product_c = Product.objects.create(
             name="Unpriced Widget",
             description="",
             sale_price=None,
@@ -108,19 +109,16 @@ class CatalogueApiViewTest(TestCase):
 
 class BrowseCatalogueViewTest(TestCase):
 
-    def setUp(self):
-        self.staff_user = User.objects.create_user(
-            "staffcat", password="testpass123", is_staff=True
-        )
-        self.regular_user = User.objects.create_user(
-            "regularcat", password="testpass123", is_staff=False
-        )
-        self.active_instance = PairedInstance.objects.create(
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff_user = User.objects.create_user("staffcat", is_staff=True)
+        cls.regular_user = User.objects.create_user("regularcat", is_staff=False)
+        cls.active_instance = PairedInstance.objects.create(
             name="Active Partner",
             url="https://active.example.com",
             api_key="real-api-key",
         )
-        self.pending_instance = PairedInstance.objects.create(
+        cls.pending_instance = PairedInstance.objects.create(
             name="Pending Partner",
             url="https://pending.example.com",
             api_key="",
@@ -134,7 +132,7 @@ class BrowseCatalogueViewTest(TestCase):
         self.assertNotEqual(response.status_code, 200)
 
     def test_browse_catalogue_staff_only(self):
-        self.client.login(username="regularcat", password="testpass123")
+        self.client.force_login(self.regular_user)
         url = reverse(
             "config:paired-instance-browse-catalogue", args=[self.active_instance.pk]
         )
@@ -142,7 +140,7 @@ class BrowseCatalogueViewTest(TestCase):
         self.assertNotEqual(response.status_code, 200)
 
     def test_browse_catalogue_pending_instance_redirects_with_error(self):
-        self.client.login(username="staffcat", password="testpass123")
+        self.client.force_login(self.staff_user)
         url = reverse(
             "config:paired-instance-browse-catalogue", args=[self.pending_instance.pk]
         )
@@ -151,6 +149,7 @@ class BrowseCatalogueViewTest(TestCase):
 
     @patch("config.views.httpx.get")
     def test_browse_catalogue_success(self, mock_get):
+        self.client.force_login(self.staff_user)
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.json.return_value = [
@@ -163,7 +162,7 @@ class BrowseCatalogueViewTest(TestCase):
         ]
         mock_get.return_value = mock_resp
 
-        self.client.login(username="staffcat", password="testpass123")
+        self.client.force_login(self.staff_user)
         url = reverse(
             "config:paired-instance-browse-catalogue", args=[self.active_instance.pk]
         )
@@ -178,7 +177,7 @@ class BrowseCatalogueViewTest(TestCase):
         mock_resp.status_code = 500
         mock_get.return_value = mock_resp
 
-        self.client.login(username="staffcat", password="testpass123")
+        self.client.force_login(self.staff_user)
         url = reverse(
             "config:paired-instance-browse-catalogue", args=[self.active_instance.pk]
         )

@@ -79,20 +79,21 @@ class NotifyCustomerViewTest(TestCase):
 
 class NotifyCustomerProductViewTest(TestCase):
 
-    def setUp(self):
-        self.customer = Customer.objects.create(name="Linked Customer")
-        self.instance = PairedInstance.objects.create(
+    @classmethod
+    def setUpTestData(cls):
+        cls.customer = Customer.objects.create(name="Linked Customer")
+        cls.instance = PairedInstance.objects.create(
             name="Remote Partner",
             url="https://remote.example.com",
             api_key="their-key",
-            customer=self.customer,
+            customer=cls.customer,
         )
-        self.product = Product.objects.create(
+        cls.product = Product.objects.create(
             name="Test Widget",
             sale_price=Decimal("10.00"),
         )
-        self.url = reverse("config:notify-customer-product")
-        self.payload = {"product_name": "Test Widget", "price": "9.99"}
+        cls.url = reverse("config:notify-customer-product")
+        cls.payload = {"product_name": "Test Widget", "price": "9.99"}
 
     def _post(self, payload, key=None):
         token = key if key is not None else self.instance.our_key

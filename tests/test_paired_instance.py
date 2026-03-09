@@ -46,8 +46,9 @@ class PairedInstanceModelTest(TestCase):
 
 class CompanyApiViewTest(TestCase):
 
-    def setUp(self):
-        self.instance = PairedInstance.objects.create(
+    @classmethod
+    def setUpTestData(cls):
+        cls.instance = PairedInstance.objects.create(
             name="Partner Co",
             url="https://partner.example.com",
             api_key="their-key-xyz",
@@ -100,42 +101,38 @@ class CompanyApiViewTest(TestCase):
 
 class PairedInstanceListViewTest(TestCase):
 
-    def setUp(self):
-        self.staff_user = User.objects.create_user(
-            "staffuser", password="testpass123", is_staff=True
-        )
-        self.regular_user = User.objects.create_user(
-            "regularuser", password="testpass123", is_staff=False
-        )
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff_user = User.objects.create_user("staffuser", is_staff=True)
+        cls.regular_user = User.objects.create_user("regularuser", is_staff=False)
 
     def test_list_view_redirects_unauthenticated(self):
         response = self.client.get(reverse("config:paired-instance-list"))
         self.assertNotEqual(response.status_code, 200)
 
     def test_list_view_redirects_non_staff(self):
-        self.client.login(username="regularuser", password="testpass123")
+        self.client.force_login(self.regular_user)
         response = self.client.get(reverse("config:paired-instance-list"))
         self.assertNotEqual(response.status_code, 200)
 
     def test_list_view_accessible_by_staff(self):
-        self.client.login(username="staffuser", password="testpass123")
+        self.client.force_login(self.staff_user)
         response = self.client.get(reverse("config:paired-instance-list"))
         self.assertEqual(response.status_code, 200)
 
 
 class CompletePairingViewTest(TestCase):
 
-    def setUp(self):
-        self.staff_user = User.objects.create_user(
-            "staffuser2", password="testpass123", is_staff=True
-        )
-        self.instance = PairedInstance.objects.create(
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff_user = User.objects.create_user("staffuser2", is_staff=True)
+        cls.instance = PairedInstance.objects.create(
             name="Pending Partner",
             url="https://pending.example.com",
         )
 
     def test_complete_pairing_sets_api_key(self):
-        self.client.login(username="staffuser2", password="testpass123")
+        self.client.force_login(self.staff_user)
         response = self.client.post(
             reverse("config:paired-instance-complete", args=[self.instance.pk]),
             {"api_key": "newly-received-key"},
@@ -145,7 +142,7 @@ class CompletePairingViewTest(TestCase):
         self.assertEqual(self.instance.api_key, "newly-received-key")
 
     def test_complete_pairing_rejects_blank_api_key(self):
-        self.client.login(username="staffuser2", password="testpass123")
+        self.client.force_login(self.staff_user)
         response = self.client.post(
             reverse("config:paired-instance-complete", args=[self.instance.pk]),
             {"api_key": ""},
@@ -157,24 +154,23 @@ class CompletePairingViewTest(TestCase):
 
 class ImportGuardTest(TestCase):
 
-    def setUp(self):
-        self.staff_user = User.objects.create_user(
-            "staffuser3", password="testpass123", is_staff=True
-        )
-        self.pending_instance = PairedInstance.objects.create(
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff_user = User.objects.create_user("staffuser3", is_staff=True)
+        cls.pending_instance = PairedInstance.objects.create(
             name="Pending",
             url="https://pending.example.com",
         )
 
     def test_import_customer_blocked_when_api_key_blank(self):
-        self.client.login(username="staffuser3", password="testpass123")
+        self.client.force_login(self.staff_user)
         response = self.client.get(
             reverse("config:import-as-customer", args=[self.pending_instance.pk])
         )
         self.assertRedirects(response, reverse("config:paired-instance-list"))
 
     def test_import_supplier_blocked_when_api_key_blank(self):
-        self.client.login(username="staffuser3", password="testpass123")
+        self.client.force_login(self.staff_user)
         response = self.client.get(
             reverse("config:import-as-supplier", args=[self.pending_instance.pk])
         )

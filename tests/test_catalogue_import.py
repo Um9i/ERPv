@@ -11,38 +11,35 @@ from procurement.models import Supplier, SupplierProduct
 
 class ImportCatalogueProductViewTest(TestCase):
 
-    def setUp(self):
-        self.staff_user = User.objects.create_user(
-            "staffimport", password="testpass123", is_staff=True
-        )
-        self.regular_user = User.objects.create_user(
-            "regularimport", password="testpass123", is_staff=False
-        )
-        self.supplier = Supplier.objects.create(name="Remote Supplier Co")
-        self.active_instance = PairedInstance.objects.create(
+    @classmethod
+    def setUpTestData(cls):
+        cls.staff_user = User.objects.create_user("staffimport", is_staff=True)
+        cls.regular_user = User.objects.create_user("regularimport", is_staff=False)
+        cls.supplier = Supplier.objects.create(name="Remote Supplier Co")
+        cls.active_instance = PairedInstance.objects.create(
             name="Active Partner",
             url="https://active.example.com",
             api_key="real-api-key",
-            supplier=self.supplier,
+            supplier=cls.supplier,
         )
-        self.pending_instance = PairedInstance.objects.create(
+        cls.pending_instance = PairedInstance.objects.create(
             name="Pending Partner",
             url="https://pending.example.com",
             api_key="",
         )
-        self.import_url = reverse(
+        cls.import_url = reverse(
             "config:paired-instance-import-product",
-            args=[self.active_instance.pk],
+            args=[cls.active_instance.pk],
         )
-        self.post_data = {
+        cls.post_data = {
             "name": "Remote Widget",
             "description": "A widget from remote",
             "sale_price": "9.99",
-            "supplier_id": str(self.supplier.pk),
+            "supplier_id": str(cls.supplier.pk),
         }
 
     def _login_staff(self):
-        self.client.login(username="staffimport", password="testpass123")
+        self.client.force_login(self.staff_user)
 
     # --- access control ---
 
@@ -52,7 +49,7 @@ class ImportCatalogueProductViewTest(TestCase):
         self.assertFalse(Product.objects.filter(name="Remote Widget").exists())
 
     def test_import_view_is_staff_only(self):
-        self.client.login(username="regularimport", password="testpass123")
+        self.client.force_login(self.regular_user)
         response = self.client.post(self.import_url, self.post_data)
         self.assertNotEqual(response.status_code, 200)
         self.assertFalse(Product.objects.filter(name="Remote Widget").exists())
