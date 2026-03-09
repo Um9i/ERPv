@@ -97,7 +97,6 @@
     <div class="panel h-100">
       <div class="panel-header d-flex align-items-center justify-content-between">
         <span><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Items to Reorder</span>
-        <a href="{{ low_stock_url }}?filter=purchasable" class="btn btn-sm btn-outline-danger">View {{ purchasable_low_stock }}</a>
       </div>
       <div class="panel-body">
         <p class="mb-2">
@@ -105,8 +104,7 @@
           product{{ purchasable_low_stock|pluralize }} {{ purchasable_low_stock|pluralize:'is,are' }} below
           required stock and not covered by open purchase orders.
         </p>
-        <a href="{% url 'procurement:purchase-order-create' %}" class="btn btn-sm btn-primary">Raise a PO</a>
-        <a href="{{ low_stock_url }}?filter=purchasable" class="btn btn-sm btn-outline-secondary ms-2">View Shortages</a>
+        <a href="{{ low_stock_url }}?filter=purchasable" class="btn btn-sm btn-primary">View {{ purchasable_low_stock }} Shortages</a>
       </div>
     </div>
     {% elif pending_receiving %}
@@ -160,10 +158,6 @@
               <span style="width:12px;height:12px;border-radius:2px;background:#ffc107;display:inline-block;"></span>
               Pending ({{ pending_receiving }})
             </span>
-            <span class="d-flex align-items-center gap-1 small">
-              <span style="width:12px;height:12px;border-radius:2px;background:#dee2e6;display:inline-block;"></span>
-              No Lines ({{ total_purchase_orders }})
-            </span>
           </div>
         </div>
       </div>
@@ -186,10 +180,10 @@
   new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: ['Received', 'Pending', 'No Lines'],
+      labels: ['Received', 'Pending'],
       datasets: [{
-        data: [received, pending, other],
-        backgroundColor: ['#198754', '#ffc107', '#dee2e6'],
+        data: [received, pending],
+        backgroundColor: ['#198754', '#ffc107'],
         borderWidth: 2,
         borderColor: '#fff',
         hoverOffset: 6

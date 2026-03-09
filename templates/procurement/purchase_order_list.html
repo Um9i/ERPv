@@ -29,6 +29,7 @@
             <th>ID</th>
             <th>Supplier</th>
             <th>Status</th>
+            <th>Due Date</th>
             <th>Created At</th>
             <th class="text-end">Actions</th>
         </tr>
@@ -36,9 +37,10 @@
     <tbody>
         {% for order in purchase_orders %}
         <tr>
-            <td>{{ order.order_number }}</td>
-            <td>{{ order.supplier.name }}</td>
+            <td><a href="{% url 'procurement:purchase-order-detail' order.id %}">{{ order.order_number }}</a></td>
+            <td><a href="{% url 'procurement:supplier-detail' order.supplier.id %}">{{ order.supplier.name }}</a></td>
             <td>{% if order.has_open_lines %}Open{% else %}Closed{% endif %}</td>
+            <td>{{ order.due_date|default:"—" }}</td>
             <td>{{ order.created_at }}</td>
             <td class="text-end">
                 {% if order.has_open_lines %}

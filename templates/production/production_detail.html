@@ -27,10 +27,10 @@
     <div class="detail-section-header">
         <h2 class="detail-section-title">Cost Summary</h2>
     </div>
-    <div class="row g-3">
 
-        {# ── Per unit ── #}
-        <div class="col-auto">
+    {# ── Per-unit / projected row ── #}
+    <div class="row g-3 mb-3">
+        <div class="col">
             <div class="metric-card">
                 <div class="metric-card-content">
                     <span class="metric-card-value">£{{ unit_cost|floatformat:2 }}</span>
@@ -39,7 +39,7 @@
             </div>
         </div>
         {% if sale_price %}
-        <div class="col-auto">
+        <div class="col">
             <div class="metric-card">
                 <div class="metric-card-content">
                     <span class="metric-card-value">£{{ sale_price|floatformat:2 }}</span>
@@ -48,9 +48,7 @@
             </div>
         </div>
         {% endif %}
-
-        {# ── Projected (full job) ── #}
-        <div class="col-auto">
+        <div class="col">
             <div class="metric-card">
                 <div class="metric-card-content">
                     <span class="metric-card-value">£{{ total_cost|floatformat:2 }}</span>
@@ -59,7 +57,7 @@
             </div>
         </div>
         {% if projected_value %}
-        <div class="col-auto">
+        <div class="col">
             <div class="metric-card">
                 <div class="metric-card-content">
                     <span class="metric-card-value">£{{ projected_value|floatformat:2 }}</span>
@@ -67,13 +65,10 @@
                 </div>
             </div>
         </div>
-        <div class="col-auto">
+        <div class="col">
             <div class="metric-card">
                 <div class="metric-card-content">
-                    <span class="metric-card-value
-                        {% if projected_margin_pct >= 30 %}text-success
-                        {% elif projected_margin_pct >= 10 %}text-warning
-                        {% else %}text-danger{% endif %}">
+                    <span class="metric-card-value {% if projected_margin_pct >= 30 %}text-success{% elif projected_margin_pct >= 10 %}text-warning{% else %}text-danger{% endif %}">
                         {{ projected_margin_pct|floatformat:1 }}%
                     </span>
                     <span class="metric-card-label">Projected Margin</span>
@@ -81,11 +76,13 @@
             </div>
         </div>
         {% endif %}
+    </div>
 
-        {# ── Actual (received so far) — only show when something received ── #}
-        {% if production.quantity_received > 0 %}
-        <div class="col-12"><hr class="my-1"></div>
-        <div class="col-auto">
+    {# ── Actual (received so far) ── #}
+    {% if production.quantity_received > 0 %}
+    <p class="text-muted small mb-2 fw-semibold text-uppercase" style="letter-spacing:.04em;">Actuals to date</p>
+    <div class="row g-3">
+        <div class="col">
             <div class="metric-card">
                 <div class="metric-card-content">
                     <span class="metric-card-value">£{{ produced_cost|floatformat:2 }}</span>
@@ -94,7 +91,7 @@
             </div>
         </div>
         {% if produced_value %}
-        <div class="col-auto">
+        <div class="col">
             <div class="metric-card">
                 <div class="metric-card-content">
                     <span class="metric-card-value">£{{ produced_value|floatformat:2 }}</span>
@@ -102,13 +99,10 @@
                 </div>
             </div>
         </div>
-        <div class="col-auto">
+        <div class="col">
             <div class="metric-card">
                 <div class="metric-card-content">
-                    <span class="metric-card-value
-                        {% if margin_pct >= 30 %}text-success
-                        {% elif margin_pct >= 10 %}text-warning
-                        {% else %}text-danger{% endif %}">
+                    <span class="metric-card-value {% if margin_pct >= 30 %}text-success{% elif margin_pct >= 10 %}text-warning{% else %}text-danger{% endif %}">
                         {{ margin_pct|floatformat:1 }}%
                     </span>
                     <span class="metric-card-label">Actual Margin</span>
@@ -116,9 +110,9 @@
             </div>
         </div>
         {% endif %}
-        {% endif %}
-
     </div>
+    {% endif %}
+
 </div>
 {% endif %}
 
@@ -149,32 +143,32 @@
         <h2 class="detail-section-title">Component Breakdown</h2>
     </div>
     <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
-            <thead>
+        <table class="table table-sm table-striped align-middle mb-0">
+            <thead class="table-light">
                 <tr>
                     <th>Component</th>
-                    <th class="text-end">Per Unit</th>
-                    <th class="text-end">Required (remaining)</th>
-                    <th class="text-end">In Stock</th>
-                    <th class="text-end">Shortfall</th>
+                    <th class="text-center" style="width:6rem;">Per Unit</th>
+                    <th class="text-center" style="width:8rem;">Required</th>
+                    <th class="text-center" style="width:7rem;">In Stock</th>
+                    <th class="text-center" style="width:7rem;">Shortfall</th>
                 </tr>
             </thead>
             <tbody>
                 {% for c in components %}
-                <tr class="{% if not c.ok %}table-danger{% endif %}">
+                <tr {% if not c.ok %}class="table-danger"{% endif %}>
                     <td>
                         <a href="{% url 'inventory:inventory-detail' c.product.product_inventory.pk %}">
                             {{ c.product.name }}
                         </a>
                     </td>
-                    <td class="text-end">{{ c.per_unit }}</td>
-                    <td class="text-end">{{ c.required_remaining }}</td>
-                    <td class="text-end">{{ c.stock }}</td>
-                    <td class="text-end">
+                    <td class="text-center">{{ c.per_unit }}</td>
+                    <td class="text-center">{{ c.required_remaining }}</td>
+                    <td class="text-center">{{ c.stock }}</td>
+                    <td class="text-center">
                         {% if c.ok %}
-                            <span class="text-success"><i class="bi bi-check-lg"></i></span>
+                            <span class="badge bg-success-subtle text-success"><i class="bi bi-check-lg"></i> OK</span>
                         {% else %}
-                            <span class="text-danger fw-semibold">-{{ c.shortfall }}</span>
+                            <span class="badge bg-danger-subtle text-danger fw-semibold">−{{ c.shortfall }}</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -187,21 +181,79 @@
 
 {% if bom %}
 {% if production.status != 'Closed' %}
-    {% if production.materials_available_for_remaining %}
-    <a href="{% url 'production:production-receive' production.id %}" class="btn btn-success">
-        <i class="bi bi-check-lg me-1"></i>Receive Units
-    </a>
-    {% else %}
-    <button class="btn btn-success" disabled title="Insufficient materials to complete remaining quantity">
-        <i class="bi bi-check-lg me-1"></i>Receive Units
-    </button>
+
+<div class="detail-section">
+    <div class="detail-section-header">
+        <h2 class="detail-section-title">Actions</h2>
+    </div>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
     {% endif %}
-    <form method="post" class="d-inline">
-        {% csrf_token %}
-        <button type="submit" name="cancel_production" value="1" class="btn btn-outline-danger" onclick="return confirm('Cancel this job and release its allocations?');">
-            Cancel Job
-        </button>
-    </form>
+
+    <div class="card border">
+        <div class="card-header bg-transparent fw-semibold">
+            <i class="bi bi-box-arrow-in-down me-1"></i>Receive Units
+        </div>
+        <div class="card-body">
+
+            {% if receive_form.errors %}
+            <div class="alert alert-danger py-2">
+                <ul class="mb-0 ps-3">
+                    {% for field in receive_form %}{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}{% endfor %}
+                    {% for error in receive_form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if production.materials_available_for_remaining %}
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3 mb-3">
+                    <div class="col-sm-3">
+                        <label class="form-label fw-medium" for="{{ receive_form.quantity_to_receive.id_for_label }}">Quantity</label>
+                        {{ receive_form.quantity_to_receive }}
+                    </div>
+                    <div class="col-sm-5">
+                        <label class="form-label fw-medium" for="{{ receive_form.location.id_for_label }}">Location <span class="text-muted fw-normal">(optional)</span></label>
+                        {{ receive_form.location }}
+                    </div>
+                </div>
+                <div class="d-flex gap-2 justify-content-end">
+                    <button type="submit" name="cancel_production" value="1"
+                        class="btn btn-outline-danger"
+                        form="cancel-form"
+                        onclick="return confirm('Cancel this job and release its allocations?');">
+                        <i class="bi bi-x-circle me-1"></i>Cancel Job
+                    </button>
+                    <button type="submit" name="receive_production" value="1" class="btn btn-success">
+                        <i class="bi bi-check-lg me-1"></i>Receive
+                    </button>
+                </div>
+            </form>
+            {% else %}
+            <p class="text-muted mb-3">Insufficient materials to receive remaining quantity.</p>
+            <div class="d-flex justify-content-end">
+                <button type="submit" name="cancel_production" value="1"
+                    class="btn btn-outline-danger"
+                    form="cancel-form"
+                    onclick="return confirm('Cancel this job and release its allocations?');">
+                    <i class="bi bi-x-circle me-1"></i>Cancel Job
+                </button>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+
+<form id="cancel-form" method="post" class="d-none">{% csrf_token %}</form>
+
 {% endif %}
 {% else %}
 <p>No BOM defined for product.</p>
@@ -256,19 +308,24 @@
         row.appendChild(icon);
 
         const name = document.createElement('span');
-        name.className = 'flex-grow-1';
+        name.className = 'me-2';
         name.textContent = node.name;
         row.appendChild(name);
 
-        const qty = document.createElement('span');
-        qty.className = 'text-muted small ms-auto me-3';
-        qty.textContent = 'Need: ' + node.quantity;
-        row.appendChild(qty);
+        const badges = document.createElement('span');
+        badges.className = 'ms-1 d-inline-flex gap-1';
 
-        const stock = document.createElement('span');
-        stock.className = 'small fw-semibold ' + (sufficient ? 'text-success' : 'text-danger');
-        stock.textContent = 'Stock: ' + node.stock;
-        row.appendChild(stock);
+        const needBadge = document.createElement('span');
+        needBadge.className = 'badge bg-secondary-subtle text-secondary fw-normal';
+        needBadge.textContent = 'Need\u00a0' + node.quantity;
+        badges.appendChild(needBadge);
+
+        const stockBadge = document.createElement('span');
+        stockBadge.className = 'badge fw-normal ' + (sufficient ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger');
+        stockBadge.textContent = 'Stock\u00a0' + node.stock;
+        badges.appendChild(stockBadge);
+
+        row.appendChild(badges);
 
         wrapper.appendChild(row);
 

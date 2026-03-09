@@ -3,9 +3,16 @@
 {% block card_icon %}bi-people-fill{% endblock %}
 {% block card_title %}{{ customer.name }}{% endblock %}
 {% block card_body %}
+
+{# ── Header actions ── #}
+<div class="d-flex justify-content-end gap-2 mb-4">
+    <a href="{% url 'sales:customer-update' customer.id %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil me-1"></i>Edit Customer</a>
+    <a href="{% url 'sales:customer-delete' customer.id %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Delete Customer</a>
+</div>
+
 {# ── Metric Cards ── #}
 <div class="row g-3 mb-4">
-    <div class="col-6 col-lg-4">
+    <div class="col">
         <div class="metric-card">
             <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-cart3"></i></div>
             <div class="metric-card-content">
@@ -14,7 +21,7 @@
             </div>
         </div>
     </div>
-    <div class="col-6 col-lg-4">
+    <div class="col">
         <div class="metric-card">
             <div class="metric-card-icon metric-card-icon--warning"><i class="bi bi-hourglass-split"></i></div>
             <div class="metric-card-content">
@@ -23,7 +30,7 @@
             </div>
         </div>
     </div>
-    <div class="col-6 col-lg-4">
+    <div class="col">
         <div class="metric-card">
             <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-graph-up-arrow"></i></div>
             <div class="metric-card-content">
@@ -33,7 +40,9 @@
         </div>
     </div>
 </div>
-<div class="detail-info">
+
+{# ── Contact & Address info (single unified grid) ── #}
+<div class="detail-info mb-4">
     <div class="detail-info-item">
         <span class="detail-info-label">Phone</span>
         <span class="detail-info-value">{{ customer.phone|default:"—" }}</span>
@@ -48,9 +57,6 @@
         <span class="detail-info-value"><a href="{{ customer.website }}" target="_blank" rel="noopener">{{ customer.website }}</a></span>
     </div>
     {% endif %}
-</div>
-{% if customer.address_line_1 or customer.city or customer.country %}
-<div class="detail-info" style="margin-top:-0.5rem">
     {% if customer.address_line_1 %}
     <div class="detail-info-item">
         <span class="detail-info-label">Address Line 1</span>
@@ -88,194 +94,208 @@
     </div>
     {% endif %}
 </div>
-{% endif %}
-<div class="detail-actions">
-    <a href="{% url 'sales:customer-update' customer.id %}" class="btn btn-outline-primary"><i class="bi bi-pencil me-1"></i>Edit Customer</a>
-    <a href="{% url 'sales:customer-delete' customer.id %}" class="btn btn-outline-danger"><i class="bi bi-trash me-1"></i>Delete Customer</a>
+
+{# ── Tabs ── #}
+<ul class="nav nav-tabs" id="customerTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if not request.GET.order_page and not request.GET.ct_page and not request.GET.cp_page %}active{% endif %}" id="tab-overview-btn"
+            data-bs-toggle="tab" data-bs-target="#tab-overview" type="button" role="tab">
+            <i class="bi bi-bar-chart-line me-1"></i>Overview
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if request.GET.order_page %}active{% endif %}" id="tab-orders-btn"
+            data-bs-toggle="tab" data-bs-target="#tab-orders" type="button" role="tab">
+            <i class="bi bi-receipt me-1"></i>Orders
+            {% if open_orders %}<span class="badge bg-warning-subtle text-warning ms-1">{{ open_orders }}</span>{% endif %}
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if request.GET.cp_page %}active{% endif %}" id="tab-products-btn"
+            data-bs-toggle="tab" data-bs-target="#tab-products" type="button" role="tab">
+            <i class="bi bi-box-seam me-1"></i>Products
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if request.GET.ct_page %}active{% endif %}" id="tab-contacts-btn"
+            data-bs-toggle="tab" data-bs-target="#tab-contacts" type="button" role="tab">
+            <i class="bi bi-person-lines-fill me-1"></i>Contacts
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content border border-top-0 rounded-bottom p-3 mb-4" id="customerTabContent">
+
+    {# ── Overview: Top Products ── #}
+    <div class="tab-pane fade {% if not request.GET.order_page and not request.GET.ct_page and not request.GET.cp_page %}show active{% endif %}" id="tab-overview" role="tabpanel">
+        <div class="detail-section-header mt-2 mb-3">
+            <h2 class="detail-section-title">Top Products</h2>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Product</th>
+                        <th class="text-end" style="width:10rem;">Total Qty</th>
+                        <th class="text-end" style="width:10rem;">Total Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in top_products %}
+                    <tr>
+                        <td>
+                            {% if row.product__product_inventory %}
+                            <a href="{% url 'inventory:inventory-detail' row.product__product_inventory %}">{{ row.product__name }}</a>
+                            {% else %}
+                            {{ row.product__name }}
+                            {% endif %}
+                        </td>
+                        <td class="text-end">{{ row.total_qty }}</td>
+                        <td class="text-end">{{ row.total_value|currency }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-muted">No sales recorded.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {# ── Orders ── #}
+    <div class="tab-pane fade {% if request.GET.order_page %}show active{% endif %}" id="tab-orders" role="tabpanel">
+        <div class="detail-section-header mt-2 mb-3">
+            <h2 class="detail-section-title">Sales Orders</h2>
+            <a href="{% url 'sales:sales-order-create' %}?customer={{ customer.id }}" class="btn btn-sm btn-success">
+                <i class="bi bi-plus-lg me-1"></i>Create Sales Order
+            </a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Order Ref</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th class="text-end" style="width:10rem;">Total Amount</th>
+                        <th style="width:6rem;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in sales_orders %}
+                    <tr>
+                        <td><a href="{% url 'sales:sales-order-detail' order.id %}">{{ order.order_number }}</a></td>
+                        <td>{{ order.created_at|date:"d M Y" }}</td>
+                        <td>
+                            {% if order.status == "Open" %}
+                            <span class="badge bg-warning-subtle text-warning">Open</span>
+                            {% else %}
+                            <span class="badge bg-success-subtle text-success">Closed</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">{{ order.total_amount|currency }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'sales:sales-order-detail' order.id %}" class="btn btn-sm btn-outline-secondary">View</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-muted">No sales orders found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include "includes/pagination.html" with page_obj=sales_orders page_param="order_page" %}
+        {% if sales_orders %}
+        <a class="btn btn-link btn-sm px-0 mt-1" href="{% url 'sales:customer-salesorders' customer.id %}">See all orders &rarr;</a>
+        {% endif %}
+    </div>
+
+    {# ── Products ── #}
+    <div class="tab-pane fade {% if request.GET.cp_page %}show active{% endif %}" id="tab-products" role="tabpanel">
+        <div class="detail-section-header mt-2 mb-3">
+            <h2 class="detail-section-title">Customer Products</h2>
+            <a href="{% url 'sales:customer-product-create' %}?customer={{ customer.id }}" class="btn btn-sm btn-success">
+                <i class="bi bi-plus-lg me-1"></i>Add Product
+            </a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Product</th>
+                        <th class="text-end" style="width:8rem;">Price</th>
+                        <th style="width:8rem;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer_product in customer_products %}
+                    <tr>
+                        <td>
+                            {% with inv=customer_product.product.product_inventory %}
+                            {% if inv %}<a href="{% url 'inventory:inventory-detail' inv.pk %}">{{ customer_product.product.name }}</a>
+                            {% else %}{{ customer_product.product.name }}{% endif %}
+                            {% endwith %}
+                        </td>
+                        <td class="text-end">{{ customer_product.price|currency }}</td>
+                        <td class="text-end">
+                            <div class="d-flex gap-1 justify-content-end">
+                                <a href="{% url 'sales:customer-product-update' customer_product.id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                                <a href="{% url 'sales:customer-product-delete' customer_product.id %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-muted">No customer products found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include "includes/pagination.html" with page_obj=customer_products page_param="cp_page" %}
+        {% if customer_products %}
+        <a class="btn btn-link btn-sm px-0 mt-1" href="{% url 'sales:customer-products' customer.id %}">See all products &rarr;</a>
+        {% endif %}
+    </div>
+
+    {# ── Contacts ── #}
+    <div class="tab-pane fade {% if request.GET.ct_page %}show active{% endif %}" id="tab-contacts" role="tabpanel">
+        <div class="detail-section-header mt-2 mb-3">
+            <h2 class="detail-section-title">Contacts</h2>
+            <a href="{% url 'sales:customer-contact-create' %}?customer={{ customer.id }}" class="btn btn-sm btn-success">
+                <i class="bi bi-plus-lg me-1"></i>Add Contact
+            </a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th style="width:8rem;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for contact in customer_contacts %}
+                    <tr>
+                        <td>{{ contact.name }}</td>
+                        <td>{% if contact.email %}<a href="mailto:{{ contact.email }}">{{ contact.email }}</a>{% else %}—{% endif %}</td>
+                        <td>{{ contact.phone|default:"—" }}</td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <a href="{% url 'sales:customer-contact-update' contact.id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                                <a href="{% url 'sales:customer-contact-delete' contact.id %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-muted">No contacts found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include "includes/pagination.html" with page_obj=customer_contacts page_param="ct_page" %}
+    </div>
+
 </div>
 
-{# ── Recent Orders ── #}
-<div class="detail-section">
-    <div class="detail-section-header">
-        <h2 class="detail-section-title">Recent Orders</h2>
-        <a href="{% url 'sales:sales-order-create' %}?customer={{ customer.id }}" class="btn btn-sm btn-success"><i class="bi bi-plus-lg me-1"></i>Create Sales Order</a>
-    </div>
-    <div class="table-responsive">
-        <table class="table table-striped align-middle">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Order Ref</th>
-                    <th>Status</th>
-                    <th class="text-end">Total Value</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for order in recent_orders %}
-                <tr>
-                    <td>{{ order.created_at|date:"d M Y" }}</td>
-                    <td><a href="{% url 'sales:sales-order-detail' order.pk %}">{{ order.order_number }}</a></td>
-                    <td>
-                        {% if order.status == "Open" %}
-                        <span class="badge bg-warning-subtle text-warning">Open</span>
-                        {% else %}
-                        <span class="badge bg-success-subtle text-success">Closed</span>
-                        {% endif %}
-                    </td>
-                    <td class="text-end">{{ order.total_amount|currency }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="4" class="text-muted">No orders yet.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-{# ── Top Products ── #}
-<div class="detail-section">
-    <div class="detail-section-header">
-        <h2 class="detail-section-title">Top Products</h2>
-    </div>
-    <div class="table-responsive">
-        <table class="table table-striped align-middle">
-            <thead>
-                <tr>
-                    <th>Product</th>
-                    <th class="text-end">Total Qty</th>
-                    <th class="text-end">Total Value</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in top_products %}
-                <tr>
-                    <td>
-                        {% if row.product__product_inventory %}
-                        <a href="{% url 'inventory:inventory-detail' row.product__product_inventory %}">{{ row.product__name }}</a>
-                        {% else %}
-                        {{ row.product__name }}
-                        {% endif %}
-                    </td>
-                    <td class="text-end">{{ row.total_qty }}</td>
-                    <td class="text-end">{{ row.total_value|currency }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="3" class="text-muted">No sales recorded.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-{# ── Contacts ── #}
-<div class="detail-section">
-    <div class="detail-section-header">
-        <h2 class="detail-section-title">Contacts</h2>
-        <a href="{% url 'sales:customer-contact-create' %}?customer={{ customer.id }}" class="btn btn-sm btn-success"><i class="bi bi-plus-lg me-1"></i>Add Contact</a>
-    </div>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for contact in customer_contacts %}
-            <tr>
-                <td>{{ contact.name }}</td>
-                <td>{{ contact.email }}</td>
-                <td>{{ contact.phone }}</td>
-                <td>
-                    <a href="{% url 'sales:customer-contact-update' contact.id %}" class="btn btn-sm btn-secondary">Edit</a>
-                    <a href="{% url 'sales:customer-contact-delete' contact.id %}" class="btn btn-sm btn-danger">Delete</a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="4" class="text-muted">No contacts found.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% include "includes/pagination.html" with page_obj=customer_contacts page_param="ct_page" %}
-</div>
-
-{# ── Sales Orders ── #}
-<div class="detail-section">
-    <div class="detail-section-header">
-        <h2 class="detail-section-title">Sales Orders</h2>
-        <a href="{% url 'sales:sales-order-create' %}?customer={{ customer.id }}" class="btn btn-sm btn-success"><i class="bi bi-plus-lg me-1"></i>Create Sales Order</a>
-    </div>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Order Number</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Total Amount</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for order in sales_orders %}
-            <tr>
-                <td>{{ order.order_number }}</td>
-                <td>{{ order.date }}</td>
-                <td>{{ order.status }}</td>
-                <td>{{ order.total_amount|currency }}</td>
-                <td><a href="{% url 'sales:sales-order-detail' order.id %}" class="btn btn-sm btn-primary">View</a></td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="5" class="text-muted">No sales orders found.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% include "includes/pagination.html" with page_obj=sales_orders page_param="order_page" %}
-    {% if sales_orders %}
-    <a class="btn btn-link btn-sm" href="{% url 'sales:customer-salesorders' customer.id %}">See all orders &rarr;</a>
-    {% endif %}
-</div>
-
-{# ── Customer Products ── #}
-<div class="detail-section">
-    <div class="detail-section-header">
-        <h2 class="detail-section-title">Customer Products</h2>
-        <a href="{% url 'sales:customer-product-create' %}?customer={{ customer.id }}" class="btn btn-sm btn-success"><i class="bi bi-plus-lg me-1"></i>Add Product</a>
-    </div>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Product</th>
-                <th>Price</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for customer_product in customer_products %}
-            <tr>
-                <td>{{ customer_product.product.name }}</td>
-                <td>{{ customer_product.price|currency }}</td>
-                <td>
-                    <a href="{% url 'sales:customer-product-update' customer_product.id %}" class="btn btn-sm btn-secondary">Edit</a>
-                    <a href="{% url 'sales:customer-product-delete' customer_product.id %}" class="btn btn-sm btn-danger">Delete</a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="3" class="text-muted">No customer products found.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% include "includes/pagination.html" with page_obj=customer_products page_param="cp_page" %}
-    {% if customer_products %}
-    <a class="btn btn-link btn-sm" href="{% url 'sales:customer-products' customer.id %}">See all products &rarr;</a>
-    {% endif %}
-</div>
 {% endblock %}
 

@@ -108,7 +108,7 @@ class TestInventory:
         # shortage card only appears when nonzero; check for the label text
         assert "Shortage" in content or "In Stock" in content
         # chart canvases should be present
-        assert '<canvas id="pending-chart"' in content
+        assert "Demand Overview" in content
         assert '<canvas id="history-chart"' in content
         # ledger entries should appear (pagination header optional)
 
@@ -810,8 +810,8 @@ class TestInventory:
             InventoryLocation.objects.get(inventory=inv, location=bin_b).quantity == 40
         )
 
-    def test_inventory_list_shows_locations(self, client, product):
-        """Inventory list view includes location badges."""
+    def test_inventory_list_does_not_show_locations(self, client, product):
+        """Inventory list view no longer includes a locations column."""
         from django.urls import reverse
         from django.contrib.auth.models import User
         from inventory.models import Inventory, Location, InventoryLocation
@@ -828,8 +828,8 @@ class TestInventory:
 
         resp = client.get(reverse("inventory:inventory-list"))
         content = resp.content.decode()
-        assert "Bin X" in content
-        assert "(50)" in content
+        assert "Bin X" not in content
+        assert "Locations" not in content
 
     def test_ledger_shows_location(self, client, product):
         """Ledger table displays location when set on an entry."""

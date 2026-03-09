@@ -18,6 +18,7 @@
     <thead>
         <tr>
             <th>Name</th>
+            <th>Email</th>
             <th>Phone</th>
             <th class="text-end">Actions</th>
         </tr>
@@ -26,6 +27,7 @@
         {% for supplier in suppliers %}
         <tr>
             <td>{{ supplier.name }}</td>
+            <td>{% if supplier.email %}<a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a>{% else %}—{% endif %}</td>
             <td>{{ supplier.phone }}</td>
             <td class="text-end">
                 <a href="{% url 'procurement:supplier-detail' supplier.id %}" class="btn btn-secondary btn-sm">View</a>

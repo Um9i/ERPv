@@ -105,7 +105,10 @@ class CustomerProductForm(forms.ModelForm):
 class SalesOrderForm(forms.ModelForm):
     class Meta:
         model = SalesOrder
-        fields = ["customer"]
+        fields = ["customer", "ship_by_date"]
+        widgets = {
+            "ship_by_date": forms.DateInput(attrs={"type": "date"}),
+        }
 
 
 class SalesOrderLineForm(forms.ModelForm):

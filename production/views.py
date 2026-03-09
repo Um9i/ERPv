@@ -400,6 +400,9 @@ class ProductionDetailView(DetailView):
     context_object_name = "production"
 
     def post(self, request, *args, **kwargs):
+        from django.contrib import messages
+        from .services import receive_production_into_location
+
         self.object = self.get_object()
         if "cancel_production" in request.POST:
             self.object.cancel()
@@ -408,6 +411,25 @@ class ProductionDetailView(DetailView):
             self.object.complete = True
             self.object.save()
             return redirect(request.path)
+        if "receive_production" in request.POST:
+            form = ProductionReceiveForm(request.POST, instance=self.object)
+            if form.is_valid():
+                location = form.cleaned_data.get("location")
+                quantity = form.cleaned_data["quantity_to_receive"]
+                try:
+                    if location:
+                        receive_production_into_location(
+                            self.object.pk, quantity, location.pk
+                        )
+                    else:
+                        self.object.quantity_received += quantity
+                        self.object.save()
+                except Exception as e:
+                    messages.error(request, str(e))
+                return redirect(request.path)
+            else:
+                context = self.get_context_data(receive_form=form)
+                return self.render_to_response(context)
         return super().post(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -483,6 +505,10 @@ class ProductionDetailView(DetailView):
                 "projected_margin_pct": projected_margin_pct,
             }
         )
+        if "receive_form" not in kwargs:
+            context["receive_form"] = ProductionReceiveForm(instance=job)
+        else:
+            context["receive_form"] = kwargs["receive_form"]
         return context
 
 

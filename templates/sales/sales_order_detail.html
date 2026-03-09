@@ -5,6 +5,7 @@
 {% block card_body %}
 <p><strong>Customer:</strong> <a href="{% url 'sales:customer-detail' sales_order.customer.pk %}">{{ sales_order.customer.name }}</a></p>
 <p><strong>Created At:</strong> {{ sales_order.created_at }}</p>
+<p><strong>Ship By Date:</strong> {{ sales_order.ship_by_date|default:"—" }}</p>
 <p><strong>Updated At:</strong> {{ sales_order.updated_at }}</p>
 <p><strong>Status:</strong> {{ sales_order.status }}</p>
 <p><strong>Total Order Value:</strong> {{ sales_order.total_amount|currency }}</p>
@@ -14,6 +15,7 @@
 </div>
 
 <h3>Order Lines</h3>
+<div class="table-responsive">
 <table class="table">
     <thead>
         <tr>
@@ -40,4 +42,5 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% endblock %}

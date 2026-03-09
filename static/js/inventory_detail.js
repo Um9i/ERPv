@@ -37,43 +37,46 @@
         },
     };
 
-    /* ── Demand doughnut ── */
-    var pendingCtx = document.getElementById('pending-chart').getContext('2d');
-    var pendingLabels = ['Sales Pending', 'Purchases Incoming'];
-    var pendingData   = [data.sales_pending, data.purchase_pending];
-    var pendingColors = [COLORS.success, COLORS.info];
+    /* ── Demand doughnut (only rendered when canvas exists) ── */
+    var pendingEl = document.getElementById('pending-chart');
+    if (pendingEl) {
+        var pendingCtx = pendingEl.getContext('2d');
+        var pendingLabels = ['Sales Pending', 'Purchases Incoming'];
+        var pendingData   = [data.sales_pending, data.purchase_pending];
+        var pendingColors = [COLORS.success, COLORS.info];
 
-    if (data.production_pending > 0) {
-        pendingLabels.push('In Production');
-        pendingData.push(data.production_pending);
-        pendingColors.push(COLORS.warning);
-    }
+        if (data.production_pending > 0) {
+            pendingLabels.push('In Production');
+            pendingData.push(data.production_pending);
+            pendingColors.push(COLORS.warning);
+        }
 
-    pendingLabels.push('Shortage');
-    pendingData.push(data.required_qty);
-    pendingColors.push(COLORS.danger);
+        pendingLabels.push('Shortage');
+        pendingData.push(data.required_qty);
+        pendingColors.push(COLORS.danger);
 
-    new Chart(pendingCtx, {
-        type: 'doughnut',
-        data: {
-            labels: pendingLabels,
-            datasets: [{
-                data: pendingData,
-                backgroundColor: pendingColors,
-                borderWidth: 2,
-                borderColor: '#fff',
-                hoverOffset: 6,
-            }]
-        },
-        options: {
-            ...sharedOptions,
-            cutout: '62%',
-            plugins: {
-                ...sharedOptions.plugins,
-                legend: { position: 'bottom', labels: { font: sharedFont, usePointStyle: true, padding: 12 } },
+        new Chart(pendingCtx, {
+            type: 'doughnut',
+            data: {
+                labels: pendingLabels,
+                datasets: [{
+                    data: pendingData,
+                    backgroundColor: pendingColors,
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                    hoverOffset: 6,
+                }]
             },
-        },
-    });
+            options: {
+                ...sharedOptions,
+                cutout: '62%',
+                plugins: {
+                    ...sharedOptions.plugins,
+                    legend: { position: 'bottom', labels: { font: sharedFont, usePointStyle: true, padding: 12 } },
+                },
+            },
+        });
+    }
 
     /* ── Inventory level history ── */
     var histCtx = document.getElementById('history-chart').getContext('2d');
@@ -81,7 +84,7 @@
     histGradient.addColorStop(0, 'rgba(99,102,241,0.25)');
     histGradient.addColorStop(1, 'rgba(99,102,241,0.01)');
 
-    new Chart(histCtx, {
+    var histChart = new Chart(histCtx, {
         type: 'line',
         data: {
             labels: data.history_dates,
@@ -102,6 +105,7 @@
         },
         options: {
             ...sharedOptions,
+            aspectRatio: 3.5,
             scales: {
                 x: {
                     ticks: { font: sharedFont, color: COLORS.text, maxTicksLimit: 8, maxRotation: 0 },
@@ -119,7 +123,7 @@
     /* ── Monthly activity ── */
     var monthCtx = document.getElementById('monthly-chart').getContext('2d');
 
-    new Chart(monthCtx, {
+    var monthChart = new Chart(monthCtx, {
         type: 'bar',
         data: {
             labels: data.monthly_dates,
@@ -146,6 +150,7 @@
         },
         options: {
             ...sharedOptions,
+            aspectRatio: 3,
             scales: {
                 x: {
                     ticks: { font: sharedFont, color: COLORS.text },
@@ -159,4 +164,13 @@
             },
         },
     });
+
+    /* ── Resize activity charts when their tab becomes visible ── */
+    var actTabBtn = document.getElementById('tab-activity-btn');
+    if (actTabBtn) {
+        actTabBtn.addEventListener('shown.bs.tab', function () {
+            histChart.resize();
+            monthChart.resize();
+        });
+    }
 })();

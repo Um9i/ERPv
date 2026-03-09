@@ -403,6 +403,12 @@ class ProcurementDashboardView(TemplateView):
             if context["total_purchase_orders"]
             else 0
         )
+        context["orders_no_lines"] = max(
+            0,
+            context["total_purchase_orders"]
+            - context["orders_received"]
+            - context["pending_receiving"],
+        )
         return context
 
 
@@ -486,6 +492,11 @@ class PurchaseOrderCreateView(CreateView):
         # can show the line-items section immediately
         context["supplier_known"] = bool(supplier_id)
         context["has_suppliers"] = Supplier.objects.exists()
+        if supplier_id:
+            try:
+                context["supplier_name"] = Supplier.objects.get(pk=supplier_id).name
+            except Supplier.DoesNotExist:
+                context["supplier_name"] = ""
 
         return context
 

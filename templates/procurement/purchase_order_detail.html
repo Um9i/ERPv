@@ -5,12 +5,14 @@
 {% block card_body %}
 <p><strong>Supplier:</strong> <a href="{% url 'procurement:supplier-detail' purchase_order.supplier.pk %}">{{ purchase_order.supplier.name }}</a></p>
 <p><strong>Created At:</strong> {{ purchase_order.created_at }}</p>
+<p><strong>Due Date:</strong> {{ purchase_order.due_date|default:"—" }}</p>
 <p><strong>Updated At:</strong> {{ purchase_order.updated_at }}</p>
 <p><strong>Status:</strong> {{ purchase_order.status }}</p>
 <p><strong>Total Order Value:</strong> {{ purchase_order.total_amount|currency }}</p>
 <p><strong>Open Order Value:</strong> {{ purchase_order.remaining_total|currency }}</p>
 
 <h3>Order Lines</h3>
+<div class="table-responsive">
 <table class="table">
     <thead>
         <tr>
@@ -37,4 +39,5 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% endblock %}

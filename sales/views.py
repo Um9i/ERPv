@@ -632,6 +632,7 @@ class SalesDashboardView(TemplateView):
             if total_orders
             else 0
         )
+        context["fulfilled_orders"] = max(0, total_orders - context["pending_shipping"])
         return context
 
 

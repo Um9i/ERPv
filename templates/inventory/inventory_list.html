@@ -4,6 +4,14 @@
 {% block card_body %}
 <form method="get" class="mb-3 list-filter">
     <div class="row g-2 align-items-center">
+        <div class="col-md-4 col-lg-3 d-flex gap-2">
+            <select name="catalogue" class="form-select">
+                <option value="" {% if not request.GET.catalogue %}selected{% endif %}>All items</option>
+                <option value="1" {% if request.GET.catalogue == '1' %}selected{% endif %}>Catalogue only</option>
+                <option value="0" {% if request.GET.catalogue == '0' %}selected{% endif %}>Non-catalogue only</option>
+            </select>
+            <button class="btn btn-outline-secondary" type="submit">Apply</button>
+        </div>
         <div class="col-md-6 col-lg-5 ms-auto">
             <div class="input-group">
                 <input type="text" name="q" class="form-control" placeholder="Search products" value="{{ request.GET.q }}">
@@ -21,7 +29,6 @@
     <tr>
         <th>Product</th>
         <th>Quantity</th>
-        <th>Locations</th>
         <th class="text-center">Catalogue</th>
         <th class="text-end">Actions</th>
     </tr>
@@ -31,13 +38,6 @@
     <tr>
         <td>{{ inventory.product.name }}</td>
         <td>{{ inventory.quantity }}</td>
-        <td class="text-muted">
-            {% for sl in inventory.stock_locations.all %}
-                <span class="badge bg-light text-dark border me-1">{{ sl.location.name }} ({{ sl.quantity }})</span>
-            {% empty %}
-                <span class="text-muted">—</span>
-            {% endfor %}
-        </td>
         <td class="text-center">
             {% if inventory.product.catalogue_item %}
                 <i class="bi bi-check-circle-fill text-success" title="Catalogue item"></i>

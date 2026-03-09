@@ -97,7 +97,6 @@
     <div class="panel h-100">
       <div class="panel-header d-flex align-items-center justify-content-between">
         <span><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Components Needed for Production</span>
-        <a href="{{ low_stock_url }}?filter=producible" class="btn btn-sm btn-outline-danger">View {{ producible_low_stock }}</a>
       </div>
       <div class="panel-body">
         <p class="mb-2">
@@ -105,8 +104,7 @@
           product{{ producible_low_stock|pluralize }} {{ producible_low_stock|pluralize:'is,are' }} short and
           can be satisfied by scheduling a production job.
         </p>
-        <a href="{% url 'production:production-create' %}" class="btn btn-sm btn-primary">Schedule a Job</a>
-        <a href="{{ low_stock_url }}?filter=producible" class="btn btn-sm btn-outline-secondary ms-2">View Shortages</a>
+        <a href="{{ low_stock_url }}?filter=producible" class="btn btn-sm btn-primary">View {{ producible_low_stock }} Shortages</a>
       </div>
     </div>
     {% elif active_jobs %}

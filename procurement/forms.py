@@ -114,7 +114,10 @@ class SupplierProductForm(forms.ModelForm):
 class PurchaseOrderForm(forms.ModelForm):
     class Meta:
         model = PurchaseOrder
-        fields = ["supplier"]
+        fields = ["supplier", "due_date"]
+        widgets = {
+            "due_date": forms.DateInput(attrs={"type": "date"}),
+        }
 
 
 class PurchaseOrderLineForm(forms.ModelForm):

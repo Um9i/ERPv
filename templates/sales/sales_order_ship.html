@@ -11,6 +11,7 @@
 <form method="post">
     {% csrf_token %}
     {% if errors %}
+
     <div class="alert alert-danger">
         <ul>
         {% for err in errors %}
@@ -25,6 +26,7 @@
         <div>Insufficient stock for one or more lines. Quantities have been capped to available inventory.</div>
     </div>
     {% endif %}
+    <div class="table-responsive">
     <table class="table">
         <thead>
             <tr>
@@ -67,6 +69,7 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
     <button type="submit" class="btn btn-success" name="ship">Ship</button>
     <button type="submit" class="btn btn-danger" name="ship_all" value="1"
         onclick="return confirm('Are you sure you want to ship ALL remaining quantities?');">

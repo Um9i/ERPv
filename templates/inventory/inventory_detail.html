@@ -2,11 +2,23 @@
 {% load static %}
 {% block card_icon %}bi-box-seam{% endblock %}
 {% block card_title %}{{ inventory.product.name }}{% endblock %}
+
+{% block card_header %}
+<div class="d-flex justify-content-end gap-2 mb-4">
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'inventory:product-update' inventory.product.pk %}">
+        <i class="bi bi-pencil me-1"></i>Edit Product
+    </a>
+    <a class="btn btn-sm btn-warning" href="{% url 'inventory:inventory-adjust' inventory.pk %}">
+        <i class="bi bi-sliders me-1"></i>Adjust Quantity
+    </a>
+</div>
+{% endblock %}
+
 {% block card_body %}
 
 {# ── Key metrics ── #}
-<div class="row g-3 mb-4">
-    <div class="col-6 col-lg">
+<div class="row row-cols-2 row-cols-md-4 g-3 mb-4">
+    <div class="col">
         <div class="metric-card">
             <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-boxes"></i></div>
             <div class="metric-card-content">
@@ -15,7 +27,7 @@
             </div>
         </div>
     </div>
-    <div class="col-6 col-lg">
+    <div class="col">
         <div class="metric-card">
             <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-cart-check"></i></div>
             <div class="metric-card-content">
@@ -24,7 +36,7 @@
             </div>
         </div>
     </div>
-    <div class="col-6 col-lg">
+    <div class="col">
         <div class="metric-card">
             <div class="metric-card-icon metric-card-icon--dark"><i class="bi bi-truck"></i></div>
             <div class="metric-card-content">
@@ -34,7 +46,7 @@
         </div>
     </div>
     {% if production_pending > 0 %}
-    <div class="col-6 col-lg">
+    <div class="col">
         <div class="metric-card">
             <div class="metric-card-icon metric-card-icon--warning"><i class="bi bi-gear"></i></div>
             <div class="metric-card-content">
@@ -45,7 +57,7 @@
     </div>
     {% endif %}
     {% if required_qty > 0 %}
-    <div class="col-6 col-lg">
+    <div class="col">
         <div class="metric-card" style="border-color: var(--color-danger);">
             <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-exclamation-triangle"></i></div>
             <div class="metric-card-content">
@@ -56,11 +68,9 @@
     </div>
     {% endif %}
     {% if inventory.product.sale_price %}
-    <div class="col-6 col-lg">
+    <div class="col">
         <div class="metric-card">
-            <div class="metric-card-icon metric-card-icon--success">
-                <i class="bi bi-tag"></i>
-            </div>
+            <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-tag"></i></div>
             <div class="metric-card-content">
                 <span class="metric-card-value">£{{ inventory.product.sale_price|floatformat:2 }}</span>
                 <span class="metric-card-label">Sale Price</span>
@@ -69,7 +79,7 @@
     </div>
     {% endif %}
     {% if inventory.product.catalogue_item %}
-    <div class="col-6 col-lg">
+    <div class="col">
         <div class="metric-card">
             <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-book"></i></div>
             <div class="metric-card-content">
@@ -81,179 +91,208 @@
     {% endif %}
 </div>
 
-{# ── Product info: image + description + actions ── #}
-{% if inventory.product.image or inventory.product.description %}
-<div class="row g-3 mb-4 align-items-start">
-    {% if inventory.product.image %}
-    <div class="col-auto">
-        <div class="detail-section p-2" style="display:inline-block;">
-            <img src="{{ inventory.product.image.url }}"
-                 alt="{{ inventory.product.name }}"
-                 style="max-width:180px; max-height:180px; object-fit:contain; display:block;">
-        </div>
-    </div>
-    {% endif %}
-    <div class="col">
-        {% if inventory.product.description %}
-        <div class="detail-section mb-3">
-            <div class="detail-section-header">
-                <h2 class="detail-section-title">Description</h2>
+{# ── Tabs ── #}
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <button type="button" class="nav-link {% if not request.GET.tab and not request.GET.page %}active{% endif %}"
+                data-bs-toggle="tab" data-bs-target="#tab-overview">Overview</button>
+    </li>
+    <li class="nav-item">
+        <button type="button" class="nav-link {% if request.GET.tab == 'stock' %}active{% endif %}"
+                data-bs-toggle="tab" data-bs-target="#tab-stock">
+            Stock Locations
+            {% if inventory.stock_locations.exists %}
+            <span class="badge bg-secondary ms-1">{{ inventory.stock_locations.count }}</span>
+            {% endif %}
+        </button>
+    </li>
+    <li class="nav-item">
+        <button type="button" id="tab-activity-btn" class="nav-link {% if request.GET.tab == 'activity' %}active{% endif %}"
+                data-bs-toggle="tab" data-bs-target="#tab-activity">Activity</button>
+    </li>
+    <li class="nav-item">
+        <button type="button" class="nav-link {% if request.GET.tab == 'ledger' or request.GET.page %}active{% endif %}"
+                data-bs-toggle="tab" data-bs-target="#tab-ledger">Ledger</button>
+    </li>
+</ul>
+
+<div class="tab-content">
+
+    {# ── Overview tab ── #}
+    <div class="tab-pane fade {% if not request.GET.tab and not request.GET.page %}show active{% endif %}" id="tab-overview">
+        {% if inventory.product.image or inventory.product.description %}
+        <div class="row g-3 mb-4 align-items-start">
+            {% if inventory.product.image %}
+            <div class="col-auto">
+                <div class="detail-section p-2" style="display:inline-block;">
+                    <img src="{{ inventory.product.image.url }}"
+                         alt="{{ inventory.product.name }}"
+                         style="max-width:180px; max-height:180px; object-fit:contain; display:block;">
+                </div>
             </div>
-            <p class="mb-0 text-muted">{{ inventory.product.description }}</p>
+            {% endif %}
+            {% if inventory.product.description %}
+            <div class="col">
+                <div class="detail-section">
+                    <div class="detail-section-header">
+                        <h2 class="detail-section-title">Description</h2>
+                    </div>
+                    <p class="mb-0 text-muted">{{ inventory.product.description }}</p>
+                </div>
+            </div>
+            {% endif %}
         </div>
         {% endif %}
-        <div class="detail-actions">
-            <a class="btn btn-outline-primary" href="{% url 'inventory:product-update' inventory.product.pk %}"><i class="bi bi-pencil me-1"></i>Edit Product</a>
-            <a class="btn btn-warning" href="{% url 'inventory:inventory-adjust' inventory.pk %}"><i class="bi bi-sliders me-1"></i>Adjust Quantity</a>
-        </div>
-    </div>
-</div>
-{% else %}
-{# No image or description — just show actions ── #}
-<div class="detail-actions mb-4">
-    <a class="btn btn-outline-primary" href="{% url 'inventory:product-update' inventory.product.pk %}"><i class="bi bi-pencil me-1"></i>Edit Product</a>
-    <a class="btn btn-warning" href="{% url 'inventory:inventory-adjust' inventory.pk %}"><i class="bi bi-sliders me-1"></i>Adjust Quantity</a>
-</div>
-{% endif %}
 
-{# ── Stock Locations ── #}
-<div class="detail-section mb-4">
-    <div class="detail-section-header d-flex justify-content-between align-items-center">
-        <h2 class="detail-section-title mb-0">Stock Locations</h2>
-        <div>
-            <a href="{% url 'inventory:stock-transfer' inventory.pk %}"
-               class="btn btn-sm btn-outline-warning me-1">
-                <i class="bi bi-arrow-left-right me-1"></i>Transfer
-            </a>
-            <a href="{% url 'inventory:inventory-location-add' inventory.pk %}"
-               class="btn btn-sm btn-outline-primary">
-                <i class="bi bi-plus-lg me-1"></i>Assign Location
-            </a>
-        </div>
-    </div>
-
-    {% if inventory.stock_locations.exists %}
-    <div class="table-responsive mt-2">
-        <table class="table table-sm align-middle mb-0">
-            <thead>
-                <tr>
-                    <th>Location</th>
-                    <th class="text-end">Quantity</th>
-                    <th class="text-end">% of Stock</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for sl in inventory.stock_locations.all %}
-                <tr>
-                    <td><i class="bi bi-inbox me-2 text-muted"></i>{{ sl.location }}</td>
-                    <td class="text-end fw-semibold">{{ sl.quantity }}</td>
-                    <td class="text-end text-muted">
-                        {% if inventory.quantity > 0 %}
-                            {% widthratio sl.quantity inventory.quantity 100 %}%
-                        {% else %}—{% endif %}
-                    </td>
-                    <td class="text-end">
-                        <a href="{% url 'inventory:inventory-location-update' sl.pk %}" class="btn btn-sm btn-outline-secondary me-1"><i class="bi bi-pencil"></i></a>
-                        <a href="{% url 'inventory:inventory-location-delete' sl.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-            <tfoot class="table-group-divider">
-                <tr>
-                    <td class="text-muted">Unallocated</td>
-                    <td class="text-end fw-semibold text-muted">{{ unallocated_qty }}</td>
-                    <td colspan="2"></td>
-                </tr>
-            </tfoot>
-        </table>
-    </div>
-    {% else %}
-    <p class="text-muted mt-2 mb-0">No locations assigned. Use <em>Assign Location</em> to record where this stock is stored.</p>
-    {% endif %}
-</div>
-
-{# ── Stock Level History (full width) ── #}
-<div class="detail-section">
-    <div class="detail-section-header">
-        <h2 class="detail-section-title">Stock Level History</h2>
-    </div>
-    <canvas id="history-chart" height="80"></canvas>
-</div>
-
-{# ── Demand Overview & Monthly Activity side-by-side ── #}
-<div class="row g-4">
-    <div class="col-md-4">
-        <div class="detail-section h-100">
+        {# ── Demand Overview ── #}
+        <div class="detail-section">
             <div class="detail-section-header">
                 <h2 class="detail-section-title">Demand Overview</h2>
             </div>
+            {% if sales_pending > 0 or purchase_pending > 0 or production_pending > 0 or required_qty > 0 %}
             <div style="max-width:280px; margin:0 auto; padding-top:1rem;">
                 <canvas id="pending-chart"></canvas>
             </div>
+            {% else %}
+            <p class="text-muted text-center py-4 mb-0">No pending demand for this product.</p>
+            {% endif %}
         </div>
     </div>
-    <div class="col-md-8">
-        <div class="detail-section h-100">
+
+    {# ── Stock Locations tab ── #}
+    <div class="tab-pane fade {% if request.GET.tab == 'stock' %}show active{% endif %}" id="tab-stock">
+        <div class="detail-section">
+            <div class="detail-section-header d-flex justify-content-between align-items-center">
+                <h2 class="detail-section-title mb-0">Stock Locations</h2>
+                <div>
+                    <a href="{% url 'inventory:stock-transfer' inventory.pk %}"
+                       class="btn btn-sm btn-outline-warning me-1">
+                        <i class="bi bi-arrow-left-right me-1"></i>Transfer
+                    </a>
+                    <a href="{% url 'inventory:inventory-location-add' inventory.pk %}"
+                       class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-plus-lg me-1"></i>Assign Location
+                    </a>
+                </div>
+            </div>
+            {% if inventory.stock_locations.exists %}
+            <div class="table-responsive mt-2">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Location</th>
+                            <th class="text-end">Quantity</th>
+                            <th class="text-end">% of Stock</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sl in inventory.stock_locations.all %}
+                        <tr>
+                            <td><i class="bi bi-inbox me-2 text-muted"></i>{{ sl.location }}</td>
+                            <td class="text-end fw-semibold">{{ sl.quantity }}</td>
+                            <td class="text-end text-muted">
+                                {% if inventory.quantity > 0 %}
+                                    {% widthratio sl.quantity inventory.quantity 100 %}%
+                                {% else %}—{% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'inventory:inventory-location-update' sl.pk %}" class="btn btn-sm btn-outline-secondary me-1"><i class="bi bi-pencil"></i></a>
+                                <a href="{% url 'inventory:inventory-location-delete' sl.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-group-divider">
+                        <tr class="text-muted small">
+                            <td><i class="bi bi-dash-circle me-2 opacity-50"></i>Unallocated</td>
+                            <td class="text-end fw-semibold">{{ unallocated_qty }}</td>
+                            <td class="text-end">
+                                {% if inventory.quantity > 0 %}
+                                    {% widthratio unallocated_qty inventory.quantity 100 %}%
+                                {% else %}—{% endif %}
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted mt-2 mb-0">No locations assigned. Use <em>Assign Location</em> to record where this stock is stored.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ── Activity tab ── #}
+    <div class="tab-pane fade {% if request.GET.tab == 'activity' %}show active{% endif %}" id="tab-activity">
+        <div class="detail-section mb-4">
+            <div class="detail-section-header">
+                <h2 class="detail-section-title">Stock Level History</h2>
+            </div>
+            <canvas id="history-chart"></canvas>
+        </div>
+        <div class="detail-section">
             <div class="detail-section-header">
                 <h2 class="detail-section-title">Monthly Activity</h2>
             </div>
-            <canvas id="monthly-chart" height="160"></canvas>
+            <canvas id="monthly-chart"></canvas>
         </div>
     </div>
-</div>
 
-{# ── Inventory Ledger ── #}
-<div class="detail-section mt-4">
-    <div class="detail-section-header">
-        <h2 class="detail-section-title">Inventory Ledger</h2>
+    {# ── Ledger tab ── #}
+    <div class="tab-pane fade {% if request.GET.tab == 'ledger' or request.GET.page %}show active{% endif %}" id="tab-ledger">
+        <div class="detail-section">
+            <div class="detail-section-header">
+                <h2 class="detail-section-title">Inventory Ledger</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th class="text-end">Change</th>
+                            <th class="text-end">Balance</th>
+                            <th>Action</th>
+                            {% if ledger_has_locations %}<th>Location</th>{% endif %}
+                            <th>Transaction</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in ledger %}
+                        <tr>
+                            <td class="text-nowrap">{{ entry.date|date:"d M Y, H:i" }}</td>
+                            <td class="text-end">
+                                {% if entry.quantity > 0 %}
+                                    <span class="badge bg-success-subtle text-success">+{{ entry.quantity }}</span>
+                                {% else %}
+                                    <span class="badge bg-danger-subtle text-danger">{{ entry.quantity }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end fw-semibold">{{ entry.balance }}</td>
+                            <td>{{ entry.action }}</td>
+                            {% if ledger_has_locations %}
+                            <td class="text-muted">{% if entry.location %}{{ entry.location }}{% else %}—{% endif %}</td>
+                            {% endif %}
+                            <td>
+                                {% if entry.transaction_id %}
+                                    <code>{% if entry.action == "Purchase Order" %}PO{% elif entry.action == "Sales Order" %}SO{% elif entry.action == "Production" %}PROD{% elif entry.action == "Inventory Adjustment" %}ADJ{% endif %}{{ entry.transaction_id|stringformat:"05d" }}</code>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="{% if ledger_has_locations %}6{% else %}5{% endif %}" class="text-muted text-center py-4">No ledger entries recorded.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% include "includes/pagination.html" with page_obj=ledger %}
+        </div>
     </div>
-    <div class="table-responsive">
-        <table class="table table-striped align-middle">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th class="text-end">Change</th>
-                    <th class="text-end">Balance</th>
-                    <th>Action</th>
-                    <th>Location</th>
-                    <th>Transaction</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for entry in ledger %}
-                <tr>
-                    <td class="text-nowrap">{{ entry.date|date:"d M Y, H:i" }}</td>
-                    <td class="text-end">
-                        {% if entry.quantity > 0 %}
-                            <span class="badge bg-success-subtle text-success">+{{ entry.quantity }}</span>
-                        {% else %}
-                            <span class="badge bg-danger-subtle text-danger">{{ entry.quantity }}</span>
-                        {% endif %}
-                    </td>
-                    <td class="text-end fw-semibold">{{ entry.balance }}</td>
-                    <td>{{ entry.action }}</td>
-                    <td class="text-muted">
-                        {% if entry.location %}{{ entry.location }}{% else %}—{% endif %}
-                    </td>
-                    <td>
-                        {% if entry.transaction_id %}
-                            <code>{% if entry.action == "Purchase Order" %}PO{% elif entry.action == "Sales Order" %}SO{% elif entry.action == "Production" %}PROD{% elif entry.action == "Inventory Adjustment" %}ADJ{% endif %}{{ entry.transaction_id|stringformat:"05d" }}</code>
-                        {% else %}
-                            <span class="text-muted">—</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" class="text-muted text-center py-4">No ledger entries recorded.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% include "includes/pagination.html" with page_obj=ledger %}
+
 </div>
 
 {% if user.is_authenticated %}

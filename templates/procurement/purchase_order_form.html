@@ -31,7 +31,16 @@
     <div class="mb-4">
         <h5 class="mb-3"><span class="badge bg-primary me-2">1</span> Select Supplier</h5>
         {% if has_suppliers %}
+            {% if supplier_known %}
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Supplier</label>
+                <p class="form-control-plaintext border rounded px-3 py-2 bg-light">{{ supplier_name }}</p>
+                {{ form.supplier }}
+            </div>
+            {{ form.due_date|as_crispy_field }}
+            {% else %}
             {{ form|crispy }}
+            {% endif %}
         {% else %}
             <div class="alert alert-warning">
                 No suppliers exist yet.

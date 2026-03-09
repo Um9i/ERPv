@@ -97,7 +97,6 @@
     <div class="panel h-100">
       <div class="panel-header d-flex align-items-center justify-content-between">
         <span><i class="bi bi-clock-history text-warning me-2"></i>Orders Awaiting Shipment</span>
-        <a href="{{ orders_url }}?status=pending" class="btn btn-sm btn-outline-warning">View All {{ pending_shipping }}</a>
       </div>
       <div class="panel-body">
         <div class="d-flex align-items-center justify-content-between mb-1">
@@ -111,6 +110,7 @@
           {{ shipped_orders }} order{{ shipped_orders|pluralize }} have been (partially or fully) shipped.
           {{ pending_shipping }} still ha{{ pending_shipping|pluralize:'s,ve' }} open lines.
         </p>
+        <a href="{{ orders_url }}?status=pending" class="btn btn-sm btn-primary mt-2">View {{ pending_shipping }} Pending Orders</a>
       </div>
     </div>
     {% else %}
@@ -136,7 +136,7 @@
           <div class="d-flex flex-wrap gap-2 justify-content-center">
             <span class="d-flex align-items-center gap-1 small">
               <span style="width:12px;height:12px;border-radius:2px;background:#198754;display:inline-block;"></span>
-              Fulfilled ({{ total_orders|add:"-"|add:pending_shipping }})
+              Fulfilled ({{ fulfilled_orders }})
             </span>
             <span class="d-flex align-items-center gap-1 small">
               <span style="width:12px;height:12px;border-radius:2px;background:#ffc107;display:inline-block;"></span>

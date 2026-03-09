@@ -18,6 +18,7 @@
     <thead>
         <tr>
             <th>Name</th>
+            <th>Email</th>
             <th>Phone</th>
             <th class="text-end">Actions</th>
         </tr>
@@ -26,6 +27,7 @@
         {% for customer in customers %}
         <tr>
             <td>{{ customer.name }}</td>
+            <td>{% if customer.email %}<a href="mailto:{{ customer.email }}">{{ customer.email }}</a>{% else %}—{% endif %}</td>
             <td>{{ customer.phone }}</td>
             <td class="text-end">
                 <a href="{% url 'sales:customer-detail' customer.id %}" class="btn btn-secondary btn-sm">View</a>

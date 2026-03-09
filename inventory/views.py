@@ -120,6 +120,11 @@ class InventoryListView(ListView):
         q = self.request.GET.get("q", "").strip()
         if q:
             qs = qs.filter(product__name__icontains=q)
+        catalogue = self.request.GET.get("catalogue", "").strip()
+        if catalogue == "1":
+            qs = qs.filter(product__catalogue_item=True)
+        elif catalogue == "0":
+            qs = qs.filter(product__catalogue_item=False)
         return qs
 
     def get_context_data(self, **kwargs):
@@ -190,12 +195,19 @@ class InventoryDetailView(DetailView):
         )
         opening_balance = running  # leftover from the desc walk above
         history = []
-        dates = []
+        raw_dates = []
         total = opening_balance
         for qty, dt in all_entries_asc:
             total += qty
-            dates.append(dt.strftime("%Y-%m-%d %H:%M"))
+            raw_dates.append(dt)
             history.append(total)
+
+        if raw_dates:
+            all_same_day = len(set(d.date() for d in raw_dates)) == 1
+            date_fmt = "%H:%M" if all_same_day else "%d %b"
+            dates = [d.strftime(date_fmt) for d in raw_dates]
+        else:
+            dates = []
 
         context["history_dates"] = dates
         context["history_qty"] = history
@@ -293,6 +305,9 @@ class InventoryDetailView(DetailView):
             inv.stock_locations.aggregate(total=Sum("quantity"))["total"] or 0
         )
         context["unallocated_qty"] = inv.quantity - context["allocated_qty"]
+        context["ledger_has_locations"] = inv.product.inventory_ledger.filter(
+            location__isnull=False
+        ).exists()
 
         # bundle all chart data for json_script (consumed by static JS)
         context["chart_data"] = {

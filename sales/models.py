@@ -75,6 +75,7 @@ class SalesOrder(models.Model):
     )
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
+    ship_by_date = models.DateField(null=True, blank=True)
     total_amount_cached = models.DecimalField(
         max_digits=14, decimal_places=2, default=Decimal("0.00"), editable=False
     )
