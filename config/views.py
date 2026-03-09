@@ -295,7 +295,7 @@ class ImportCatalogueProductView(LoginRequiredMixin, UserPassesTestMixin, View):
 
         try:
             supplier = Supplier.objects.get(pk=int(supplier_id))
-        except (Supplier.DoesNotExist, ValueError):
+        except Supplier.DoesNotExist, ValueError:
             messages.error(request, f"Supplier with id {supplier_id!r} not found.")
             return redirect(browse_url)
 
@@ -351,7 +351,7 @@ class NotifyCustomerView(View):
 
         try:
             data = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
+        except json.JSONDecodeError, ValueError:
             return JsonResponse({"error": "Invalid JSON"}, status=400)
 
         name = (data.get("name") or "").strip()
@@ -409,7 +409,7 @@ class NotifyCustomerProductView(View):
 
         try:
             data = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
+        except json.JSONDecodeError, ValueError:
             return JsonResponse({"error": "Invalid JSON"}, status=400)
 
         product_name = (data.get("product_name") or "").strip()

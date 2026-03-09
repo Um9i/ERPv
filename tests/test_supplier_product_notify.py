@@ -41,11 +41,14 @@ def test_price_change_notifies_both_customer_product_and_supplier_product(
     client, staff_user, product, paired_with_product
 ):
     client.force_login(staff_user)
-    with patch(
-        "inventory.views._notify_remote_customer_product", return_value=True
-    ) as mock_cp, patch(
-        "inventory.views._notify_remote_supplier_product_cost", return_value=True
-    ) as mock_sp:
+    with (
+        patch(
+            "inventory.views._notify_remote_customer_product", return_value=True
+        ) as mock_cp,
+        patch(
+            "inventory.views._notify_remote_supplier_product_cost", return_value=True
+        ) as mock_sp,
+    ):
         client.post(
             reverse("inventory:product-update", args=[product.pk]),
             {

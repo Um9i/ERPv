@@ -722,7 +722,7 @@ class NotifySupplierProductView(View):
 
         try:
             data = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
+        except json.JSONDecodeError, ValueError:
             return JsonResponse({"error": "Invalid JSON"}, status=400)
 
         product_name = (data.get("product_name") or "").strip()
