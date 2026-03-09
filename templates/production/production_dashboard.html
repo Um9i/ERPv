@@ -4,10 +4,10 @@
 {% block dashboard_title %}Production Management{% endblock %}
 
 {% block dashboard_links %}
-<a class="list-group-item list-group-item-action" href="{% url 'production:bom-create' %}">Create BOM</a>
-<a class="list-group-item list-group-item-action" href="{% url 'production:bom-list' %}">View BOMs</a>
-<a class="list-group-item list-group-item-action" href="{% url 'production:production-create' %}">Create Job</a>
-<a class="list-group-item list-group-item-action" href="{% url 'production:production-list' %}">View Jobs</a>
+<a href="{% url 'production:bom-create' %}"><i class="bi bi-plus-circle"></i>Create BOM</a>
+<a href="{% url 'production:bom-list' %}"><i class="bi bi-diagram-3"></i>View BOMs</a>
+<a href="{% url 'production:production-create' %}"><i class="bi bi-plus-circle"></i>Create Job</a>
+<a href="{% url 'production:production-list' %}"><i class="bi bi-gear"></i>View Jobs</a>
 {% endblock %}
 
 {% block dashboard_metrics %}

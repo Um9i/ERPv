@@ -4,10 +4,10 @@
 {% block dashboard_title %}Procurement Management{% endblock %}
 
 {% block dashboard_links %}
-<a class="list-group-item list-group-item-action" href="{% url 'procurement:purchase-order-create' %}">Create Purchase Order</a>
-<a class="list-group-item list-group-item-action" href="{% url 'procurement:purchase-order-list' %}">View Purchase Orders</a>
-<a class="list-group-item list-group-item-action" href="{% url 'procurement:supplier-create' %}">Create Supplier</a>
-<a class="list-group-item list-group-item-action" href="{% url 'procurement:supplier-list' %}">View Suppliers</a>
+<a href="{% url 'procurement:purchase-order-create' %}"><i class="bi bi-plus-circle"></i>Create Purchase Order</a>
+<a href="{% url 'procurement:purchase-order-list' %}"><i class="bi bi-bag"></i>View Purchase Orders</a>
+<a href="{% url 'procurement:supplier-create' %}"><i class="bi bi-person-plus"></i>Create Supplier</a>
+<a href="{% url 'procurement:supplier-list' %}"><i class="bi bi-people"></i>View Suppliers</a>
 {% endblock %}
 
 {% block dashboard_metrics %}

@@ -3,7 +3,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Dict, Any
 
-from django.db.models import Sum
+from django.db.models import DecimalField, Min, OuterRef, Subquery, Sum
 from django.db.models.functions import Coalesce, TruncMonth
 from django.http import HttpResponse
 from django.utils import timezone
@@ -11,8 +11,9 @@ from django.views import View
 from django.views.generic import TemplateView
 from django.views.generic.dates import ArchiveIndexView, MonthArchiveView
 
-from inventory.models import Product
-from procurement.models import PurchaseLedger, Supplier
+from inventory.models import Inventory, Product
+from procurement.models import PurchaseLedger, Supplier, SupplierProduct
+from production.models import BOMItem
 from sales.models import Customer, SalesLedger
 
 
@@ -80,6 +81,44 @@ class FinanceDashboardView(TemplateView):
             "purchases": [purchases_lu.get(m, 0) for m in month_labels],
         }
 
+        # Stock value from inventory (min supplier cost, BOM fallback)
+        min_cost_sq = (
+            SupplierProduct.objects.filter(product=OuterRef("product"))
+            .values("product")
+            .annotate(mc=Min("cost"))
+            .values("mc")[:1]
+        )
+        inventories = list(
+            Inventory.objects.annotate(
+                unit_cost=Subquery(min_cost_sq, output_field=DecimalField()),
+            ).values_list("product_id", "quantity", "unit_cost")
+        )
+        no_cost_ids = [pid for pid, qty, cost in inventories if cost is None and qty]
+        bom_costs = {}
+        if no_cost_ids:
+            bom_items = (
+                BOMItem.objects.filter(bom__product_id__in=no_cost_ids)
+                .annotate(
+                    comp_cost=Subquery(
+                        SupplierProduct.objects.filter(product=OuterRef("product"))
+                        .values("product")
+                        .annotate(mc=Min("cost"))
+                        .values("mc")[:1],
+                        output_field=DecimalField(),
+                    )
+                )
+                .values_list("bom__product_id", "quantity", "comp_cost")
+            )
+            for parent_id, bom_qty, comp_cost in bom_items:
+                if comp_cost is not None:
+                    bom_costs[parent_id] = (
+                        bom_costs.get(parent_id, 0) + bom_qty * comp_cost
+                    )
+        stock_value = sum(
+            qty * (cost if cost is not None else bom_costs.get(pid, 0))
+            for pid, qty, cost in inventories
+        )
+
         context.update(
             {
                 "now": now,
@@ -96,6 +135,7 @@ class FinanceDashboardView(TemplateView):
                     "supplier", "product"
                 ).order_by("-date")[:5],
                 "chart_data": chart_data,
+                "stock_value": stock_value,
             }
         )
         return context

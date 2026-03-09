@@ -5,10 +5,10 @@
 {% block dashboard_title %}Sales Management{% endblock %}
 
 {% block dashboard_links %}
-<a class="list-group-item list-group-item-action" href="{% url 'sales:sales-order-create' %}">Create Sales Order</a>
-<a class="list-group-item list-group-item-action" href="{% url 'sales:sales-order-list' %}">View Sales Orders</a>
-<a class="list-group-item list-group-item-action" href="{% url 'sales:customer-create' %}">Create Customer</a>
-<a class="list-group-item list-group-item-action" href="{% url 'sales:customer-list' %}">View Customers</a>
+<a href="{% url 'sales:sales-order-create' %}"><i class="bi bi-plus-circle"></i>Create Sales Order</a>
+<a href="{% url 'sales:sales-order-list' %}"><i class="bi bi-receipt"></i>View Sales Orders</a>
+<a href="{% url 'sales:customer-create' %}"><i class="bi bi-person-plus"></i>Create Customer</a>
+<a href="{% url 'sales:customer-list' %}"><i class="bi bi-people"></i>View Customers</a>
 {% endblock %}
 
 {% block dashboard_metrics %}

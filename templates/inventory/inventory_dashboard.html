@@ -5,21 +5,33 @@
 {% block dashboard_title %}Inventory Management{% endblock %}
 
 {% block dashboard_links %}
-<a class="list-group-item list-group-item-action" href="{% url 'inventory:product-create' %}">Create Product</a>
-<a class="list-group-item list-group-item-action" href="{% url 'inventory:inventory-list' %}">View Inventory</a>
-<a class="list-group-item list-group-item-action" href="{% url 'inventory:inventory-low-stock' %}">Low Stock Items</a>
-<a class="list-group-item list-group-item-action" href="{% url 'inventory:location-list' %}">Locations</a>
+<a href="{% url 'inventory:product-create' %}"><i class="bi bi-plus-circle"></i>Create Product</a>
+<a href="{% url 'inventory:inventory-list' %}"><i class="bi bi-boxes"></i>View Inventory</a>
+<a href="{% url 'inventory:location-list' %}"><i class="bi bi-geo-alt"></i>Locations</a>
+{% endblock %}
+
+{% block dashboard_search %}
+<div class="list-filter mt-3">
+  <form method="get" action="{% url 'inventory:inventory-list' %}">
+    <div class="input-group">
+      <span class="input-group-text bg-light border-end-0">
+        <i class="bi bi-search text-muted"></i>
+      </span>
+      <input type="search" name="q" class="form-control border-start-0" placeholder="Search products…" autocomplete="off">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+  </form>
+</div>
 {% endblock %}
 
 {% block dashboard_metrics %}
 {% url 'inventory:inventory-list' as inventory_url %}
-{% url 'inventory:inventory-low-stock' as low_stock_url %}
 
 {# ── Row 1: KPI cards ─────────────────────────────────────────────────── #}
 <div class="row g-3">
 
   {# Products #}
-  <div class="col-lg-6 col-xl-3">
+  <div class="col-12 col-lg-6 col-xl-3">
     <a href="{{ inventory_url }}" class="metric-card-link">
       <div class="metric-card">
         <div class="metric-card-icon metric-card-icon--dark">
@@ -34,7 +46,7 @@
   </div>
 
   {# Total Stock with 7-day trend #}
-  <div class="col-lg-6 col-xl-3">
+  <div class="col-12 col-lg-6 col-xl-3">
     <a href="{{ inventory_url }}" class="metric-card-link">
       <div class="metric-card">
         <div class="metric-card-icon metric-card-icon--dark">
@@ -57,47 +69,48 @@
     </a>
   </div>
 
-  {# Stock Value #}
-  <div class="col-lg-6 col-xl-3">
-    <a href="{{ inventory_url }}" class="metric-card-link">
-      <div class="metric-card">
-        <div class="metric-card-icon metric-card-icon--success">
-          <i class="bi bi-cash-stack"></i>
-        </div>
-        <div class="metric-card-content">
-          <span class="metric-card-label">Stock Value</span>
-          <span class="metric-card-value">{{ stock_value|currency|default:'—' }}</span>
-        </div>
+  {# Stock In 30d with trend #}
+  <div class="col-12 col-lg-6 col-xl-3">
+    <div class="metric-card">
+      <div class="metric-card-icon metric-card-icon--success">
+        <i class="bi bi-arrow-down-circle"></i>
       </div>
-    </a>
-  </div>
-
-  {# Low Stock % — danger card #}
-  <div class="col-lg-6 col-xl-3">
-    <a href="{{ low_stock_url }}" class="metric-card-link">
-      <div class="metric-card {% if low_stock_count %}border-danger{% endif %}">
-        <div class="metric-card-icon metric-card-icon--danger">
-          <i class="bi bi-exclamation-triangle"></i>
-        </div>
-        <div class="metric-card-content w-100">
-          <span class="metric-card-label">Low Stock</span>
-          <div class="d-flex align-items-baseline justify-content-between">
-            <span class="metric-card-value {% if low_stock_count %}text-danger{% endif %}">
-              {{ low_stock_count|default:'0' }}
-              <small class="fs-6 fw-normal text-muted">/ {{ total_products }}</small>
-            </span>
-            {% if low_stock_percentage %}
-              <span class="badge bg-danger ms-1">{{ low_stock_percentage }}%</span>
-            {% endif %}
-          </div>
-          {% if low_stock_count %}
-          <div class="progress mt-1" style="height:5px;">
-            <div class="progress-bar bg-danger" style="width:{{ low_stock_percentage }}%"></div>
-          </div>
+      <div class="metric-card-content">
+        <span class="metric-card-label">Stock In (30 days)</span>
+        <div class="d-flex align-items-baseline gap-2">
+          <span class="metric-card-value">{{ stock_in_30d|default:'0' }}</span>
+          {% if trend_stock_in == "up" %}
+            <span class="text-success small fw-semibold"><i class="bi bi-arrow-up-right"></i> vs prev</span>
+          {% elif trend_stock_in == "down" %}
+            <span class="text-danger small fw-semibold"><i class="bi bi-arrow-down-right"></i> vs prev</span>
+          {% else %}
+            <span class="text-muted small"><i class="bi bi-dash"></i> vs prev</span>
           {% endif %}
         </div>
       </div>
-    </a>
+    </div>
+  </div>
+
+  {# Stock Out 30d with trend #}
+  <div class="col-12 col-lg-6 col-xl-3">
+    <div class="metric-card">
+      <div class="metric-card-icon metric-card-icon--primary">
+        <i class="bi bi-arrow-up-circle"></i>
+      </div>
+      <div class="metric-card-content">
+        <span class="metric-card-label">Stock Out (30 days)</span>
+        <div class="d-flex align-items-baseline gap-2">
+          <span class="metric-card-value">{{ stock_out_30d|default:'0' }}</span>
+          {% if trend_stock_out == "up" %}
+            <span class="text-success small fw-semibold"><i class="bi bi-arrow-up-right"></i> vs prev</span>
+          {% elif trend_stock_out == "down" %}
+            <span class="text-danger small fw-semibold"><i class="bi bi-arrow-down-right"></i> vs prev</span>
+          {% else %}
+            <span class="text-muted small"><i class="bi bi-dash"></i> vs prev</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
   </div>
 
 </div>{# /row 1 #}
@@ -109,9 +122,8 @@
   <div class="col-lg-7">
     {% if low_stock_count %}
     <div class="panel h-100">
-      <div class="panel-header d-flex align-items-center justify-content-between">
-        <span><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Low Stock — Top Shortfalls</span>
-        <a href="{{ low_stock_url }}" class="btn btn-sm btn-outline-danger">View All {{ low_stock_count }}</a>
+      <div class="panel-header">
+        <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Low Stock — Top Shortfalls
       </div>
       <div class="panel-body p-0">
         <table class="table table-sm mb-0">
@@ -196,56 +208,10 @@
 
 </div>{# /row 2 #}
 
-{# ── Row 3: Movement metrics ─────────────────────────────────────────── #}
+{# ── Dead stock — only if present ────────────────────────────────────── #}
+{% if dead_stock_count %}
 <div class="row g-3 mt-0">
-
-  {# Stock In 30d with trend #}
-  <div class="col-lg-6 col-xl-4">
-    <div class="metric-card">
-      <div class="metric-card-icon metric-card-icon--success">
-        <i class="bi bi-arrow-down-circle"></i>
-      </div>
-      <div class="metric-card-content">
-        <span class="metric-card-label">Stock In (30 days)</span>
-        <div class="d-flex align-items-baseline gap-2">
-          <span class="metric-card-value">{{ stock_in_30d|default:'0' }}</span>
-          {% if trend_stock_in == "up" %}
-            <span class="text-success small fw-semibold"><i class="bi bi-arrow-up-right"></i> vs prev</span>
-          {% elif trend_stock_in == "down" %}
-            <span class="text-danger small fw-semibold"><i class="bi bi-arrow-down-right"></i> vs prev</span>
-          {% else %}
-            <span class="text-muted small"><i class="bi bi-dash"></i> vs prev</span>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-  </div>
-
-  {# Stock Out 30d with trend #}
-  <div class="col-lg-6 col-xl-4">
-    <div class="metric-card">
-      <div class="metric-card-icon metric-card-icon--primary">
-        <i class="bi bi-arrow-up-circle"></i>
-      </div>
-      <div class="metric-card-content">
-        <span class="metric-card-label">Stock Out (30 days)</span>
-        <div class="d-flex align-items-baseline gap-2">
-          <span class="metric-card-value">{{ stock_out_30d|default:'0' }}</span>
-          {% if trend_stock_out == "up" %}
-            <span class="text-success small fw-semibold"><i class="bi bi-arrow-up-right"></i> vs prev</span>
-          {% elif trend_stock_out == "down" %}
-            <span class="text-danger small fw-semibold"><i class="bi bi-arrow-down-right"></i> vs prev</span>
-          {% else %}
-            <span class="text-muted small"><i class="bi bi-dash"></i> vs prev</span>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-  </div>
-
-  {# Dead stock — only if present #}
-  {% if dead_stock_count %}
-  <div class="col-lg-6 col-xl-4">
+  <div class="col-12 col-lg-4">
     <a href="{{ inventory_url }}" class="metric-card-link">
       <div class="metric-card border-warning">
         <div class="metric-card-icon metric-card-icon--warning">
@@ -258,9 +224,8 @@
       </div>
     </a>
   </div>
-  {% endif %}
-
-</div>{# /row 3 #}
+</div>
+{% endif %}
 
 {% endblock %}
 

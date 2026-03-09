@@ -7,24 +7,17 @@
         <div class="page-header-icon"><i class="bi {% block dashboard_icon %}{% endblock %}"></i></div>
         <div>
             <h1 class="page-title">{% block dashboard_title %}{% endblock %}</h1>
-            <p class="page-subtitle">Overview and quick actions</p>
         </div>
     </div>
 </div>
-<div class="dashboard-grid">
-    <div class="dashboard-quick-actions">
-        <div class="panel">
-            <div class="panel-header">Quick Actions</div>
-            <div class="panel-body">
-                <div class="quick-action-list">
-                    {% block dashboard_links %}{% endblock %}
-                </div>
-            </div>
-        </div>
+<div class="dashboard-quick-actions">
+    <div class="quick-action-list">
+        {% block dashboard_links %}{% endblock %}
     </div>
-    <div class="dashboard-metrics-area">
-        {% block dashboard_metrics %}{% endblock %}
-    </div>
+</div>
+{% block dashboard_search %}{% endblock %}
+<div class="dashboard-metrics-area mt-3">
+    {% block dashboard_metrics %}{% endblock %}
 </div>
 <div class="row mt-4">
     {% block dashboard_actions %}{% endblock %}
