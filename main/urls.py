@@ -40,6 +40,7 @@ urlpatterns = (
         path("production/", include("production.urls", namespace="production")),
         path("finance/", include("finance.urls", namespace="finance")),
         path("config/", include("config.urls", namespace="config")),
+        path("dashboards/", include("dashboards.urls", namespace="dashboards")),
     ]
     + debug_toolbar_urls()
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

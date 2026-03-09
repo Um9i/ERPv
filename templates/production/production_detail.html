@@ -1,5 +1,6 @@
 {% extends "includes/card.html" %}
 {% block card_icon %}bi-wrench-adjustable-circle{% endblock %}
+{% block card_icon_color %}page-header-icon--amber{% endblock %}
 {% block card_title %}Production Job {{ production.order_number }}{% endblock %}
 {% block card_body %}
 <p><strong>Product:</strong> {{ production.product.name }}</p>
@@ -22,32 +23,13 @@
 <p><strong>Created:</strong> {{ production.created_at }}</p>
 <p><strong>Updated:</strong> {{ production.updated_at }}</p>
 
-{% if unit_cost or sale_price %}
+{# ── Job Financials ── #}
+{% if total_cost %}
 <div class="detail-section mb-4">
     <div class="detail-section-header">
-        <h2 class="detail-section-title">Cost Summary</h2>
+        <h2 class="detail-section-title">Job Financials</h2>
     </div>
-
-    {# ── Per-unit / projected row ── #}
     <div class="row g-3 mb-3">
-        <div class="col">
-            <div class="metric-card">
-                <div class="metric-card-content">
-                    <span class="metric-card-value">£{{ unit_cost|floatformat:2 }}</span>
-                    <span class="metric-card-label">Unit Cost</span>
-                </div>
-            </div>
-        </div>
-        {% if sale_price %}
-        <div class="col">
-            <div class="metric-card">
-                <div class="metric-card-content">
-                    <span class="metric-card-value">£{{ sale_price|floatformat:2 }}</span>
-                    <span class="metric-card-label">Sale Price</span>
-                </div>
-            </div>
-        </div>
-        {% endif %}
         <div class="col">
             <div class="metric-card">
                 <div class="metric-card-content">
@@ -102,8 +84,8 @@
         <div class="col">
             <div class="metric-card">
                 <div class="metric-card-content">
-                    <span class="metric-card-value {% if margin_pct >= 30 %}text-success{% elif margin_pct >= 10 %}text-warning{% else %}text-danger{% endif %}">
-                        {{ margin_pct|floatformat:1 }}%
+                    <span class="metric-card-value {% if actual_margin_pct >= 30 %}text-success{% elif actual_margin_pct >= 10 %}text-warning{% else %}text-danger{% endif %}">
+                        {{ actual_margin_pct|floatformat:1 }}%
                     </span>
                     <span class="metric-card-label">Actual Margin</span>
                 </div>
@@ -112,7 +94,6 @@
         {% endif %}
     </div>
     {% endif %}
-
 </div>
 {% endif %}
 
@@ -211,7 +192,13 @@
             </div>
             {% endif %}
 
-            {% if production.materials_available_for_remaining %}
+            {% if max_receivable > 0 %}
+            {% if not production.materials_available_for_remaining %}
+            <div class="alert alert-warning py-2 mb-3">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                Only enough materials to receive <strong>{{ max_receivable }}</strong> of {{ production.remaining }} remaining units.
+            </div>
+            {% endif %}
             <form method="post">
                 {% csrf_token %}
                 <div class="row g-3 mb-3">
@@ -237,7 +224,7 @@
                 </div>
             </form>
             {% else %}
-            <p class="text-muted mb-3">Insufficient materials to receive remaining quantity.</p>
+            <p class="text-muted mb-3">Insufficient materials to receive any units.</p>
             <div class="d-flex justify-content-end">
                 <button type="submit" name="cancel_production" value="1"
                     class="btn btn-outline-danger"

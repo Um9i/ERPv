@@ -7,7 +7,13 @@ from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from decimal import Decimal, ROUND_HALF_UP
-from inventory.models import Product, Inventory, InventoryLedger
+from inventory.models import (
+    Product,
+    Inventory,
+    InventoryLedger,
+    InventoryLocation,
+    Location,
+)
 from main.mixins import AddressMixin
 
 
@@ -279,3 +285,119 @@ def _update_so_cache(sender, instance, **kwargs):
         instance.sales_order.update_cached_total()
     except Exception:
         pass
+
+
+class PickList(models.Model):
+    """A pick list generated from a sales order to guide warehouse staff."""
+
+    sales_order = models.ForeignKey(
+        SalesOrder, on_delete=models.CASCADE, related_name="pick_lists"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name_plural = "Pick Lists"
+
+    def __str__(self):
+        return f"Pick List for {self.sales_order.order_number}"
+
+    @classmethod
+    def generate_for_order(cls, sales_order):
+        """Create a pick list with lines showing where to pick each product."""
+        pick_list = cls.objects.create(sales_order=sales_order)
+        for line in sales_order.sales_order_lines.filter(complete=False):
+            remaining = line.remaining
+            if remaining <= 0:
+                continue
+            product = line.product.product
+            try:
+                inv = Inventory.objects.get(product=product)
+            except Inventory.DoesNotExist:
+                PickListLine.objects.create(
+                    pick_list=pick_list,
+                    sales_order_line=line,
+                    location=None,
+                    quantity=remaining,
+                )
+                continue
+
+            # allocate from bin locations with stock
+            stock_locs = list(
+                InventoryLocation.objects.filter(
+                    inventory=inv, quantity__gt=0
+                ).order_by("location__name")
+            )
+            allocated = 0
+            for sl in stock_locs:
+                if allocated >= remaining:
+                    break
+                pick_qty = min(sl.quantity, remaining - allocated)
+                PickListLine.objects.create(
+                    pick_list=pick_list,
+                    sales_order_line=line,
+                    location=sl.location,
+                    quantity=pick_qty,
+                )
+                allocated += pick_qty
+
+            # allocate from unallocated stock (exists but not in any bin)
+            if allocated < remaining:
+                loc_total = (
+                    InventoryLocation.objects.filter(inventory=inv).aggregate(
+                        total=Sum("quantity")
+                    )["total"]
+                    or 0
+                )
+                unallocated_qty = max(inv.quantity - loc_total, 0)
+                if unallocated_qty > 0:
+                    pick_qty = min(unallocated_qty, remaining - allocated)
+                    PickListLine.objects.create(
+                        pick_list=pick_list,
+                        sales_order_line=line,
+                        location=None,
+                        quantity=pick_qty,
+                    )
+                    allocated += pick_qty
+
+            # true shortage — not enough stock anywhere
+            if allocated < remaining:
+                PickListLine.objects.create(
+                    pick_list=pick_list,
+                    sales_order_line=line,
+                    location=None,
+                    quantity=remaining - allocated,
+                    is_shortage=True,
+                )
+
+        return pick_list
+
+
+class PickListLine(models.Model):
+    """A single line on a pick list indicating where to pick a product."""
+
+    pick_list = models.ForeignKey(
+        PickList, on_delete=models.CASCADE, related_name="lines"
+    )
+    sales_order_line = models.ForeignKey(
+        SalesOrderLine, on_delete=models.CASCADE, related_name="pick_list_lines"
+    )
+    location = models.ForeignKey(
+        Location,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pick_list_lines",
+    )
+    quantity = models.PositiveBigIntegerField()
+    is_shortage = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["sales_order_line", "location"]
+        verbose_name_plural = "Pick List Lines"
+
+    def __str__(self):
+        loc = self.location or "Unallocated"
+        return (
+            f"{self.sales_order_line.product.product.name} × {self.quantity} from {loc}"
+        )

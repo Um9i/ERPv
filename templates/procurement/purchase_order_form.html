@@ -2,6 +2,7 @@
 {% load crispy_forms_tags %}
 {% load static %}
 {% block card_icon %}bi-cart-plus{% endblock %}
+{% block card_icon_color %}page-header-icon--blue{% endblock %}
 {% block card_title %}Create Purchase Order{% endblock %}
 {% block card_body %}
 {% if form.errors or lines_formset.non_form_errors %}

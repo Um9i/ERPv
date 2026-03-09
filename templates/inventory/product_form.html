@@ -1,6 +1,7 @@
 {% extends "includes/card.html" %}
 {% load crispy_forms_tags %}
 {% block card_icon %}bi-box-seam{% endblock %}
+{% block card_icon_color %}page-header-icon--green{% endblock %}
 {% block card_title %}{% if form.instance.pk %}Update Product{% else %}New Product{% endif %}{% endblock %}
 {% block card_body %}
 

@@ -21,6 +21,8 @@ from .views import (
     SalesOrderListView,
     SalesDashboardView,
     SalesOrderInvoiceView,
+    PickListCreateView,
+    PickListDetailView,
 )
 
 app_name = "sales"
@@ -105,5 +107,15 @@ urlpatterns = [
         "sales-orders/<int:pk>/invoice/",
         SalesOrderInvoiceView.as_view(),
         name="sales-order-invoice",
+    ),
+    path(
+        "sales-orders/<int:pk>/pick-list/",
+        PickListCreateView.as_view(),
+        name="pick-list-create",
+    ),
+    path(
+        "pick-lists/<int:pk>/",
+        PickListDetailView.as_view(),
+        name="pick-list-detail",
     ),
 ]

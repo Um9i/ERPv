@@ -1,5 +1,6 @@
 {% extends "includes/card.html" %}
 {% block card_icon %}bi-gear-fill{% endblock %}
+{% block card_icon_color %}page-header-icon--amber{% endblock %}
 {% block card_title %}Receive Production — {{ production.order_number }}{% endblock %}
 {% block card_body %}
 {% if form.errors %}

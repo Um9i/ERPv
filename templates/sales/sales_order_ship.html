@@ -1,5 +1,6 @@
 {% extends "includes/card.html" %}
 {% block card_icon %}bi-cart4{% endblock %}
+{% block card_icon_color %}page-header-icon--indigo{% endblock %}
 {% block card_title %}Sales Order Shipping - {{ sales_order.order_number }}{% endblock %}
 {% block card_body %}
 <p><strong>Customer:</strong> {{ sales_order.customer.name }}</p>

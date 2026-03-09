@@ -1,6 +1,7 @@
 {% extends "includes/card.html" %}
 {% load crispy_forms_tags %}
 {% block card_icon %}bi-truck{% endblock %}
+{% block card_icon_color %}page-header-icon--blue{% endblock %}
 {% block card_title %}{% if form.instance.pk %}Edit Supplier Product{% else %}New Supplier Product{% endif %}{% endblock %}
 {% block card_body %}
 {% if form.errors %}

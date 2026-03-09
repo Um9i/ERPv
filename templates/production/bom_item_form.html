@@ -1,6 +1,7 @@
 {% extends "includes/card.html" %}
 {% load crispy_forms_tags %}
 {% block card_icon %}bi-puzzle{% endblock %}
+{% block card_icon_color %}page-header-icon--amber{% endblock %}
 {% block card_title %}{% if form.instance.pk %}Edit BOM Component{% else %}New BOM Component{% endif %}{% endblock %}
 {% block card_body %}
 {% if form.errors %}

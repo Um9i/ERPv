@@ -179,11 +179,23 @@ class BOMDetailView(DetailView):
 
         context = super().get_context_data(**kwargs)
         bom = self.object
+        product = bom.product
         items = bom.bom_items.select_related("product").all()
         page = self.request.GET.get("page")
         paginator = Paginator(items, 10)
         context["bom_items"] = paginator.get_page(page)
-        context["bom_tree"] = build_bom_tree(bom.product)
+        context["bom_tree"] = build_bom_tree(product)
+
+        unit_cost = product.unit_cost
+        sale_price = product.effective_sale_price
+        component_cost = float(unit_cost) - float(bom.production_cost or 0)
+        context["component_cost"] = component_cost
+        context["unit_cost"] = unit_cost
+        context["sale_price"] = sale_price
+        if unit_cost and sale_price and sale_price > 0:
+            context["margin_pct"] = ((sale_price - unit_cost) / sale_price) * 100
+        else:
+            context["margin_pct"] = None
         return context
 
 
@@ -500,11 +512,12 @@ class ProductionDetailView(DetailView):
                 "total_cost": total_cost,
                 "produced_cost": produced_cost,
                 "produced_value": produced_value,
-                "margin_pct": margin_pct,
+                "actual_margin_pct": margin_pct,
                 "projected_value": projected_value,
                 "projected_margin_pct": projected_margin_pct,
             }
         )
+        context["max_receivable"] = job.max_receivable
         if "receive_form" not in kwargs:
             context["receive_form"] = ProductionReceiveForm(instance=job)
         else:

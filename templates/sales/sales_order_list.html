@@ -1,5 +1,6 @@
 {% extends "includes/card.html" %}
 {% block card_icon %}bi-cart4{% endblock %}
+{% block card_icon_color %}page-header-icon--indigo{% endblock %}
 {% block card_title %}Sales Orders{% endblock %}
 {% block card_body %}
 <form method="get" class="mb-3 list-filter">
@@ -53,9 +54,6 @@
             <td>{{ order.ship_by_date|default:"—" }}</td>
             <td>{{ order.created_at }}</td>
             <td class="text-end">
-                {% if order.has_open_lines %}
-                <a href="{% url 'sales:sales-order-ship' order.id %}" class="btn btn-sm btn-success">Ship</a>
-                {% endif %}
                 <a href="{% url 'sales:sales-order-detail' order.id %}" class="btn btn-secondary btn-sm">View</a>
                 {% if order.has_open_lines %}
                 <form method="post" action="{% url 'sales:sales-order-detail' order.id %}" class="d-inline">

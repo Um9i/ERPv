@@ -1,11 +1,23 @@
 {% extends "includes/card.html" %}
 {% load currency_tags %}
 {% block card_icon %}bi-cart4{% endblock %}
+{% block card_icon_color %}page-header-icon--indigo{% endblock %}
 {% block card_title %}Sales Order {{ sales_order.order_number }}{% endblock %}
 {% block card_body %}
 <p><strong>Customer:</strong> <a href="{% url 'sales:customer-detail' sales_order.customer.pk %}">{{ sales_order.customer.name }}</a></p>
 <p><strong>Created At:</strong> {{ sales_order.created_at }}</p>
+{% if sales_order.status == "Closed" %}
 <p><strong>Ship By Date:</strong> {{ sales_order.ship_by_date|default:"—" }}</p>
+{% else %}
+<div class="mb-2 d-flex align-items-center gap-2">
+    <strong>Ship By Date:</strong>
+    <form method="post" class="d-inline-flex align-items-center gap-2 mb-0">
+        {% csrf_token %}
+        <input type="date" name="ship_by_date" value="{{ sales_order.ship_by_date|date:'Y-m-d' }}" class="form-control form-control-sm" style="width: auto;">
+        <button type="submit" name="update_ship_by_date" class="btn btn-sm btn-outline-secondary"><i class="bi bi-check-lg"></i></button>
+    </form>
+</div>
+{% endif %}
 <p><strong>Updated At:</strong> {{ sales_order.updated_at }}</p>
 <p><strong>Status:</strong> {{ sales_order.status }}</p>
 <p><strong>Total Order Value:</strong> {{ sales_order.total_amount|currency }}</p>

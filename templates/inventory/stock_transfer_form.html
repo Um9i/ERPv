@@ -1,6 +1,7 @@
 {% extends "includes/card.html" %}
 {% load crispy_forms_tags %}
 {% block card_icon %}bi-arrow-left-right{% endblock %}
+{% block card_icon_color %}page-header-icon--green{% endblock %}
 {% block card_title %}Stock Transfer — {{ inventory.product.name }}{% endblock %}
 {% block card_body %}
 {% if form.errors %}

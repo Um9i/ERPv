@@ -99,6 +99,13 @@ class Product(models.Model):
             .values_list("product_id", "min_cost")
         )
 
+        # bulk-load production costs per BOM
+        prod_costs = dict(
+            BillOfMaterials.objects.filter(product_id__in=all_ids).values_list(
+                "product_id", "production_cost"
+            )
+        )
+
         # bottom-up cost computation
         costs = {pid: supplier_costs[pid] for pid in all_ids if pid in supplier_costs}
         changed = True
@@ -111,7 +118,10 @@ class Product(models.Model):
                     costs[pid] = 0
                     changed = True
                 elif all(cid in costs for cid, _ in children_map[pid]):
-                    costs[pid] = sum(qty * costs[cid] for cid, qty in children_map[pid])
+                    component_cost = sum(
+                        qty * costs[cid] for cid, qty in children_map[pid]
+                    )
+                    costs[pid] = component_cost + (prod_costs.get(pid) or 0)
                     changed = True
 
         return costs.get(self.pk, 0)

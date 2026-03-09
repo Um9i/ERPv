@@ -1,5 +1,6 @@
 {% extends "includes/card.html" %}
 {% block card_icon %}bi-exclamation-triangle{% endblock %}
+{% block card_icon_color %}page-header-icon--green{% endblock %}
 {% block card_title %}{% if filter_by == 'purchasable' %}Items to Reorder{% elif filter_by == 'producible' %}Items to Produce{% else %}Low Stock Items{% endif %}{% endblock %}
 {% block card_body %}
 {% if required_items %}

@@ -944,7 +944,7 @@ class TestCostSummary:
         resp = client.get(url)
         ctx = resp.context
 
-        assert ctx["margin_pct"] is None
+        assert ctx["actual_margin_pct"] is None
         assert ctx["projected_value"] is None
         assert ctx["projected_margin_pct"] is None
 

@@ -1,5 +1,6 @@
 {% extends "includes/card.html" %}
 {% block card_icon %}bi-diagram-3-fill{% endblock %}
+{% block card_icon_color %}page-header-icon--amber{% endblock %}
 {% block card_title %}BOM for {{ bom.product.name }}{% endblock %}
 {% block card_body %}
 
@@ -12,6 +13,69 @@
         <i class="bi bi-trash me-1"></i>Delete BOM
     </a>
 </div>
+
+{# ── Cost Summary ── #}
+{% if unit_cost or sale_price %}
+<div class="detail-section mb-4">
+    <div class="detail-section-header">
+        <h2 class="detail-section-title">Cost Summary</h2>
+    </div>
+    <div class="row g-3">
+        {% if component_cost %}
+        <div class="col">
+            <div class="metric-card">
+                <div class="metric-card-content">
+                    <span class="metric-card-value">£{{ component_cost|floatformat:2 }}</span>
+                    <span class="metric-card-label">Component Cost</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if bom.production_cost %}
+        <div class="col">
+            <div class="metric-card">
+                <div class="metric-card-content">
+                    <span class="metric-card-value">£{{ bom.production_cost|floatformat:2 }}</span>
+                    <span class="metric-card-label">Production Cost</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if unit_cost %}
+        <div class="col">
+            <div class="metric-card">
+                <div class="metric-card-content">
+                    <span class="metric-card-value">£{{ unit_cost|floatformat:2 }}</span>
+                    <span class="metric-card-label">Unit Cost</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if sale_price %}
+        <div class="col">
+            <div class="metric-card">
+                <div class="metric-card-content">
+                    <span class="metric-card-value">£{{ sale_price|floatformat:2 }}</span>
+                    <span class="metric-card-label">Sale Price</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if margin_pct != None %}
+        <div class="col">
+            <div class="metric-card">
+                <div class="metric-card-content">
+                    <span class="metric-card-value {% if margin_pct >= 30 %}text-success{% elif margin_pct >= 10 %}text-warning{% else %}text-danger{% endif %}">
+                        {{ margin_pct|floatformat:1 }}%
+                    </span>
+                    <span class="metric-card-label">Margin</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
 
 {# ── BOM tree ── #}
 {% if bom_tree %}

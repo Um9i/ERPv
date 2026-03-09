@@ -1,6 +1,7 @@
 {% extends "includes/card.html" %}
 {% load currency_tags %}
 {% block card_icon %}bi-truck{% endblock %}
+{% block card_icon_color %}page-header-icon--blue{% endblock %}
 {% block card_title %}Purchase Orders for {{ view.kwargs.pk }}{% endblock %}
 {% block card_body %}
 <table class="table">

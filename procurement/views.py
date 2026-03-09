@@ -641,6 +641,20 @@ class PurchaseOrderDetailView(DetailView):
             from django.shortcuts import redirect
 
             return redirect(request.path)
+        if "update_due_date" in request.POST:
+            from django.shortcuts import redirect
+
+            if self.object.status == "Closed":
+                return redirect(request.path)
+            raw = request.POST.get("due_date", "").strip()
+            if raw:
+                from datetime import date as date_cls
+
+                self.object.due_date = date_cls.fromisoformat(raw)
+            else:
+                self.object.due_date = None
+            self.object.save(update_fields=["due_date", "updated_at"])
+            return redirect(request.path)
         # delegate other POSTs if we ever need them (none today)
         return super().post(request, *args, **kwargs)
 

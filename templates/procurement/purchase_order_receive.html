@@ -1,5 +1,6 @@
 {% extends "includes/card.html" %}
 {% block card_icon %}bi-cart-plus{% endblock %}
+{% block card_icon_color %}page-header-icon--blue{% endblock %}
 {% block card_title %}Purchase Order Receiving - {{ purchase_order.order_number }}{% endblock %}
 {% block card_body %}
 <p><strong>Supplier:</strong> {{ purchase_order.supplier.name }}</p>

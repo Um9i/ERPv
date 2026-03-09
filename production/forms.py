@@ -6,7 +6,14 @@ from inventory.models import Location
 class BillOfMaterialsForm(forms.ModelForm):
     class Meta:
         model = BillOfMaterials
-        fields = ["product"]
+        fields = ["product", "production_cost"]
+        widgets = {
+            "production_cost": forms.NumberInput(attrs={"step": "0.01"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["production_cost"].required = False
 
 
 class BOMItemForm(forms.ModelForm):

@@ -206,6 +206,8 @@ h1, h2, h3, h4, h5, h6 {
 .sidebar-icon--indigo { background: rgba(99,102,241,0.15); color: #818cf8; }
 .sidebar-icon--amber  { background: rgba(217,119,6,0.15); color: #fbbf24; }
 .sidebar-icon--teal   { background: rgba(13,148,136,0.15); color: #2dd4bf; }
+.sidebar-icon--purple { background: rgba(139,92,246,0.15); color: #a78bfa; }
+.sidebar-icon--rose   { background: rgba(244,63,94,0.15); color: #fb7185; }
 .sidebar-label {
     white-space: nowrap;
 }
@@ -258,6 +260,13 @@ h1, h2, h3, h4, h5, h6 {
 .page-header-icon i {
     font-size: 1.3rem !important;
 }
+.page-header-icon--green  { background: rgba(5,150,105,0.15); color: #34d399; }
+.page-header-icon--blue   { background: rgba(37,99,235,0.15); color: #60a5fa; }
+.page-header-icon--indigo { background: rgba(99,102,241,0.15); color: #818cf8; }
+.page-header-icon--amber  { background: rgba(217,119,6,0.15); color: #fbbf24; }
+.page-header-icon--teal   { background: rgba(13,148,136,0.15); color: #2dd4bf; }
+.page-header-icon--purple { background: rgba(139,92,246,0.15); color: #a78bfa; }
+.page-header-icon--rose   { background: rgba(244,63,94,0.15); color: #fb7185; }
 .page-title {
     font-size: 1.5rem;
     font-weight: 700;

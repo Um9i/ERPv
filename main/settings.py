@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "sales.apps.SalesConfig",
     "finance.apps.FinanceConfig",
     "config.apps.ConfigConfig",
+    "dashboards.apps.DashboardsConfig",
     "debug_toolbar",
 ]
 

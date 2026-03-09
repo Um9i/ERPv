@@ -1,6 +1,7 @@
 {% extends "includes/card.html" %}
 {% load crispy_forms_tags %}
 {% block card_icon %}bi-person-lines-fill{% endblock %}
+{% block card_icon_color %}page-header-icon--indigo{% endblock %}
 {% block card_title %}{% if object %}Edit Customer Contact{% else %}New Customer Contact{% endif %}{% endblock %}
 {% block card_body %}
 {% if form.errors %}

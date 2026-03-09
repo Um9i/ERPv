@@ -5,6 +5,7 @@ from .models import (
     SalesOrder,
     SalesOrderLine,
     SalesLedger,
+    PickList,
 )
 from .forms import (
     CustomerForm,
@@ -342,6 +343,8 @@ class SalesOrderCreateView(CreateView):
             self.object = form.save()
             lines_formset.instance = self.object
             lines_formset.save()
+            # auto-generate a pick list for the new order
+            PickList.generate_for_order(self.object)
             return super().form_valid(form)
         else:
             return self.form_invalid(form)
@@ -466,6 +469,20 @@ class SalesOrderDetailView(DetailView):
             self.object.save(update_fields=["updated_at"])
             from django.shortcuts import redirect
 
+            return redirect(request.path)
+        if "update_ship_by_date" in request.POST:
+            from django.shortcuts import redirect
+
+            if self.object.status == "Closed":
+                return redirect(request.path)
+            raw = request.POST.get("ship_by_date", "").strip()
+            if raw:
+                from datetime import date as date_cls
+
+                self.object.ship_by_date = date_cls.fromisoformat(raw)
+            else:
+                self.object.ship_by_date = None
+            self.object.save(update_fields=["ship_by_date", "updated_at"])
             return redirect(request.path)
         return super().post(request, *args, **kwargs)
 
@@ -681,3 +698,34 @@ class SalesOrderInvoiceView(DetailView):
             f'inline; filename="invoice-{order.order_number}.pdf"'
         )
         return response
+
+
+class PickListCreateView(DetailView):
+    """Generate a new pick list for a sales order."""
+
+    model = SalesOrder
+
+    def post(self, request, *args, **kwargs):
+        order = self.get_object()
+        pick_list = PickList.generate_for_order(order)
+        return redirect("sales:pick-list-detail", pk=pick_list.pk)
+
+    def get(self, request, *args, **kwargs):
+        # GET also generates for convenience
+        order = self.get_object()
+        pick_list = PickList.generate_for_order(order)
+        return redirect("sales:pick-list-detail", pk=pick_list.pk)
+
+
+class PickListDetailView(DetailView):
+    model = PickList
+    template_name = "sales/pick_list_detail.html"
+    context_object_name = "pick_list"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["lines"] = self.object.lines.select_related(
+            "sales_order_line__product__product",
+            "location",
+        ).all()
+        return context

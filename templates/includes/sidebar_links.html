@@ -28,10 +28,16 @@
         <span class="sidebar-label">Finance</span>
     </a>
 </li>
+<li class="nav-item">
+    <a href="{% url 'dashboards:dashboard-home' %}" class="nav-link sidebar-link">
+        <span class="sidebar-icon sidebar-icon--purple"><i class="bi bi-speedometer2"></i></span>
+        <span class="sidebar-label">Dashboards</span>
+    </a>
+</li>
 {% if request.user.is_staff %}
 <li class="nav-item">
     <a href="{% url 'config:company-config' %}" class="nav-link sidebar-link">
-        <span class="sidebar-icon sidebar-icon--secondary"><i class="bi bi-gear"></i></span>
+        <span class="sidebar-icon sidebar-icon--rose"><i class="bi bi-sliders"></i></span>
         <span class="sidebar-label">Settings</span>
     </a>
 </li>

@@ -8,6 +8,12 @@ from inventory.models import Product, Inventory, InventoryLedger, ProductionAllo
 
 class BillOfMaterials(models.Model):
     product = models.OneToOneField(Product, on_delete=models.CASCADE)
+    production_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text="Additional per-unit cost for labour, overhead, etc.",
+    )
 
     class Meta:
         ordering = ["product"]
@@ -168,18 +174,24 @@ class Production(models.Model):
     @property
     def materials_available_for_remaining(self):
         """Return ``True`` if inventory can cover the remaining job quantity."""
+        return self.max_receivable >= self.remaining
+
+    @property
+    def max_receivable(self):
+        """Max units that can be received given current inventory."""
         if self.bom() is None:
-            return False
+            return 0
         from inventory.models import Inventory
 
+        cap = self.remaining
         for item in self.bom():
             try:
                 inv = Inventory.objects.get(product=item.product)
             except Inventory.DoesNotExist:
-                return False
-            if inv.quantity < item.quantity * self.remaining:
-                return False
-        return True
+                return 0
+            if item.quantity > 0:
+                cap = min(cap, inv.quantity // item.quantity)
+        return cap
 
     def clean(self):
         if self.bom() == None:
