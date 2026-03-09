@@ -142,9 +142,15 @@ class TestCustomer:
 
     def test_dashboard_metrics(self, client, customer, sales_order, sales_order_line):
         """Dashboard should provide counts that match DB state."""
+        import datetime
         from django.urls import reverse
         from django.contrib.auth.models import User
-        from sales.models import SalesOrder, SalesOrderLine
+        from sales.models import SalesOrder
+
+        # give the fixture order a ship_by_date of today so it appears in today's totals
+        today = datetime.date.today()
+        sales_order.ship_by_date = today
+        sales_order.save(update_fields=["ship_by_date"])
 
         user = User.objects.create_user(username="dashuser")
         client.force_login(user)
@@ -153,13 +159,16 @@ class TestCustomer:
         assert resp.status_code == 200
         ctx = resp.context
         assert ctx["total_orders"] == SalesOrder.objects.count()
+        due_qs = SalesOrder.objects.filter(ship_by_date__lte=today)
         assert (
             ctx["shipped_orders"]
-            == SalesOrderLine.objects.filter(quantity_shipped__gt=0).count()
+            == due_qs.filter(sales_order_lines__quantity_shipped__gt=0)
+            .distinct()
+            .count()
         )
         assert (
             ctx["pending_shipping"]
-            == SalesOrderLine.objects.filter(complete=False).count()
+            == due_qs.filter(sales_order_lines__complete=False).distinct().count()
         )
         assert ctx["total_customers"] == customer.__class__.objects.count()
         content = resp.content.decode()

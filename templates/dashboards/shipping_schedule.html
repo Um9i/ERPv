@@ -86,10 +86,11 @@
             <td>{{ order.status }}</td>
             <td class="text-end">{{ order.remaining_total|currency }}</td>
             <td class="text-end d-print-none">
-              {% if order.pick_lists.all|length > 0 %}
-              <a href="{% url 'sales:pick-list-detail' order.pick_lists.all.0.pk %}" class="btn btn-sm btn-outline-secondary" title="View Pick List"><i class="bi bi-clipboard"></i></a>
+              {% if order.pick_lists.all %}
+              <a href="{% url 'sales:pick-list-detail' order.pick_lists.all.0.pk %}" class="btn btn-sm btn-outline-secondary" title="View Pick List"><i class="bi bi-clipboard"></i> Pick List</a>
+              {% else %}
+              <a href="{% url 'sales:pick-list-create' order.pk %}" class="btn btn-sm btn-outline-success" title="Generate Pick List"><i class="bi bi-clipboard-check"></i> Generate</a>
               {% endif %}
-              <a href="{% url 'sales:pick-list-create' order.pk %}" class="btn btn-sm btn-outline-success" title="Generate Pick List"><i class="bi bi-clipboard-check"></i></a>
             </td>
           </tr>
           {% endfor %}
@@ -129,10 +130,11 @@
             <td class="text-end">{{ order.total_amount|currency }}</td>
             <td class="text-end">{{ order.remaining_total|currency }}</td>
             <td class="text-end d-print-none">
-              {% if order.pick_lists.all|length > 0 %}
-              <a href="{% url 'sales:pick-list-detail' order.pick_lists.all.0.pk %}" class="btn btn-sm btn-outline-secondary" title="View Pick List"><i class="bi bi-clipboard"></i></a>
+              {% if order.pick_lists.all %}
+              <a href="{% url 'sales:pick-list-detail' order.pick_lists.all.0.pk %}" class="btn btn-sm btn-outline-secondary" title="View Pick List"><i class="bi bi-clipboard"></i> Pick List</a>
+              {% else %}
+              <a href="{% url 'sales:pick-list-create' order.pk %}" class="btn btn-sm btn-outline-success" title="Generate Pick List"><i class="bi bi-clipboard-check"></i> Generate</a>
               {% endif %}
-              <a href="{% url 'sales:pick-list-create' order.pk %}" class="btn btn-sm btn-outline-success" title="Generate Pick List"><i class="bi bi-clipboard-check"></i></a>
             </td>
           </tr>
           {% endfor %}

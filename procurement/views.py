@@ -345,10 +345,15 @@ class ProcurementDashboardView(TemplateView):
         from django.db.models import Count, Q, F
 
         context = super().get_context_data(**kwargs)
+        from django.utils import timezone
+
+        today = timezone.localdate()
         context["total_purchase_orders"] = PurchaseOrder.objects.count()
-        # how many purchase orders are fully received (all lines complete)
+        # orders due today or earlier
+        due_qs = PurchaseOrder.objects.filter(due_date__lte=today)
+        # how many of today's due POs are fully received (all lines complete)
         context["orders_received"] = (
-            PurchaseOrder.objects.annotate(
+            due_qs.annotate(
                 total_lines=Count("purchase_order_lines"),
                 complete_lines=Count(
                     "purchase_order_lines",
@@ -358,14 +363,9 @@ class ProcurementDashboardView(TemplateView):
             .filter(total_lines__gt=0, total_lines=F("complete_lines"))
             .count()
         )
-        # pending_receiving now measures the number of *purchase orders*
-        # that still have open lines rather than raw line count.  the card
-        # label remains "Pending Receiving" for now, but the underlying
-        # value aligns with the executive/main dashboard semantics.
+        # POs due today or earlier that still have open lines
         context["pending_receiving"] = (
-            PurchaseOrder.objects.filter(purchase_order_lines__complete=False)
-            .distinct()
-            .count()
+            due_qs.filter(purchase_order_lines__complete=False).distinct().count()
         )
         context["total_suppliers"] = Supplier.objects.count()
         # count products that have a live shortage, have a supplier, and are not
@@ -432,10 +432,9 @@ class ProcurementDashboardView(TemplateView):
         purchasable_items.sort(key=lambda e: e["required_cached"], reverse=True)
         context["purchasable_items"] = purchasable_items
         context["purchasable_low_stock"] = len(purchasable_items)
+        due_total = context["orders_received"] + context["pending_receiving"]
         context["receipt_rate"] = (
-            round(context["orders_received"] / context["total_purchase_orders"] * 100)
-            if context["total_purchase_orders"]
-            else 0
+            round(context["orders_received"] / due_total * 100) if due_total else 0
         )
         context["orders_no_lines"] = max(
             0,

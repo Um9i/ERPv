@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-logo"><i class="bi bi-lock"></i></div>
+            <h2 class="auth-title">Registration Closed</h2>
+            <p class="auth-subtitle">New account registration is not currently available.</p>
+        </div>
+        <p class="auth-footer">
+            Already have an account? <a href="{% url 'login' %}" class="auth-link">Sign in</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

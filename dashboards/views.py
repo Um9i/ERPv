@@ -33,11 +33,15 @@ class ShippingScheduleView(TemplateView):
         context["next_date"] = current + timedelta(days=1)
         context["week_start"] = current - timedelta(days=current.weekday())
 
-        # orders due on this date
+        # orders due on this date (exclude closed orders)
         context["orders"] = (
-            SalesOrder.objects.filter(ship_by_date=current)
+            SalesOrder.objects.filter(
+                ship_by_date=current,
+                sales_order_lines__complete=False,
+            )
             .select_related("customer")
             .prefetch_related("sales_order_lines__product__product", "pick_lists")
+            .distinct()
         )
 
         # week overview
@@ -45,7 +49,14 @@ class ShippingScheduleView(TemplateView):
         week_dates = [week_start + timedelta(days=i) for i in range(7)]
         week_data = []
         for d in week_dates:
-            count = SalesOrder.objects.filter(ship_by_date=d).count()
+            count = (
+                SalesOrder.objects.filter(
+                    ship_by_date=d,
+                    sales_order_lines__complete=False,
+                )
+                .distinct()
+                .count()
+            )
             week_data.append(
                 {
                     "date": d,

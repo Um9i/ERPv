@@ -161,10 +161,16 @@ class TestSupplier:
     def test_dashboard_metrics(
         self, client, supplier, purchase_order, purchase_order_line
     ):
+        import datetime
         from django.urls import reverse
         from django.contrib.auth.models import User
         from procurement.models import PurchaseOrder, PurchaseOrderLine, Supplier
         from django.db.models import Count, Q, F
+
+        # give the fixture PO a due_date of today so it falls in the dashboard filter
+        today = datetime.date.today()
+        purchase_order.due_date = today
+        purchase_order.save(update_fields=["due_date"])
 
         user = User.objects.create_user(username="dashuser")
         client.force_login(user)
@@ -173,8 +179,9 @@ class TestSupplier:
         assert resp.status_code == 200
         ctx = resp.context
         assert ctx["total_purchase_orders"] == PurchaseOrder.objects.count()
+        due_qs = PurchaseOrder.objects.filter(due_date__lte=today)
         expected_received = (
-            PurchaseOrder.objects.annotate(
+            due_qs.annotate(
                 total_lines=Count("purchase_order_lines"),
                 complete_lines=Count(
                     "purchase_order_lines",
@@ -186,9 +193,7 @@ class TestSupplier:
         )
         assert ctx["orders_received"] == expected_received
         expected_open = (
-            PurchaseOrder.objects.filter(purchase_order_lines__complete=False)
-            .distinct()
-            .count()
+            due_qs.filter(purchase_order_lines__complete=False).distinct().count()
         )
         assert ctx["pending_receiving"] == expected_open
         assert ctx["total_suppliers"] == Supplier.objects.count()

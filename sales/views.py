@@ -651,26 +651,26 @@ class SalesDashboardView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        from django.utils import timezone
+
+        today = timezone.localdate()
         context["total_orders"] = SalesOrder.objects.count()
+        # orders with ship_by_date today or earlier
+        due_qs = SalesOrder.objects.filter(ship_by_date__lte=today)
+        # how many of today's due SOs have had any shipment
         context["shipped_orders"] = (
-            SalesOrder.objects.filter(sales_order_lines__quantity_shipped__gt=0)
-            .distinct()
-            .count()
+            due_qs.filter(sales_order_lines__quantity_shipped__gt=0).distinct().count()
         )
-        # count of orders with any lines still awaiting shipment (not marked complete)
+        # SOs due today or earlier with any open lines
         context["pending_shipping"] = (
-            SalesOrder.objects.filter(sales_order_lines__complete=False)
-            .distinct()
-            .count()
+            due_qs.filter(sales_order_lines__complete=False).distinct().count()
         )
         context["total_customers"] = Customer.objects.count()
-        total_orders = context["total_orders"]
+        due_total = context["shipped_orders"] + context["pending_shipping"]
         context["fulfillment_rate"] = (
-            round((total_orders - context["pending_shipping"]) / total_orders * 100)
-            if total_orders
-            else 0
+            round(context["shipped_orders"] / due_total * 100) if due_total else 0
         )
-        context["fulfilled_orders"] = max(0, total_orders - context["pending_shipping"])
+        context["fulfilled_orders"] = context["shipped_orders"]
         return context
 
 
