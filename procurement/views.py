@@ -576,7 +576,7 @@ class PurchaseOrderListView(ListView):
         )
 
         filter_value = self.request.GET.get("filter", "").strip()
-        status_value = self.request.GET.get("status", "").strip().lower()
+        status_value = self.request.GET.get("status", "open").strip().lower()
 
         if status_value == "open":
             qs = qs.filter(has_open_lines=True)
@@ -605,7 +605,7 @@ class PurchaseOrderListView(ListView):
         paginator = Paginator(qs, 15)
         context["purchase_orders"] = paginator.get_page(page)
         context["q"] = self.request.GET.get("q", "")
-        context["status"] = self.request.GET.get("status", "").strip().lower()
+        context["status"] = self.request.GET.get("status", "open").strip().lower()
         return context
 
 

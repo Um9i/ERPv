@@ -527,12 +527,12 @@ class TestPurchaseOrder:
         PurchaseOrder.objects.create(supplier=other)
         url = reverse("procurement:purchase-order-list")
         # search by supplier name
-        resp = client.get(url, {"q": "Test Supplier"})
+        resp = client.get(url, {"q": "Test Supplier", "status": ""})
         content = resp.content.decode()
         assert purchase_order.supplier.name in content
         assert "Other Supplier" not in content
         # search by numeric ID should still work
-        resp2 = client.get(url, {"q": str(purchase_order.pk)})
+        resp2 = client.get(url, {"q": str(purchase_order.pk), "status": ""})
         assert purchase_order.order_number in resp2.content.decode()
 
     def test_purchase_order_list_filter_received(
@@ -563,7 +563,7 @@ class TestPurchaseOrder:
         )
 
         url = reverse("procurement:purchase-order-list")
-        resp = client.get(url, {"filter": "received"})
+        resp = client.get(url, {"filter": "received", "status": ""})
         assert resp.status_code == 200
         content = resp.content.decode()
         assert received_po.order_number in content

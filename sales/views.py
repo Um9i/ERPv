@@ -373,11 +373,11 @@ class SalesOrderListView(ListView):
             )
             .order_by("-created_at")
         )
-        status = self.request.GET.get("status", "").lower()
-        if status == "shipped":
-            qs = qs.filter(sales_order_lines__quantity_shipped__gt=0).distinct()
-        elif status == "pending":
+        status = self.request.GET.get("status", "open").lower()
+        if status == "open":
             qs = qs.filter(has_open_lines=True)
+        elif status == "closed":
+            qs = qs.filter(has_open_lines=False)
         q = self.request.GET.get("q", "").strip()
         if q:
             qs = qs.filter(Q(customer__name__icontains=q) | Q(pk__icontains=q))
@@ -449,7 +449,7 @@ class SalesOrderListView(ListView):
         page_obj.object_list = orders
         context["sales_orders"] = page_obj
         context["q"] = self.request.GET.get("q", "")
-        context["status"] = self.request.GET.get("status", "").lower()
+        context["status"] = self.request.GET.get("status", "open").lower()
         return context
 
 

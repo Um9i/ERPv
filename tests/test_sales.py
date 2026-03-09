@@ -235,11 +235,11 @@ class TestSalesOrder:
         other = Customer.objects.create(name="Other Customer")
         SalesOrder.objects.create(customer=other)
         url = reverse("sales:sales-order-list")
-        resp = client.get(url, {"q": "Test Customer"})
+        resp = client.get(url, {"q": "Test Customer", "status": ""})
         content = resp.content.decode()
         assert sales_order.customer.name in content
         assert "Other Customer" not in content
-        resp2 = client.get(url, {"q": str(sales_order.pk)})
+        resp2 = client.get(url, {"q": str(sales_order.pk), "status": ""})
         assert sales_order.order_number in resp2.content.decode()
 
     def test_sales_order_properties(self, sales_order, sales_order_line):
