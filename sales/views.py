@@ -566,11 +566,32 @@ class SalesOrderShipView(DetailView):
                 touched = True
                 inv.quantity -= qty
                 inv.save(update_fields=["quantity", "last_updated"])
+
+                # deduct from stock locations that hold inventory
+                from inventory.models import InventoryLocation
+
+                remaining_to_deduct = qty
+                locations_used = []
+                stock_locs = list(
+                    InventoryLocation.objects.select_for_update()
+                    .filter(inventory=inv, quantity__gt=0)
+                    .order_by("location__name")
+                )
+                for sl in stock_locs:
+                    if remaining_to_deduct <= 0:
+                        break
+                    deduct = min(sl.quantity, remaining_to_deduct)
+                    sl.quantity -= deduct
+                    sl.save(update_fields=["quantity", "last_updated"])
+                    remaining_to_deduct -= deduct
+                    locations_used.append(sl.location)
+
                 InventoryLedger.objects.create(
                     product=line.product.product,
                     quantity=-abs(qty),
                     action="Sales Order",
                     transaction_id=self.object.pk,
+                    location=locations_used[0] if len(locations_used) == 1 else None,
                 )
                 SalesLedger.objects.create(
                     product=line.product.product,

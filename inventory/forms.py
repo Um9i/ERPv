@@ -136,7 +136,7 @@ class StockTransferForm(forms.ModelForm):
     def __init__(self, *args, inventory=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.inventory = inventory
-        # only show locations that have stock for this inventory
+        # show locations that have stock, plus "Unallocated" if applicable
         if inventory:
             assigned_location_ids = InventoryLocation.objects.filter(
                 inventory=inventory, quantity__gt=0
@@ -144,6 +144,34 @@ class StockTransferForm(forms.ModelForm):
             self.fields["from_location"].queryset = Location.objects.filter(
                 pk__in=assigned_location_ids
             )
-        self.fields["from_location"].empty_label = "Select source\u2026"
+            allocated = (
+                InventoryLocation.objects.filter(inventory=inventory).aggregate(
+                    total=models.Sum("quantity")
+                )["total"]
+                or 0
+            )
+            unallocated = inventory.quantity - allocated
+            if unallocated > 0:
+                self.fields["from_location"].empty_label = (
+                    f"Unallocated ({unallocated})"
+                )
+                self.fields["from_location"].required = False
+            else:
+                self.fields["from_location"].empty_label = None
+        else:
+            self.fields["from_location"].empty_label = "Select source\u2026"
         self.fields["to_location"].queryset = Location.objects.all()
-        self.fields["to_location"].empty_label = "Select destination\u2026"
+        if inventory:
+            allocated = (
+                InventoryLocation.objects.filter(inventory=inventory).aggregate(
+                    total=models.Sum("quantity")
+                )["total"]
+                or 0
+            )
+            if allocated > 0:
+                self.fields["to_location"].empty_label = "Unallocated"
+                self.fields["to_location"].required = False
+            else:
+                self.fields["to_location"].empty_label = "Select destination\u2026"
+        else:
+            self.fields["to_location"].empty_label = "Select destination\u2026"

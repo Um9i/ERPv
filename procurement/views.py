@@ -698,11 +698,27 @@ class PurchaseOrderReceiveView(DetailView):
                     quantity=F("quantity") + qty, last_updated=timezone.now()
                 )
                 affected_product_ids.add(line.product.product_id)
+
+                # route received stock to location if product has exactly one
+                from inventory.models import InventoryLocation
+
+                inv_obj = Inventory.objects.get(product=line.product.product)
+                stock_locs = list(inv_obj.stock_locations.all())
+                recv_location = None
+                if len(stock_locs) == 1:
+                    sl = InventoryLocation.objects.select_for_update().get(
+                        pk=stock_locs[0].pk
+                    )
+                    sl.quantity += qty
+                    sl.save(update_fields=["quantity", "last_updated"])
+                    recv_location = sl.location
+
                 InventoryLedger.objects.create(
                     product=line.product.product,
                     quantity=qty,
                     action="Purchase Order",
                     transaction_id=self.object.pk,
+                    location=recv_location,
                 )
                 PurchaseLedger.objects.create(
                     product=line.product.product,

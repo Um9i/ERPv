@@ -366,10 +366,18 @@ class StockTransfer(models.Model):
         Inventory, on_delete=models.CASCADE, related_name="transfers"
     )
     from_location = models.ForeignKey(
-        Location, on_delete=models.CASCADE, related_name="transfers_out"
+        Location,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="transfers_out",
     )
     to_location = models.ForeignKey(
-        Location, on_delete=models.CASCADE, related_name="transfers_in"
+        Location,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="transfers_in",
     )
     quantity = models.PositiveBigIntegerField()
     transferred_at = models.DateTimeField(auto_now_add=True)
@@ -380,44 +388,67 @@ class StockTransfer(models.Model):
         verbose_name_plural = "Stock Transfers"
 
     def __str__(self):
-        return (
-            f"{self.inventory.product.name}: {self.quantity} "
-            f"{self.from_location} → {self.to_location}"
-        )
+        src = self.from_location or "Unallocated"
+        dest = self.to_location or "Unallocated"
+        return f"{self.inventory.product.name}: {self.quantity} " f"{src} → {dest}"
 
     def clean(self):
-        if self.from_location_id == self.to_location_id:
-            raise ValidationError(_("Source and destination must be different."))
-        try:
-            src = InventoryLocation.objects.get(
-                inventory=self.inventory, location=self.from_location
-            )
-        except InventoryLocation.DoesNotExist:
-            raise ValidationError(_("No stock at the source location."))
-        if src.quantity < self.quantity:
+        if not self.from_location_id and not self.to_location_id:
             raise ValidationError(
-                _(f"Only {src.quantity} available at {self.from_location}.")
+                _("Source and destination cannot both be unallocated.")
             )
+        if (
+            self.from_location_id
+            and self.to_location_id
+            and self.from_location_id == self.to_location_id
+        ):
+            raise ValidationError(_("Source and destination must be different."))
+        if self.from_location_id:
+            try:
+                src = InventoryLocation.objects.get(
+                    inventory=self.inventory, location=self.from_location
+                )
+            except InventoryLocation.DoesNotExist:
+                raise ValidationError(_("No stock at the source location."))
+            if src.quantity < self.quantity:
+                raise ValidationError(
+                    _(f"Only {src.quantity} available at {self.from_location}.")
+                )
+        else:
+            # transferring from unallocated stock
+            allocated = (
+                InventoryLocation.objects.filter(inventory=self.inventory).aggregate(
+                    total=Sum("quantity")
+                )["total"]
+                or 0
+            )
+            unallocated = self.inventory.quantity - allocated
+            if self.quantity > unallocated:
+                raise ValidationError(
+                    _(f"Only {unallocated} units of unallocated stock available.")
+                )
 
     @transaction.atomic
     def save(self, *args, **kwargs):
         self.full_clean()
         if self.pk is None:
-            # deduct from source
-            src = InventoryLocation.objects.select_for_update().get(
-                inventory=self.inventory, location=self.from_location
-            )
-            src.quantity -= self.quantity
-            src.save(update_fields=["quantity", "last_updated"])
+            # deduct from source (skip when transferring from unallocated)
+            if self.from_location_id:
+                src = InventoryLocation.objects.select_for_update().get(
+                    inventory=self.inventory, location=self.from_location
+                )
+                src.quantity -= self.quantity
+                src.save(update_fields=["quantity", "last_updated"])
 
-            # add to destination (create if needed)
-            dest, _ = InventoryLocation.objects.select_for_update().get_or_create(
-                inventory=self.inventory,
-                location=self.to_location,
-                defaults={"quantity": 0},
-            )
-            dest.quantity += self.quantity
-            dest.save(update_fields=["quantity", "last_updated"])
+            # add to destination (skip when transferring to unallocated)
+            if self.to_location_id:
+                dest, _ = InventoryLocation.objects.select_for_update().get_or_create(
+                    inventory=self.inventory,
+                    location=self.to_location,
+                    defaults={"quantity": 0},
+                )
+                dest.quantity += self.quantity
+                dest.save(update_fields=["quantity", "last_updated"])
 
             # ledger: two entries, net zero on total stock
             InventoryLedger.objects.create(
