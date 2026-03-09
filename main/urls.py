@@ -29,8 +29,8 @@ admin.site.site_header = "ERPv"
 admin.site.index_title = ""
 
 urlpatterns = (
-    [
-        path("admin/", admin.site.urls),
+    ([path("admin/", admin.site.urls)] if settings.DEBUG else [])
+    + [
         path("accounts/", include("django_registration.backends.one_step.urls")),
         path("accounts/", include("django.contrib.auth.urls")),
         path("", TemplateView.as_view(template_name="home.html"), name="home"),

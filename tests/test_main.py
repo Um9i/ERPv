@@ -32,7 +32,7 @@ class TestMainPages:
             assert resp.status_code in (302, 301)
             assert reverse("login") in resp.url
 
-    @override_settings(PASSWORD_HASHERS=_FAST_HASHERS)
+    @override_settings(PASSWORD_HASHERS=_FAST_HASHERS, REGISTRATION_OPEN=True)
     def test_registration_pages(self, client):
         """Registration form and completion pages render correctly."""
         from django.urls import reverse
