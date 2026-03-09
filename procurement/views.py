@@ -627,6 +627,7 @@ class PurchaseOrderReceiveView(DetailView):
         # remaining amount were entered
         receive_all = "receive_all" in request.POST
         touched = False
+        affected_product_ids: set[int] = set()
         for line in self.object.purchase_order_lines.filter(complete=False):
             if receive_all:
                 qty = line.remaining
@@ -651,6 +652,7 @@ class PurchaseOrderReceiveView(DetailView):
                 Inventory.objects.filter(product=line.product.product).update(
                     quantity=F("quantity") + qty, last_updated=timezone.now()
                 )
+                affected_product_ids.add(line.product.product_id)
                 InventoryLedger.objects.create(
                     product=line.product.product,
                     quantity=qty,
@@ -689,6 +691,11 @@ class PurchaseOrderReceiveView(DetailView):
         if touched:
             # auto_now takes care of the actual value
             self.object.save(update_fields=["updated_at"])
+            # refresh required_cached for all products whose stock changed
+            if affected_product_ids:
+                from inventory.services import refresh_required_cache_for_products
+
+                refresh_required_cache_for_products(affected_product_ids)
         return redirect(self.get_success_url())
 
     def get_success_url(self):

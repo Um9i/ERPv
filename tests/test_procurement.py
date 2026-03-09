@@ -462,6 +462,34 @@ class TestSupplierProduct:
         getresp = client.get(url)
         assert 'max="0"' in getresp.content.decode()
 
+    def test_receive_refreshes_required_cache(self, client, purchase_order_line):
+        """Receiving stock should update required_cached so the low stock list stays accurate."""
+        from django.urls import reverse
+        from inventory.models import Inventory, ProductionAllocated
+        from django.contrib.auth.models import User
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        product = purchase_order_line.product.product
+        inv = Inventory.objects.get(product=product)
+        # simulate: stock is 0, allocation equals order quantity → item appears needed
+        inv.quantity = 0
+        inv.save(update_fields=["quantity"])
+        pa = ProductionAllocated.objects.get(product=product)
+        pa.quantity = purchase_order_line.quantity
+        pa.save()
+        inv.refresh_from_db()
+        assert inv.required_cached == purchase_order_line.quantity
+
+        po = purchase_order_line.purchase_order
+        url = reverse("procurement:purchase-order-receive", args=[po.pk])
+        client.post(url, {"receive_all": "1"})
+
+        inv.refresh_from_db()
+        # after receiving, stock covers the allocation so required_cached must be 0
+        assert inv.required_cached == 0
+
 
 @pytest.mark.django_db
 class TestPurchaseOrder:
