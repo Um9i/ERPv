@@ -1,0 +1,19 @@
+{% load crispy_forms_tags %}
+<div class="mb-3">
+    <label for="{{ field.id_for_label }}" class="form-label">
+        {% if label %}{{ label }}{% else %}{{ field.label }}{% endif %}
+        {% if optional %}<span class="text-muted fw-normal small">(optional)</span>{% endif %}
+    </label>
+    <input
+        type="{% if field.field.widget.input_type %}{{ field.field.widget.input_type }}{% else %}text{% endif %}"
+        name="{{ field.html_name }}"
+        id="{{ field.id_for_label }}"
+        value="{{ field.value|default:'' }}"
+        {% if field.field.max_length %}maxlength="{{ field.field.max_length }}"{% endif %}
+        class="form-control{% if field.errors %} is-invalid{% endif %}">
+    {% if field.errors %}
+    <div class="invalid-feedback">{{ field.errors|join:", " }}</div>
+    {% elif show_help and field.help_text %}
+    <div class="form-text">{{ field.help_text }}</div>
+    {% endif %}
+</div>

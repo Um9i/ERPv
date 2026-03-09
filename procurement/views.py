@@ -373,7 +373,8 @@ class ProcurementDashboardView(TemplateView):
         # stale cache discrepancies with the low-stock list.
         from inventory.models import Inventory
         from procurement.models import SupplierProduct
-        from procurement.services import pending_po_by_product
+        from procurement.services import best_supplier_products, pending_po_by_product
+        from django.urls import reverse
 
         inv_list = list(
             Inventory.objects.select_related("product").filter(required_cached__gt=0)
@@ -385,19 +386,52 @@ class ProcurementDashboardView(TemplateView):
                 "product_id", flat=True
             )
         )
+        best_sp_map = best_supplier_products(product_ids)
 
-        purchasable_short = 0
+        purchasable_items = []
+        supplier_items: dict = {}
         for inv in inv_list:
             if inv.product_id not in purchasable_ids:
                 continue
-            # use the cached value to avoid per-product N+1 queries
             required_qty = inv.required_cached
             if required_qty <= 0:
                 continue
             po_amount = po_map.get(inv.product_id, 0)
-            if po_amount < required_qty:
-                purchasable_short += 1
-        context["purchasable_low_stock"] = purchasable_short
+            if po_amount >= required_qty:
+                continue
+            shortfall = required_qty - po_amount
+            sp = best_sp_map.get(inv.product_id)
+            supplier_id = sp.supplier_id if sp else None
+            supplierproduct_id = sp.pk if sp else None
+            if supplier_id:
+                supplier_items.setdefault(supplier_id, []).append(
+                    (supplierproduct_id, shortfall)
+                )
+            purchasable_items.append(
+                {
+                    "product": inv.product,
+                    "quantity": inv.quantity,
+                    "required_cached": required_qty,
+                    "po_amount": po_amount,
+                    "shortfall": shortfall,
+                    "supplier_id": supplier_id,
+                }
+            )
+
+        for entry in purchasable_items:
+            sid = entry["supplier_id"]
+            if sid:
+                pairs = supplier_items.get(sid, [])
+                qs = "&".join(f"item={pid}:{qty}" for pid, qty in pairs)
+                entry["po_url"] = (
+                    f"{reverse('procurement:purchase-order-create')}?supplier={sid}&{qs}"
+                )
+            else:
+                entry["po_url"] = None
+
+        purchasable_items.sort(key=lambda e: e["required_cached"], reverse=True)
+        context["purchasable_items"] = purchasable_items
+        context["purchasable_low_stock"] = len(purchasable_items)
         context["receipt_rate"] = (
             round(context["orders_received"] / context["total_purchase_orders"] * 100)
             if context["total_purchase_orders"]

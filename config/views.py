@@ -43,6 +43,12 @@ class CompanyConfigView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
         obj, _ = CompanyConfig.objects.get_or_create(pk=1, defaults={"name": "ERPv"})
         return obj
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["instances"] = PairedInstance.objects.all()
+        ctx["new_our_key"] = self.request.session.pop("new_paired_key", None)
+        return ctx
+
     def form_valid(self, form):
         messages.success(self.request, "Company configuration saved.")
         return super().form_valid(form)

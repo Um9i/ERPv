@@ -3,12 +3,13 @@
 {% block card_icon %}bi-people-fill{% endblock %}
 {% block card_title %}{% if customer %}Edit Customer{% else %}New Customer{% endif %}{% endblock %}
 {% block card_body %}
+
 {% if form.errors %}
 <div class="alert alert-danger">
-    <ul>
+    <ul class="mb-0">
     {% for field in form %}
         {% for error in field.errors %}
-            <li>{{ error }}</li>
+            <li><strong>{{ field.label }}:</strong> {{ error }}</li>
         {% endfor %}
     {% endfor %}
     {% for error in form.non_field_errors %}
@@ -17,9 +18,87 @@
     </ul>
 </div>
 {% endif %}
-<form method="post">
+
+<form method="post" id="customer-form">
     {% csrf_token %}
-    {{ form|crispy }}
-    <button type="submit" class="btn btn-success">Save</button>
+
+    <div class="form-section mb-4">
+        <h6 class="form-section-title">Customer</h6>
+        {% include "includes/_field.html" with field=form.name optional=False %}
+    </div>
+
+    <div class="form-section mb-4">
+        <h6 class="form-section-title">Contact Details</h6>
+        <div class="row g-3">
+            <div class="col-md-6">
+                {% include "includes/_field.html" with field=form.phone optional=True %}
+            </div>
+            <div class="col-md-6">
+                {% include "includes/_field.html" with field=form.email optional=True %}
+            </div>
+        </div>
+        {% include "includes/_field.html" with field=form.website optional=True show_help=True %}
+    </div>
+
+    <div class="form-section mb-4">
+        <h6 class="form-section-title">Address <span class="text-muted fw-normal" style="text-transform:none;letter-spacing:0">— optional</span></h6>
+        <div class="row g-3">
+            <div class="col-md-6">
+                {% include "includes/_field.html" with field=form.address_line_1 optional=True label="Address line 1" %}
+            </div>
+            <div class="col-md-6">
+                {% if form.address_line_2.value %}
+                {% include "includes/_field.html" with field=form.address_line_2 optional=True label="Address line 2" %}
+                {% else %}
+                <div id="show-addr2-btn" class="mb-3">
+                    <label class="form-label d-block">&nbsp;</label>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="show-addr2">
+                        <i class="bi bi-plus me-1"></i>Add address line 2
+                    </button>
+                </div>
+                <div class="d-none" id="addr2-wrap">
+                    {% include "includes/_field.html" with field=form.address_line_2 optional=True label="Address line 2" %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-4">
+                {% include "includes/_field.html" with field=form.city optional=True %}
+            </div>
+            <div class="col-md-4">
+                {% include "includes/_field.html" with field=form.state optional=True %}
+            </div>
+            <div class="col-md-4">
+                {% include "includes/_field.html" with field=form.postal_code optional=True %}
+            </div>
+        </div>
+        {% include "includes/_field.html" with field=form.country optional=True %}
+    </div>
+
+    <div class="product-form-footer">
+        <a href="{% if customer %}{% url 'sales:customer-detail' customer.pk %}{% else %}{% url 'sales:customer-list' %}{% endif %}"
+           class="btn btn-outline-secondary">
+            Discard
+        </a>
+        <button type="submit" class="btn btn-success">
+            {% if customer %}Save Changes{% else %}Create Customer{% endif %}
+        </button>
+    </div>
 </form>
+
+<script>
+(function () {
+    'use strict';
+    var btn = document.getElementById('show-addr2');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+        document.getElementById('show-addr2-btn').classList.add('d-none');
+        document.getElementById('addr2-wrap').classList.remove('d-none');
+        var inp = document.getElementById('addr2-wrap').querySelector('input');
+        if (inp) inp.focus();
+    });
+}());
+</script>
+
 {% endblock %}

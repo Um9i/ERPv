@@ -98,13 +98,33 @@
       <div class="panel-header d-flex align-items-center justify-content-between">
         <span><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Items to Reorder</span>
       </div>
-      <div class="panel-body">
-        <p class="mb-2">
-          <span class="fw-semibold text-danger">{{ purchasable_low_stock }}</span>
-          product{{ purchasable_low_stock|pluralize }} {{ purchasable_low_stock|pluralize:'is,are' }} below
-          required stock and not covered by open purchase orders.
-        </p>
-        <a href="{{ low_stock_url }}?filter=purchasable" class="btn btn-sm btn-primary">View {{ purchasable_low_stock }} Shortages</a>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-3">Product</th>
+              <th class="text-end">On Hand</th>
+              <th class="text-end">Needed</th>
+              <th class="text-end">On PO</th>
+              <th class="text-end pe-3">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in purchasable_items %}
+            <tr>
+              <td class="ps-3">{{ item.product.name }}</td>
+              <td class="text-end">{{ item.quantity }}</td>
+              <td class="text-end text-danger fw-semibold">{{ item.required_cached }}</td>
+              <td class="text-end">{{ item.po_amount }}</td>
+              <td class="text-end pe-3">
+                {% if item.po_url %}
+                <a href="{{ item.po_url }}" class="btn btn-sm btn-primary">New PO</a>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
     {% elif pending_receiving %}

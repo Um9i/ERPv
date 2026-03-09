@@ -96,15 +96,36 @@
     {% if producible_low_stock %}
     <div class="panel h-100">
       <div class="panel-header d-flex align-items-center justify-content-between">
-        <span><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Components Needed for Production</span>
+        <span><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Production Required</span>
       </div>
-      <div class="panel-body">
-        <p class="mb-2">
-          <span class="fw-semibold text-danger">{{ producible_low_stock }}</span>
-          product{{ producible_low_stock|pluralize }} {{ producible_low_stock|pluralize:'is,are' }} short and
-          can be satisfied by scheduling a production job.
-        </p>
-        <a href="{{ low_stock_url }}?filter=producible" class="btn btn-sm btn-primary">View {{ producible_low_stock }} Shortages</a>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-3">Product</th>
+              <th class="text-end">On Hand</th>
+              <th class="text-end">Needed</th>
+              <th class="text-end">In Active Jobs</th>
+              <th class="text-end pe-3">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in producible_items %}
+            <tr>
+              <td class="ps-3">{{ item.product.name }}</td>
+              <td class="text-end">{{ item.quantity }}</td>
+              <td class="text-end text-danger fw-semibold">{{ item.required_cached }}</td>
+              <td class="text-end">{{ item.pending_job }}</td>
+              <td class="text-end pe-3">
+                <a href="{% url 'production:production-create' %}?product={{ item.product.pk }}&quantity={{ item.shortfall }}"
+                   class="btn btn-sm btn-primary">
+                  New job
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
     {% elif active_jobs %}
@@ -158,10 +179,6 @@
               <span style="width:12px;height:12px;border-radius:2px;background:#ffc107;display:inline-block;"></span>
               Active ({{ active_jobs }})
             </span>
-            <span class="d-flex align-items-center gap-1 small">
-              <span style="width:12px;height:12px;border-radius:2px;background:#dee2e6;display:inline-block;"></span>
-              Other ({{ total_jobs }})
-            </span>
           </div>
         </div>
       </div>
@@ -179,16 +196,13 @@
   if (!ctx) return;
   var completed = {{ completed_jobs }};
   var active    = {{ active_jobs }};
-  var total     = {{ total_jobs }};
-  var other     = Math.max(0, total - completed - active);
-  // active and completed can overlap; show independently scaled if needed
   new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: ['Completed', 'Active', 'Other'],
+      labels: ['Completed', 'Active'],
       datasets: [{
-        data: [completed, active, other],
-        backgroundColor: ['#198754', '#ffc107', '#dee2e6'],
+        data: [completed, active],
+        backgroundColor: ['#198754', '#ffc107'],
         borderWidth: 2,
         borderColor: '#fff',
         hoverOffset: 6

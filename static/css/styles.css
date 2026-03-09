@@ -5,7 +5,7 @@
    ============================================= */
 :root {
     /* Core palette */
-    --color-bg: #f8fafc;
+    --color-bg: #f8f9fa;
     --color-bg-white: #ffffff;
     --color-text: #1e293b;
     --color-text-muted: #64748b;
@@ -632,6 +632,27 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 0.88rem;
     color: var(--color-text);
     margin-bottom: 0.3rem;
+}
+
+.logo-dropzone {
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 2rem 1.5rem;
+    text-align: center;
+    background: var(--color-bg);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+.logo-dropzone:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+}
+.logo-dropzone img {
+    max-height: 80px;
+    margin-bottom: 0.75rem;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 

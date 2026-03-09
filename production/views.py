@@ -582,16 +582,20 @@ class ProductionDashboardView(TemplateView):
             .annotate(total=Sum(F("quantity") - F("quantity_received")))
             .values("total")
         )
-        context["producible_low_stock"] = (
+        producible_items = (
             Inventory.objects.filter(
                 required_cached__gt=0, product_id__in=producible_ids
             )
+            .select_related("product")
             .annotate(
                 pending_job=Coalesce(
                     Subquery(job_subquery, output_field=IntegerField()), 0
                 )
             )
             .filter(pending_job__lt=F("required_cached"))
-            .count()
+            .annotate(shortfall=F("required_cached") - F("pending_job"))
+            .order_by("product__name")
         )
+        context["producible_items"] = producible_items
+        context["producible_low_stock"] = producible_items.count()
         return context

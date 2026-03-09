@@ -5,10 +5,10 @@
 
 {% block card_header %}
 <div class="d-flex justify-content-end gap-2 mb-4">
-    <a class="btn btn-sm btn-outline-primary" href="{% url 'inventory:product-update' inventory.product.pk %}">
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'inventory:product-update' inventory.product.pk %}">
         <i class="bi bi-pencil me-1"></i>Edit Product
     </a>
-    <a class="btn btn-sm btn-warning" href="{% url 'inventory:inventory-adjust' inventory.pk %}">
+    <a class="btn btn-sm btn-outline-warning" href="{% url 'inventory:inventory-adjust' inventory.pk %}">
         <i class="bi bi-sliders me-1"></i>Adjust Quantity
     </a>
 </div>
@@ -16,8 +16,8 @@
 
 {% block card_body %}
 
-{# ── Key metrics ── #}
-<div class="row row-cols-2 row-cols-md-4 g-3 mb-4">
+{# ── Key metrics — uniform 3-column grid ── #}
+<div class="row row-cols-2 row-cols-sm-3 g-3 mb-4">
     <div class="col">
         <div class="metric-card">
             <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-boxes"></i></div>
@@ -58,10 +58,10 @@
     {% endif %}
     {% if required_qty > 0 %}
     <div class="col">
-        <div class="metric-card" style="border-color: var(--color-danger);">
+        <div class="metric-card">
             <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-exclamation-triangle"></i></div>
             <div class="metric-card-content">
-                <span class="metric-card-value" style="color: var(--color-danger);">{{ required_qty }}</span>
+                <span class="metric-card-value text-danger">{{ required_qty }}</span>
                 <span class="metric-card-label">Shortage</span>
             </div>
         </div>
@@ -92,26 +92,30 @@
 </div>
 
 {# ── Tabs ── #}
-<ul class="nav nav-tabs mb-3">
-    <li class="nav-item">
-        <button type="button" class="nav-link {% if not request.GET.tab and not request.GET.page %}active{% endif %}"
+<ul class="nav nav-tabs detail-tabs mb-3" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button type="button" role="tab" class="nav-link {% if not request.GET.tab and not request.GET.page %}active{% endif %}"
                 data-bs-toggle="tab" data-bs-target="#tab-overview">Overview</button>
     </li>
-    <li class="nav-item">
-        <button type="button" class="nav-link {% if request.GET.tab == 'stock' %}active{% endif %}"
+    <li class="nav-item" role="presentation">
+        <button type="button" role="tab" class="nav-link {% if request.GET.tab == 'stock' %}active{% endif %}"
                 data-bs-toggle="tab" data-bs-target="#tab-stock">
             Stock Locations
             {% if inventory.stock_locations.exists %}
-            <span class="badge bg-secondary ms-1">{{ inventory.stock_locations.count }}</span>
+            <span class="badge bg-secondary ms-1"
+                  data-bs-toggle="tooltip"
+                  title="{{ inventory.stock_locations.count }} location{% if inventory.stock_locations.count != 1 %}s{% endif %} assigned">
+                {{ inventory.stock_locations.count }}
+            </span>
             {% endif %}
         </button>
     </li>
-    <li class="nav-item">
-        <button type="button" id="tab-activity-btn" class="nav-link {% if request.GET.tab == 'activity' %}active{% endif %}"
+    <li class="nav-item" role="presentation">
+        <button type="button" role="tab" id="tab-activity-btn" class="nav-link {% if request.GET.tab == 'activity' %}active{% endif %}"
                 data-bs-toggle="tab" data-bs-target="#tab-activity">Activity</button>
     </li>
-    <li class="nav-item">
-        <button type="button" class="nav-link {% if request.GET.tab == 'ledger' or request.GET.page %}active{% endif %}"
+    <li class="nav-item" role="presentation">
+        <button type="button" role="tab" class="nav-link {% if request.GET.tab == 'ledger' or request.GET.page %}active{% endif %}"
                 data-bs-toggle="tab" data-bs-target="#tab-ledger">Ledger</button>
     </li>
 </ul>
@@ -119,39 +123,116 @@
 <div class="tab-content">
 
     {# ── Overview tab ── #}
-    <div class="tab-pane fade {% if not request.GET.tab and not request.GET.page %}show active{% endif %}" id="tab-overview">
-        {% if inventory.product.image or inventory.product.description %}
-        <div class="row g-3 mb-4 align-items-start">
-            {% if inventory.product.image %}
-            <div class="col-auto">
-                <div class="detail-section p-2" style="display:inline-block;">
+    <div class="tab-pane fade {% if not request.GET.tab and not request.GET.page %}show active{% endif %}" id="tab-overview" role="tabpanel">
+
+        {# ── Product info: image + description + metadata ── #}
+        <div class="detail-section mb-4">
+            <div class="row g-4 align-items-start">
+                {# Image column — only rendered if image exists #}
+                {% if inventory.product.image %}
+                <div class="col-auto d-flex align-items-start">
                     <img src="{{ inventory.product.image.url }}"
                          alt="{{ inventory.product.name }}"
-                         style="max-width:180px; max-height:180px; object-fit:contain; display:block;">
+                         style="max-width:160px; max-height:160px; object-fit:contain; border-radius:.375rem; border:1px solid var(--bs-border-color);">
                 </div>
-            </div>
-            {% endif %}
-            {% if inventory.product.description %}
-            <div class="col">
-                <div class="detail-section">
-                    <div class="detail-section-header">
-                        <h2 class="detail-section-title">Description</h2>
-                    </div>
-                    <p class="mb-0 text-muted">{{ inventory.product.description }}</p>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-        {% endif %}
+                {% endif %}
 
-        {# ── Demand Overview ── #}
+                {# Description + metadata ── fills remaining space #}
+                <div class="col">
+                    {% if inventory.product.description %}
+                    <h2 class="detail-section-title mb-2">Description</h2>
+                    <p class="text-muted mb-3">{{ inventory.product.description }}</p>
+                    {% endif %}
+                    <div class="row g-2 text-sm">
+                        <div class="col-6 col-md-4">
+                            <div class="text-muted small">Product ID</div>
+                            <div class="fw-semibold">#{{ inventory.product.pk }}</div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <div class="text-muted small">Sale Price</div>
+                            <div class="fw-semibold">
+                                {% if inventory.product.sale_price %}
+                                    £{{ inventory.product.sale_price|floatformat:2 }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <div class="text-muted small">Catalogue</div>
+                            <div class="fw-semibold">
+                                {% if inventory.product.catalogue_item %}
+                                    <span class="badge bg-success-subtle text-success">Listed</span>
+                                {% else %}
+                                    <span class="badge bg-secondary-subtle text-secondary">Unlisted</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <div class="text-muted small">In Stock</div>
+                            <div class="fw-semibold">{{ inventory.quantity }}</div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <div class="text-muted small">Allocated</div>
+                            <div class="fw-semibold">{{ allocated_qty }}</div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <div class="text-muted small">Unallocated</div>
+                            <div class="fw-semibold">{{ unallocated_qty }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ── Demand Overview: chart left, breakdown right ── #}
         <div class="detail-section">
             <div class="detail-section-header">
                 <h2 class="detail-section-title">Demand Overview</h2>
             </div>
             {% if sales_pending > 0 or purchase_pending > 0 or production_pending > 0 or required_qty > 0 %}
-            <div style="max-width:280px; margin:0 auto; padding-top:1rem;">
-                <canvas id="pending-chart"></canvas>
+            <div class="row align-items-center g-4">
+                <div class="col-sm-5 col-md-4 d-flex justify-content-center">
+                    <div style="max-width:200px; width:100%;">
+                        <canvas id="pending-chart"></canvas>
+                    </div>
+                </div>
+                <div class="col-sm-7 col-md-8">
+                    <div class="d-flex flex-column gap-2">
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="d-flex align-items-center gap-2">
+                                <span style="width:10px;height:10px;border-radius:50%;background:#0d6efd;display:inline-block;flex-shrink:0;"></span>
+                                <span class="text-muted small">Sales Pending</span>
+                            </span>
+                            <span class="fw-semibold">{{ sales_pending }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="d-flex align-items-center gap-2">
+                                <span style="width:10px;height:10px;border-radius:50%;background:#198754;display:inline-block;flex-shrink:0;"></span>
+                                <span class="text-muted small">Purchases Incoming</span>
+                            </span>
+                            <span class="fw-semibold">{{ purchase_pending }}</span>
+                        </div>
+                        {% if production_pending > 0 %}
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="d-flex align-items-center gap-2">
+                                <span style="width:10px;height:10px;border-radius:50%;background:#ffc107;display:inline-block;flex-shrink:0;"></span>
+                                <span class="text-muted small">In Production</span>
+                            </span>
+                            <span class="fw-semibold">{{ production_pending }}</span>
+                        </div>
+                        {% endif %}
+                        {% if required_qty > 0 %}
+                        <div class="d-flex justify-content-between align-items-center py-2">
+                            <span class="d-flex align-items-center gap-2">
+                                <span style="width:10px;height:10px;border-radius:50%;background:#dc3545;display:inline-block;flex-shrink:0;"></span>
+                                <span class="text-muted small">Shortage</span>
+                            </span>
+                            <span class="fw-semibold text-danger">{{ required_qty }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
             {% else %}
             <p class="text-muted text-center py-4 mb-0">No pending demand for this product.</p>
@@ -160,7 +241,7 @@
     </div>
 
     {# ── Stock Locations tab ── #}
-    <div class="tab-pane fade {% if request.GET.tab == 'stock' %}show active{% endif %}" id="tab-stock">
+    <div class="tab-pane fade {% if request.GET.tab == 'stock' %}show active{% endif %}" id="tab-stock" role="tabpanel">
         <div class="detail-section">
             <div class="detail-section-header d-flex justify-content-between align-items-center">
                 <h2 class="detail-section-title mb-0">Stock Locations</h2>
@@ -224,7 +305,7 @@
     </div>
 
     {# ── Activity tab ── #}
-    <div class="tab-pane fade {% if request.GET.tab == 'activity' %}show active{% endif %}" id="tab-activity">
+    <div class="tab-pane fade {% if request.GET.tab == 'activity' %}show active{% endif %}" id="tab-activity" role="tabpanel">
         <div class="detail-section mb-4">
             <div class="detail-section-header">
                 <h2 class="detail-section-title">Stock Level History</h2>
@@ -240,7 +321,7 @@
     </div>
 
     {# ── Ledger tab ── #}
-    <div class="tab-pane fade {% if request.GET.tab == 'ledger' or request.GET.page %}show active{% endif %}" id="tab-ledger">
+    <div class="tab-pane fade {% if request.GET.tab == 'ledger' or request.GET.page %}show active{% endif %}" id="tab-ledger" role="tabpanel">
         <div class="detail-section">
             <div class="detail-section-header">
                 <h2 class="detail-section-title">Inventory Ledger</h2>
@@ -304,4 +385,10 @@
 {% if user.is_authenticated %}
 <script src="{% static 'js/inventory_detail.js' %}"></script>
 {% endif %}
+<script>
+(function () {
+    var tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltips.forEach(function (el) { new bootstrap.Tooltip(el); });
+}());
+</script>
 {% endblock %}

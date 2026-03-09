@@ -1,80 +1,350 @@
-{% extends "base.html" %}
-{% block content %}
-<div class="detail-section">
-  <div class="detail-section-header">
-    <h1>Company Configuration</h1>
-    <p class="text-muted">Your company details used on invoices and reports.</p>
+{% extends "includes/card.html" %}
+{% block card_icon %}bi-gear{% endblock %}
+{% block card_title %}Settings{% endblock %}
+{% block card_body %}
+
+{# ── Tab Nav ── #}
+<ul class="nav nav-tabs detail-tabs mb-3" id="settingsTabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="tab-company" data-bs-toggle="tab" data-bs-target="#pane-company"
+            type="button" role="tab" data-tab-hash="company" aria-selected="true">
+      <i class="bi bi-building me-1"></i>Company
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="tab-address" data-bs-toggle="tab" data-bs-target="#pane-address"
+            type="button" role="tab" data-tab-hash="address">
+      <i class="bi bi-geo-alt me-1"></i>Address
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="tab-branding" data-bs-toggle="tab" data-bs-target="#pane-branding"
+            type="button" role="tab" data-tab-hash="branding">
+      <i class="bi bi-image me-1"></i>Branding
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="tab-integrations" data-bs-toggle="tab" data-bs-target="#pane-integrations"
+            type="button" role="tab" data-tab-hash="integrations">
+      <i class="bi bi-diagram-3 me-1"></i>Integrations
+      {% if instances %}
+        <span class="badge bg-secondary ms-1">{{ instances|length }}</span>
+      {% endif %}
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content" id="settingsTabContent">
+
+  {# ── Company Tab ── #}
+  <div class="tab-pane fade show active" id="pane-company" role="tabpanel">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="_tab" value="company">
+      <div class="panel mb-4">
+        <div class="panel-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Company Name</label>
+              {{ form.name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">VAT Number</label>
+              {{ form.vat_number }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Company Number</label>
+              {{ form.company_number }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Phone</label>
+              {{ form.phone }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              {{ form.email }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Website</label>
+              {{ form.website }}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex justify-content-end mb-2">
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi bi-check2 me-1"></i>Save Changes
+        </button>
+      </div>
+    </form>
   </div>
 
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    <div class="row g-3">
+  {# ── Address Tab ── #}
+  <div class="tab-pane fade" id="pane-address" role="tabpanel">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="_tab" value="address">
+      <div class="panel mb-4">
+        <div class="panel-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Address Line 1</label>
+              {{ form.address_line_1 }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Address Line 2</label>
+              {{ form.address_line_2 }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">City</label>
+              {{ form.city }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">State / Region</label>
+              {{ form.state }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Postal Code</label>
+              {{ form.postal_code }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Country</label>
+              {{ form.country }}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex justify-content-end mb-2">
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi bi-check2 me-1"></i>Save Changes
+        </button>
+      </div>
+    </form>
+  </div>
 
-      <div class="col-md-6">
-        <label class="form-label">Company Name</label>
-        {{ form.name }}
+  {# ── Branding Tab ── #}
+  <div class="tab-pane fade" id="pane-branding" role="tabpanel">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="_tab" value="branding">
+      <div class="panel mb-4">
+        <div class="panel-body">
+          <label class="logo-dropzone d-block" for="id_logo">
+            {% if form.instance.logo %}
+              <img src="{{ form.instance.logo.url }}" alt="Current logo">
+            {% else %}
+              <i class="bi bi-cloud-upload fs-2 text-muted mb-2 d-block"></i>
+            {% endif %}
+            <p class="mb-1 fw-medium">Drop your logo here or click to browse</p>
+            <p class="text-muted small mb-2">PNG, JPG or SVG</p>
+            <span class="btn btn-sm btn-outline-secondary">Browse files</span>
+            <p class="text-muted small mt-2 mb-0" id="logo-file-name">No file selected</p>
+          </label>
+          {{ form.logo }}
+        </div>
       </div>
-      <div class="col-md-6">
-        <label class="form-label">VAT Number</label>
-        {{ form.vat_number }}
+      <div class="d-flex justify-content-end mb-2">
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi bi-check2 me-1"></i>Save Changes
+        </button>
       </div>
-      <div class="col-md-6">
-        <label class="form-label">Company Number</label>
-        {{ form.company_number }}
+    </form>
+  </div>
+
+  {# ── Integrations Tab ── #}
+  <div class="tab-pane fade" id="pane-integrations" role="tabpanel">
+
+    {% if new_our_key %}
+      <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+        <strong><i class="bi bi-key-fill"></i> Your API key has been generated.</strong>
+        Send this key to your partner &mdash; it will <strong>not</strong> be shown in full again.
+        <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
+          <code id="new-our-key" class="fs-6 user-select-all">{{ new_our_key }}</code>
+          <button type="button" class="btn btn-sm btn-outline-secondary"
+                  onclick="navigator.clipboard.writeText(document.getElementById('new-our-key').innerText)">
+            <i class="bi bi-clipboard"></i> Copy
+          </button>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endif %}
+
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-3" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+
+    <div class="panel">
+      <div class="panel-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-diagram-3 me-2"></i>Paired Instances</span>
+        <a href="{% url 'config:paired-instance-create' %}" class="btn btn-sm btn-primary">
+          <i class="bi bi-plus-lg"></i> Add Paired Instance
+        </a>
       </div>
 
-      <div class="col-md-6">
-        <label class="form-label">Phone</label>
-        {{ form.phone }}
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">Email</label>
-        {{ form.email }}
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">Website</label>
-        {{ form.website }}
-      </div>
-
-      <div class="col-12"><hr><h6>Address</h6></div>
-      <div class="col-md-6">
-        <label class="form-label">Address Line 1</label>
-        {{ form.address_line_1 }}
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">Address Line 2</label>
-        {{ form.address_line_2 }}
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">City</label>
-        {{ form.city }}
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">State / Region</label>
-        {{ form.state }}
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Postal Code</label>
-        {{ form.postal_code }}
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">Country</label>
-        {{ form.country }}
-      </div>
-
-      <div class="col-12"><hr><h6>Logo</h6></div>
-      <div class="col-md-6">
-        {% if form.instance.logo %}
-          <img src="{{ form.instance.logo.url }}" alt="Company logo"
-               style="max-height:80px; margin-bottom:0.5rem; display:block;">
-        {% endif %}
-        {{ form.logo }}
-      </div>
-
+      {% if instances %}
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">Name</th>
+                <th>URL</th>
+                <th>Our Key (preview)</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th class="text-end pe-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for inst in instances %}
+              <tr>
+                <td class="ps-3"><strong>{{ inst.name }}</strong>
+                  {% if inst.notes %}<br><small class="text-muted">{{ inst.notes|truncatechars:60 }}</small>{% endif %}
+                </td>
+                <td><a href="{{ inst.url }}" target="_blank" rel="noopener noreferrer">{{ inst.url }}</a></td>
+                <td><code>{{ inst.our_key_preview }}</code></td>
+                <td>
+                  {% if inst.status == "active" %}
+                    <span class="badge bg-success-subtle text-success">Active</span>
+                  {% else %}
+                    <span class="badge bg-warning-subtle text-warning">Pending</span>
+                  {% endif %}
+                </td>
+                <td>{{ inst.created_at|date:"d M Y" }}</td>
+                <td class="text-end pe-3">
+                  <div class="dropdown d-inline-block">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                      Actions
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                      {% if inst.status == "pending" %}
+                        <li>
+                          <a class="dropdown-item" href="{% url 'config:paired-instance-complete' inst.pk %}">
+                            <i class="bi bi-key me-2"></i>Enter Their Key
+                          </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                          <span class="dropdown-item disabled" title="Complete pairing first">
+                            <i class="bi bi-person-plus me-2"></i>Import as Customer
+                          </span>
+                        </li>
+                        <li>
+                          <span class="dropdown-item disabled" title="Complete pairing first">
+                            <i class="bi bi-truck me-2"></i>Import as Supplier
+                          </span>
+                        </li>
+                      {% else %}
+                        {% if inst.customer %}
+                          <li>
+                            <span class="dropdown-item disabled" title="Already imported as {{ inst.customer.name }}">
+                              <i class="bi bi-person-check me-2"></i>Customer Imported
+                            </span>
+                          </li>
+                        {% else %}
+                          <li>
+                            <a class="dropdown-item" href="{% url 'config:import-as-customer' inst.pk %}">
+                              <i class="bi bi-person-plus me-2"></i>Import as Customer
+                            </a>
+                          </li>
+                        {% endif %}
+                        {% if inst.supplier %}
+                          <li>
+                            <span class="dropdown-item disabled" title="Already imported as {{ inst.supplier.name }}">
+                              <i class="bi bi-truck me-2"></i>Supplier Imported
+                            </span>
+                          </li>
+                        {% else %}
+                          <li>
+                            <a class="dropdown-item" href="{% url 'config:import-as-supplier' inst.pk %}">
+                              <i class="bi bi-truck me-2"></i>Import as Supplier
+                            </a>
+                          </li>
+                        {% endif %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                          <a class="dropdown-item" href="{% url 'config:paired-instance-browse-catalogue' inst.pk %}">
+                            <i class="bi bi-grid me-2"></i>Browse Catalogue
+                          </a>
+                        </li>
+                      {% endif %}
+                      <li><hr class="dropdown-divider"></li>
+                      <li>
+                        <a class="dropdown-item text-danger" href="{% url 'config:paired-instance-delete' inst.pk %}">
+                          <i class="bi bi-trash me-2"></i>Delete
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="panel-body text-center py-5 text-muted">
+          <i class="bi bi-diagram-2 fs-1 d-block mb-3"></i>
+          <p class="mb-3">No paired instances yet.</p>
+          <a href="{% url 'config:paired-instance-create' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Add your first paired instance
+          </a>
+        </div>
+      {% endif %}
     </div>
-    <div class="mt-4">
-      <button type="submit" class="btn btn-primary">Save Changes</button>
-    </div>
-  </form>
-</div>
+
+  </div>{# /pane-integrations #}
+
+</div>{# /tab-content #}
+
+<script>
+(function () {
+  // Logo file input
+  var logoInput = document.getElementById('id_logo');
+  if (logoInput) {
+    logoInput.classList.add('d-none');
+    logoInput.addEventListener('change', function () {
+      var label = document.getElementById('logo-file-name');
+      if (label) label.textContent = this.files[0] ? this.files[0].name : 'No file selected';
+    });
+  }
+
+  // Hash-based tab routing
+  var TABS = ['company', 'address', 'branding', 'integrations'];
+  var DEFAULT_TAB = 'company';
+
+  function activateTab(hash) {
+    var name = (hash || '').replace(/^#/, '');
+    if (!TABS.includes(name)) name = DEFAULT_TAB;
+    var btn = document.querySelector('[data-tab-hash="' + name + '"]');
+    if (btn) {
+      var tab = new bootstrap.Tab(btn);
+      tab.show();
+    }
+  }
+
+  // Set hash when tab changes
+  document.querySelectorAll('[data-tab-hash]').forEach(function (btn) {
+    btn.addEventListener('shown.bs.tab', function () {
+      history.replaceState(null, '', '#' + btn.dataset.tabHash);
+    });
+  });
+
+  // Restore tab from hash on load
+  activateTab(window.location.hash || '#' + DEFAULT_TAB);
+
+  // Handle back/forward navigation
+  window.addEventListener('hashchange', function () {
+    activateTab(window.location.hash);
+  });
+
+  // If new_our_key is present, jump to integrations tab
+  {% if new_our_key %}
+  activateTab('#integrations');
+  {% endif %}
+}());
+</script>
 {% endblock %}
