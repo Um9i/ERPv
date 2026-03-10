@@ -141,7 +141,11 @@ class SupplierDetailView(LoginRequiredMixin, DetailView):
         supplier = self.object
         po_list = supplier.supplier_purchase_orders.all()
         # enforce ordering to avoid paginator warnings
-        pp_list = supplier.supplier_products.all().order_by("product__name")
+        pp_list = (
+            supplier.supplier_products.select_related("product")
+            .all()
+            .order_by("product__name")
+        )
         # contacts
         contacts_list = supplier.supplier_contacts.all().order_by("name")
 
@@ -289,7 +293,9 @@ class SupplierPurchaseOrderListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         supplier_id = self.kwargs.get("pk")
-        return PurchaseOrder.objects.filter(supplier_id=supplier_id)
+        return PurchaseOrder.objects.filter(supplier_id=supplier_id).select_related(
+            "supplier"
+        )
 
 
 class SupplierProductListView(LoginRequiredMixin, ListView):
@@ -300,7 +306,9 @@ class SupplierProductListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         supplier_id = self.kwargs.get("pk")
-        return SupplierProduct.objects.filter(supplier_id=supplier_id)
+        return SupplierProduct.objects.filter(supplier_id=supplier_id).select_related(
+            "supplier", "product"
+        )
 
 
 class SupplierProductIDsView(LoginRequiredMixin, DetailView):

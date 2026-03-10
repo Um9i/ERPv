@@ -177,7 +177,12 @@ USE_TZ = True
 STATIC_ROOT = BASE_DIR / "staticfiles/"
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static/"]
-# STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+if not DEBUG:
+    STORAGES = {
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
 COMPRESS_ENABLED = os.getenv("COMPRESS", False)
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media/"

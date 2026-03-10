@@ -46,7 +46,9 @@ class CompanyConfigView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["instances"] = PairedInstance.objects.all()
+        ctx["instances"] = PairedInstance.objects.select_related(
+            "supplier", "customer"
+        ).all()
         ctx["new_our_key"] = self.request.session.pop("new_paired_key", None)
         return ctx
 
@@ -94,6 +96,9 @@ class PairedInstanceListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
 
     def test_func(self):
         return self.request.user.is_staff
+
+    def get_queryset(self):
+        return PairedInstance.objects.select_related("supplier", "customer").all()
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

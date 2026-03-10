@@ -116,7 +116,11 @@ class CustomerDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         customer = self.object
         order_list = customer.customer_sales_orders.all()
-        prod_list = customer.customer_products.all().order_by("product__name")
+        prod_list = (
+            customer.customer_products.select_related("product")
+            .all()
+            .order_by("product__name")
+        )
         contacts_list = customer.customer_contacts.all().order_by("name")
 
         order_page = self.request.GET.get("order_page")
@@ -248,7 +252,9 @@ class CustomerSalesOrderListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         customer_id = self.kwargs.get("pk")
-        return SalesOrder.objects.filter(customer_id=customer_id)
+        return SalesOrder.objects.filter(customer_id=customer_id).select_related(
+            "customer"
+        )
 
 
 class CustomerProductListView(LoginRequiredMixin, ListView):
@@ -259,7 +265,9 @@ class CustomerProductListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         customer_id = self.kwargs.get("pk")
-        return CustomerProduct.objects.filter(customer_id=customer_id)
+        return CustomerProduct.objects.filter(customer_id=customer_id).select_related(
+            "customer", "product"
+        )
 
 
 class CustomerProductIDsView(LoginRequiredMixin, DetailView):
