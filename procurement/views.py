@@ -29,6 +29,7 @@ from django.db.models import F
 from django.http import JsonResponse
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
+import hmac
 from django.utils.decorators import method_decorator
 
 _SUPPLIER_PREFILL_FIELDS = [
@@ -791,9 +792,15 @@ class NotifySupplierProductView(View):
         if not auth.startswith("Bearer "):
             return JsonResponse({"error": "Unauthorized"}, status=401)
         key = auth[len("Bearer ") :]
-        try:
-            paired_instance = PairedInstance.objects.get(our_key=key)
-        except PairedInstance.DoesNotExist:
+        paired_instance = next(
+            (
+                pi
+                for pi in PairedInstance.objects.all()
+                if hmac.compare_digest(key, pi.our_key)
+            ),
+            None,
+        )
+        if paired_instance is None:
             return JsonResponse({"error": "Unauthorized"}, status=401)
 
         if not paired_instance.supplier:

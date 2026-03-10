@@ -9,6 +9,7 @@ from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
+import hmac
 from django.views.generic import ListView, CreateView, DeleteView
 from django.views.generic.edit import UpdateView
 
@@ -63,7 +64,9 @@ class CompanyApiView(View):
         if not auth.startswith("Bearer "):
             return JsonResponse({"error": "Unauthorized"}, status=401)
         key = auth[len("Bearer ") :]
-        if not PairedInstance.objects.filter(our_key=key).exists():
+        if not any(
+            hmac.compare_digest(key, pi.our_key) for pi in PairedInstance.objects.all()
+        ):
             return JsonResponse({"error": "Unauthorized"}, status=401)
         company = CompanyConfig.get_or_default()
         return JsonResponse(

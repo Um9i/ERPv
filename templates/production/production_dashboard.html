@@ -127,7 +127,7 @@
           <tbody>
             {% for item in producible_items %}
             <tr>
-              <td class="ps-3">{{ item.product.name }}</td>
+              <td class="ps-3"><a href="{% url 'inventory:inventory-detail' item.pk %}">{{ item.product.name }}</a></td>
               <td class="text-end">{{ item.quantity }}</td>
               <td class="text-end text-danger fw-semibold">{{ item.required_cached }}</td>
               <td class="text-end">{{ item.pending_job }}</td>

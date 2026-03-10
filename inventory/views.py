@@ -28,6 +28,7 @@ from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
+import hmac
 from django.contrib import messages
 
 from config.models import PairedInstance
@@ -887,7 +888,9 @@ class CatalogueApiView(View):
         if not auth.startswith("Bearer "):
             return JsonResponse({"error": "Unauthorized"}, status=401)
         key = auth[len("Bearer ") :]
-        if not PairedInstance.objects.filter(our_key=key).exists():
+        if not any(
+            hmac.compare_digest(key, pi.our_key) for pi in PairedInstance.objects.all()
+        ):
             return JsonResponse({"error": "Unauthorized"}, status=401)
         products = Product.objects.filter(catalogue_item=True, sale_price__isnull=False)
         data = [

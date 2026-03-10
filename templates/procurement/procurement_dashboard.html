@@ -128,7 +128,7 @@
           <tbody>
             {% for item in purchasable_items %}
             <tr>
-              <td class="ps-3">{{ item.product.name }}</td>
+              <td class="ps-3"><a href="{% url 'inventory:inventory-detail' item.product.product_inventory.pk %}">{{ item.product.name }}</a></td>
               <td class="text-end">{{ item.quantity }}</td>
               <td class="text-end text-danger fw-semibold">{{ item.required_cached }}</td>
               <td class="text-end">{{ item.po_amount }}</td>

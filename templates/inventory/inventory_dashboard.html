@@ -140,7 +140,7 @@
           <tbody>
             {% for item in top_low_stock_items %}
             <tr>
-              <td class="ps-3 fw-medium">{{ item.product.name }}</td>
+              <td class="ps-3"><a href="{% url 'inventory:inventory-detail' item.pk %}">{{ item.product.name }}</a></td>
               <td class="text-end">{{ item.quantity }}</td>
               <td class="text-end text-danger fw-semibold">−{{ item.required_cached }}</td>
               <td class="ps-3">

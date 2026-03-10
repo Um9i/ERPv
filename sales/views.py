@@ -662,9 +662,13 @@ class SalesDashboardView(TemplateView):
             due_qs.filter(sales_order_lines__quantity_shipped__gt=0).distinct().count()
         )
         # SOs due today or earlier with any open lines
-        context["pending_shipping"] = (
-            due_qs.filter(sales_order_lines__complete=False).distinct().count()
+        pending_qs = (
+            due_qs.filter(sales_order_lines__complete=False)
+            .distinct()
+            .select_related("customer")
         )
+        context["pending_shipping"] = pending_qs.count()
+        context["pending_orders_list"] = pending_qs[:10]
         context["total_customers"] = Customer.objects.count()
         due_total = context["shipped_orders"] + context["pending_shipping"]
         context["fulfillment_rate"] = (

@@ -21,7 +21,6 @@ from django.conf.urls.static import static
 
 # from django.views.generic import TemplateView
 from django.views.generic import TemplateView
-from debug_toolbar.toolbar import debug_toolbar_urls
 
 admin.site.site_title = "ERPv 0.0.1"
 admin.site.site_header = "ERPv"
@@ -42,6 +41,10 @@ urlpatterns = (
         path("config/", include("config.urls", namespace="config")),
         path("dashboards/", include("dashboards.urls", namespace="dashboards")),
     ]
-    + debug_toolbar_urls()
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 )
+
+if settings.DEBUG:
+    from debug_toolbar.toolbar import debug_toolbar_urls
+
+    urlpatterns += debug_toolbar_urls()

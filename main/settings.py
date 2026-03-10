@@ -21,14 +21,28 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRETKEY", "SECRET")
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "True").lower() in ("1", "true", "yes")
-ALLOWED_HOSTS = ["*"]
+DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes")
+
+# SECURITY WARNING: keep the secret key used in production secret!
+_secret = os.getenv("SECRETKEY")
+if not _secret and not DEBUG:
+    raise RuntimeError("SECRETKEY environment variable is required when DEBUG is off.")
+SECRET_KEY = _secret or "insecure-dev-key-do-not-use-in-production"
+
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"
+
+# Production security settings
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31_536_000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 CURRENCY_SYMBOL = os.getenv("CURRENCY_SYMBOL", "£")
 
@@ -58,8 +72,10 @@ INSTALLED_APPS = [
     "finance.apps.FinanceConfig",
     "config.apps.ConfigConfig",
     "dashboards.apps.DashboardsConfig",
-    "debug_toolbar",
 ]
+
+if DEBUG:
+    INSTALLED_APPS += ["debug_toolbar", "silk"]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -71,8 +87,13 @@ MIDDLEWARE = [
     "main.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
+
+if DEBUG:
+    MIDDLEWARE += [
+        "debug_toolbar.middleware.DebugToolbarMiddleware",
+        "silk.middleware.SilkyMiddleware",
+    ]
 
 ROOT_URLCONF = "main.urls"
 
