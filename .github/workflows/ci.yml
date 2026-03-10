@@ -27,7 +27,7 @@ jobs:
         run: black --check --exclude '/(migrations|htmlcov|staticfiles)/' .
 
       - name: Lint (ruff)
-        run: ruff check --exclude 'migrations/,htmlcov/,staticfiles/' .
+        run: ruff check .
 
   security:
     runs-on: ubuntu-latest
@@ -69,6 +69,9 @@ jobs:
 
       - name: Type check (mypy)
         run: mypy finance/
+        env:
+          DEBUG: "True"
+          SECRETKEY: "ci-test-key"
 
   test:
     runs-on: ubuntu-latest
