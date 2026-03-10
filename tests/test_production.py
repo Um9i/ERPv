@@ -1,7 +1,8 @@
 import pytest
 from django.core.exceptions import ValidationError
-from production.models import BillOfMaterials, BOMItem, Production
+
 from inventory.models import Inventory, InventoryLedger
+from production.models import BillOfMaterials, BOMItem, Production
 
 
 @pytest.mark.django_db
@@ -46,10 +47,10 @@ class TestProduction:
         assert production.product == product
         assert production.quantity == 10
         assert production.quantity_received == 0
-        assert production.complete == False
-        assert production.closed == False
-        assert production.bom_allocated == False
-        assert production.bom_allocated_amount == None
+        assert not production.complete
+        assert not production.closed
+        assert not production.bom_allocated
+        assert production.bom_allocated_amount is None
 
     def test_production_str(self, product):
         production = Production.objects.create(product=product, quantity=10)
@@ -69,7 +70,7 @@ class TestProduction:
     def test_production_save(self, product, bom, bom_item):
         production = Production.objects.create(product=product, quantity=10)
         production.save()
-        assert production.bom_allocated == True
+        assert production.bom_allocated is True
         assert production.bom_allocated_amount == 10
 
     def test_production_complete(self, product, bom, bom_item):
@@ -110,9 +111,8 @@ class TestProduction:
 
     # --- view tests start here ---
     def test_dashboard_link(self, client, product):
-        from django.urls import reverse
         from django.contrib.auth.models import User
-        from production.models import BillOfMaterials, Production
+        from django.urls import reverse
 
         user = User.objects.create_user(username="test")
         client.force_login(user)
@@ -126,8 +126,8 @@ class TestProduction:
         assert reverse("production:production-list") in content
 
     def test_bom_list_actions(self, client, bom):
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -142,8 +142,9 @@ class TestProduction:
         assert f'href="{reverse("production:bom-delete", args=[bom.pk])}"' in content
 
     def test_production_dashboard_metrics(self, client, product):
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
         from production.models import BillOfMaterials, Production
 
         user = User.objects.create_user(username="tester2")
@@ -163,8 +164,8 @@ class TestProduction:
 
     def test_form_does_not_show_complete(self, client, product, bom):
         """The create view should not render the complete checkbox."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="test")
         client.force_login(user)
@@ -180,8 +181,8 @@ class TestProduction:
 
     def test_bom_create_formset_present(self, client, product):
         """BOM create page should render component formset and add button."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="bomuser")
         client.force_login(user)
@@ -196,8 +197,9 @@ class TestProduction:
 
     def test_bom_create_with_lines(self, client, product):
         """Submitting the BOM create form with multiple lines saves them."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
         from production.models import BillOfMaterials
 
         # create two extra component products
@@ -229,8 +231,8 @@ class TestProduction:
 
     def test_bom_update_can_modify_lines(self, client, product, bom):
         """Editing an existing BOM lets us change quantities and add new line."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         # current bom fixture has two components; we'll change one and add a third
         existing = list(bom.bom_items.all())
@@ -266,11 +268,12 @@ class TestProduction:
 
     def test_bom_form_js_syntax(self, client, product):
         """Static order_form.js used by BOM page should be valid JS syntax."""
-        from django.urls import reverse
-        from django.contrib.auth.models import User
         import subprocess
         from pathlib import Path
+
         from django.conf import settings
+        from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="jsuser")
         client.force_login(user)
@@ -287,9 +290,10 @@ class TestProduction:
 
     def test_receiving_views(self, client, product, bom, bom_item):
         """Open jobs appear in the completion list and can be completed, even partially."""
-        from django.urls import reverse
-        from production.models import Production
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from production.models import Production
 
         user = User.objects.create_user(username="test")
         client.force_login(user)
@@ -309,11 +313,11 @@ class TestProduction:
         job.refresh_from_db()
         assert job.quantity_received == 1
         # negative receive should not alter inventory or qty (form rejects it)
-        resp_neg = client.post(url, {"quantity_to_receive": "-5"})
+        client.post(url, {"quantity_to_receive": "-5"})
         job.refresh_from_db()
         assert job.quantity_received == 1
         # over-remaining receive should be rejected by form validation
-        resp_big = client.post(url, {"quantity_to_receive": "1000"})
+        client.post(url, {"quantity_to_receive": "1000"})
         job.refresh_from_db()
         assert job.quantity_received == 1  # unchanged
         # receive remaining to complete job
@@ -331,7 +335,7 @@ class TestProduction:
         comp_inv = Inventory.objects.get(product=bom_item.product)
         comp_inv.quantity = 0
         comp_inv.save()
-        resp_err = client.post(url2, {"quantity_to_receive": "1"})
+        client.post(url2, {"quantity_to_receive": "1"})
         # view swallows validation error and redirects back
         job2.refresh_from_db()
         assert job2.quantity_received == 0
@@ -340,9 +344,10 @@ class TestProduction:
         assert fin.quantity == 100 + 3
 
     def test_bom_views(self, client, product):
-        from django.urls import reverse
-        from production.models import BillOfMaterials, BOMItem
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from production.models import BillOfMaterials, BOMItem
 
         # must be logged in because middleware enforces auth
         user = User.objects.create_user(username="test")
@@ -387,9 +392,10 @@ class TestProduction:
         assert not BOMItem.objects.exists()
 
     def test_production_job_views(self, client, product, bom, bom_item):
-        from django.urls import reverse
-        from production.models import Production
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from production.models import Production
 
         user = User.objects.create_user(username="test")
         client.force_login(user)
@@ -415,7 +421,7 @@ class TestProduction:
         assert expected_icon in html
         # create a second job that exceeds inventory to ensure the flag goes
         # false for larger quantities
-        job2 = Production.objects.create(product=product, quantity=1000)
+        Production.objects.create(product=product, quantity=1000)
         resp3 = client.get(url)
         assert "bi-exclamation-triangle-fill" in resp3.content.decode()
         # detail and complete
@@ -432,8 +438,9 @@ class TestProduction:
 
     def test_create_form_filters_products(self, client, product, bom):
         """Only products with a related BOM should be selectable."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
         from inventory.models import Product
 
         other = Product.objects.create(name="no bom")
@@ -451,8 +458,9 @@ class TestProduction:
     def test_update_form_also_filtered(self, client, product, bom):
         """Make sure update form uses same restriction and doesn't expose
         products without a BOM."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
         from inventory.models import Product
         from production.models import Production
 
@@ -489,8 +497,9 @@ class TestProduction:
     def test_overdue_badge_in_list(self, client, product, bom, bom_item):
         """Past-due open jobs render with a danger badge."""
         import datetime
-        from django.urls import reverse
+
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="due_test")
         client.force_login(user)
@@ -507,8 +516,8 @@ class TestProduction:
 
     def test_no_due_date_renders_dash(self, client, product, bom, bom_item):
         """Jobs without a due_date show a dash in the list."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="due_test2")
         client.force_login(user)
@@ -522,8 +531,9 @@ class TestProduction:
     def test_list_ordering_overdue_before_no_date(self, client, product, bom, bom_item):
         """Open jobs with a due date sort before those without one."""
         import datetime
-        from django.urls import reverse
+
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="due_test3")
         client.force_login(user)
@@ -543,8 +553,8 @@ class TestProduction:
 
     def test_due_date_form_field_present(self, client, product, bom):
         """Create form includes a date input for due_date."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="due_test4")
         client.force_login(user)
@@ -559,8 +569,8 @@ class TestProduction:
 
     def test_components_list_correct_quantities(self, client, product, bom, bom_item):
         """Detail view builds component list with correct per_unit, required, stock."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="shortage1")
         client.force_login(user)
@@ -578,8 +588,8 @@ class TestProduction:
 
     def test_shortfall_zero_when_stock_sufficient(self, client, product, bom, bom_item):
         """When stock covers the job, shortfall is 0 and ok is True."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="shortage2")
         client.force_login(user)
@@ -595,8 +605,8 @@ class TestProduction:
         self, client, product, bom, bom_item
     ):
         """When stock cannot cover the job, shortfall equals the deficit."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="shortage3")
         client.force_login(user)
@@ -614,8 +624,8 @@ class TestProduction:
         self, client, product, bom, bom_item
     ):
         """any_shortage is True when at least one component is short."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="shortage4")
         client.force_login(user)
@@ -626,8 +636,8 @@ class TestProduction:
 
     def test_any_shortage_false_when_all_covered(self, client, product, bom, bom_item):
         """any_shortage is False when all components have enough stock."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="shortage5")
         client.force_login(user)
@@ -648,6 +658,7 @@ class TestProduction:
 
         # exercise the view logic manually via the view's get_context_data
         from django.test import RequestFactory
+
         from production.views import ProductionDetailView
 
         factory = RequestFactory()
@@ -664,8 +675,8 @@ class TestProduction:
 
     def test_warning_icon_on_list_for_shortage(self, client, product, bom, bom_item):
         """List view shows warning icon for jobs with insufficient materials."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="shortage7")
         client.force_login(user)
@@ -742,8 +753,8 @@ class TestProduction:
         self, client, product, bom, bom_item, supplier, supplier_product
     ):
         """unit_cost from supplier cost appears in the detail context."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="cost1")
         client.force_login(user)
@@ -758,8 +769,8 @@ class TestProduction:
         self, client, product, bom, bom_item, supplier, supplier_product
     ):
         """total_cost = unit_cost * quantity."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="cost2")
         client.force_login(user)
@@ -771,8 +782,8 @@ class TestProduction:
 
     def test_cost_section_hidden_when_zero(self, client, product, bom, bom_item):
         """Cost Summary section is not rendered when unit_cost is 0."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="cost3")
         client.force_login(user)
@@ -836,6 +847,7 @@ class TestReceiveIntoLocation:
     def test_cannot_receive_more_than_remaining(self, product, bom, bom_item, location):
         """Receiving more than remaining raises ValidationError."""
         from django.core.exceptions import ValidationError
+
         from production.services import receive_production_into_location
 
         job = Production.objects.create(product=product, quantity=5)
@@ -886,6 +898,7 @@ class TestCostSummary:
     def test_effective_sale_price_falls_back_to_last_sold(self, product):
         """effective_sale_price falls back to last sales order line price."""
         from decimal import Decimal
+
         from sales.models import Customer, CustomerProduct, SalesOrder, SalesOrderLine
 
         customer = Customer.objects.create(name="Test Buyer")
@@ -908,8 +921,9 @@ class TestCostSummary:
     ):
         """projected_margin_pct = (value - cost) / value × 100."""
         from decimal import Decimal
-        from django.urls import reverse
+
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         product.sale_price = Decimal("125.00")
         product.save()
@@ -933,8 +947,8 @@ class TestCostSummary:
 
     def test_margin_pct_none_when_no_sale_price(self, client, product, bom, bom_item):
         """margin_pct is None when no sale price exists."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="no_price")
         client.force_login(user)
@@ -950,8 +964,8 @@ class TestCostSummary:
 
     def test_cost_section_hidden_when_both_zero(self, client, product):
         """Cost summary section hidden when both unit_cost and sale_price are 0."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="zero_cost")
         client.force_login(user)

@@ -1,24 +1,24 @@
 from django.urls import path
-from django.views.generic import TemplateView
+
 from .views import (
-    ProductCreateView,
-    ProductUpdateView,
-    ProductDeleteView,
-    InventoryListView,
-    InventoryDetailView,
+    CatalogueApiView,
     InventoryAdjustCreateView,
     InventoryDashboardView,
+    InventoryDetailView,
     InventoryListApiView,
-    LowStockListView,
-    LocationListView,
-    LocationCreateView,
-    LocationUpdateView,
-    LocationDeleteView,
+    InventoryListView,
     InventoryLocationCreateView,
-    InventoryLocationUpdateView,
     InventoryLocationDeleteView,
+    InventoryLocationUpdateView,
+    LocationCreateView,
+    LocationDeleteView,
+    LocationListView,
+    LocationUpdateView,
+    LowStockListView,
+    ProductCreateView,
+    ProductDeleteView,
+    ProductUpdateView,
     StockTransferCreateView,
-    CatalogueApiView,
 )
 
 app_name = "inventory"

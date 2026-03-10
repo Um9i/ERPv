@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from decimal import Decimal
 
-from django.db.models import Sum, F
+from django.db.models import F, Sum
 
 from procurement.models import PurchaseOrderLine, SupplierProduct
 

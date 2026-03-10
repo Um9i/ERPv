@@ -6,30 +6,27 @@ from decimal import Decimal
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.db.models import F, Sum, OuterRef, Subquery
+from django.db.models import F, OuterRef, Subquery, Sum
 from django.utils import timezone
+from faker import Faker
 
-from inventory.models import Inventory, InventoryLedger, Product
-from production.models import BillOfMaterials, BOMItem, Production
+from inventory.models import Inventory, InventoryLedger
+from main.factories import CustomerFactory, ProductFactory, SupplierFactory
 from procurement.models import (
+    PurchaseLedger,
     PurchaseOrder,
     PurchaseOrderLine,
-    PurchaseLedger,
-    Supplier,
     SupplierContact,
     SupplierProduct,
 )
+from production.models import BillOfMaterials, BOMItem, Production
 from sales.models import (
-    Customer,
     CustomerContact,
     CustomerProduct,
+    SalesLedger,
     SalesOrder,
     SalesOrderLine,
-    SalesLedger,
 )
-from main.factories import CustomerFactory, SupplierFactory, ProductFactory
-
-from faker import Faker
 
 fake = Faker()
 

@@ -1,13 +1,14 @@
 import pytest
-from inventory.models import Product, Inventory
-from production.models import BillOfMaterials, BOMItem
+
+from inventory.models import Inventory, Product
 from procurement.models import (
+    PurchaseOrder,
+    PurchaseOrderLine,
     Supplier,
     SupplierContact,
     SupplierProduct,
-    PurchaseOrder,
-    PurchaseOrderLine,
 )
+from production.models import BillOfMaterials, BOMItem, Production
 from sales.models import (
     Customer,
     CustomerContact,

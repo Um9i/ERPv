@@ -1,5 +1,6 @@
 from django import forms
 from django.core.validators import EmailValidator, RegexValidator
+
 from .models import (
     Customer,
     CustomerContact,

@@ -1,8 +1,7 @@
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.db.models import F, Min, Sum
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 
@@ -54,9 +53,10 @@ class Product(models.Model):
         2. If a bill of materials exists, compute cost as sum(component_cost * quantity).
         3. Otherwise zero.
         """
-        from procurement.models import SupplierProduct
-        from production.models import BOMItem, BillOfMaterials
         from collections import defaultdict
+
+        from procurement.models import SupplierProduct
+        from production.models import BillOfMaterials, BOMItem
 
         # cheapest supplier cost for this product
         first = (
@@ -358,7 +358,7 @@ def _update_required_from_allocation(sender, instance, **kwargs):
         pass
 
 
-from sales.models import SalesOrderLine  # imported here to avoid circular import
+from sales.models import SalesOrderLine  # noqa: E402 — circular import
 
 
 @receiver(post_save, sender=SalesOrderLine)

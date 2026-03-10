@@ -1,6 +1,7 @@
 from django import forms
 from django.db import models
-from .models import Product, InventoryAdjust, Location, InventoryLocation, StockTransfer
+
+from .models import InventoryAdjust, InventoryLocation, Location, Product, StockTransfer
 
 
 class ProductForm(forms.ModelForm):
@@ -109,7 +110,6 @@ class InventoryLocationForm(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         qty = cleaned.get("quantity")
-        location = cleaned.get("location")
         if self.inventory is None:
             return cleaned
         qs = InventoryLocation.objects.filter(inventory=self.inventory)

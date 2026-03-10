@@ -1,6 +1,8 @@
 from django import forms
-from .models import BillOfMaterials, BOMItem, Production
+
 from inventory.models import Location
+
+from .models import BillOfMaterials, BOMItem, Production
 
 
 class BillOfMaterialsForm(forms.ModelForm):

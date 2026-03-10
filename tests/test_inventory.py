@@ -1,5 +1,6 @@
 import pytest
 from django.db.models import Sum
+
 from inventory.models import Inventory, InventoryAdjust, InventoryLedger
 
 
@@ -26,9 +27,10 @@ class TestInventory:
         assert not hasattr(InventoryAdjust, "closed"), "closed field should be removed"
 
     def test_adjust_form_prefills_product_and_is_readonly(self, client, product):
-        from inventory.models import Inventory
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from inventory.models import Inventory
 
         # login required
         user = User.objects.create_user(username="tester")
@@ -51,9 +53,10 @@ class TestInventory:
         assert adj.complete is True
 
     def test_inventory_list_search_and_pagination(self, client, product):
-        from django.urls import reverse
-        from inventory.models import Inventory, Product
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from inventory.models import Inventory, Product
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -80,9 +83,10 @@ class TestInventory:
         assert "This include renders simple bootstrap pagination" not in content2
 
     def test_inventory_detail_ledger_and_last_updated(self, client, product):
-        from inventory.models import Inventory, InventoryLedger
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from inventory.models import Inventory
 
         # login required for protected views
         user = User.objects.create_user(username="tester")
@@ -179,9 +183,10 @@ class TestInventory:
         assert ctx["stock_value"] == expected_cost
 
     def test_dashboard_links(self, client, product):
-        from django.urls import reverse
         from django.contrib.auth.models import User
-        from inventory.models import Product, Inventory
+        from django.urls import reverse
+
+        from inventory.models import Inventory, Product
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -239,8 +244,9 @@ class TestInventory:
 
     def test_low_stock_pagination(self, client, product):
         """More than one page of shortages should show pagination controls."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
         from inventory.models import Inventory
 
         # create many inventory rows with required shortage
@@ -249,7 +255,7 @@ class TestInventory:
         # clear out existing products so new ones get fresh ids
         Product.objects.all().delete()
         # make 25 brand‑new products to avoid collisions
-        products = [Product.objects.create(name=f"prod{i}") for i in range(25)]
+        [Product.objects.create(name=f"prod{i}") for i in range(25)]
         # inventories are automatically created via post-save signal when
         # we make each product, so no need to add them ourselves
         # force at least one sales order per item to make required>0
@@ -283,8 +289,9 @@ class TestInventory:
         pairs. Visiting that URL should show a purchase order form with the
         appropriate initial line(s).
         """
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
         from inventory.models import Inventory
 
         # prepare shortage by setting quantity to zero and creating a
@@ -360,11 +367,12 @@ class TestInventory:
     ):
         """When multiple required products share a supplier, the PO link
         generated from any row should include all of them."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
         from inventory.models import Inventory
-        from procurement.models import SupplierProduct
         from inventory.models import Product as InvProduct
+        from procurement.models import SupplierProduct
 
         # create a second product with same supplier manually
         other = InvProduct.objects.create(name="other")
@@ -399,8 +407,9 @@ class TestInventory:
 
     def test_low_stock_production_prefill_quantity(self, client, product, bom):
         """The New job link should supply quantity equal to the required shortage."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
         from inventory.models import Inventory
 
         # create a shortage for the product using a BOM and sales order
@@ -433,8 +442,8 @@ class TestInventory:
 
     def test_production_allocation_accumulates(self, product, bom):
         """Multiple production jobs add to component allocations."""
-        from production.models import Production
         from inventory.models import ProductionAllocated
+        from production.models import Production
 
         # zero out allocations
         for item in bom.bom_items.all():
@@ -455,11 +464,12 @@ class TestInventory:
         """If two suppliers offer the same price for a short item, choose the
         supplier whose overall catalogue (across all products) is cheaper.
         """
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
         from inventory.models import Inventory
-        from procurement.models import Supplier, SupplierProduct
         from inventory.models import Product as InvProduct
+        from procurement.models import Supplier, SupplierProduct
 
         # existing supplier provides `product` at whatever fixture cost (=10)
         # create alternate supplier with same cost for this product so it's a tie
@@ -508,8 +518,9 @@ class TestInventory:
         optimized code it should not perform an N+1 sequence of supplier or BOM
         lookups.  Allowing up to 15 queries keeps the test conservative.
         """
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
         from inventory.models import Inventory
         from sales.models import Customer, CustomerProduct, SalesOrder, SalesOrderLine
 
@@ -545,8 +556,9 @@ class TestInventory:
 
     def test_location_crud_views(self, client, db):
         """Location list, create, update, delete views work."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
         from inventory.models import Location
 
         user = User.objects.create_user(username="locuser")
@@ -597,8 +609,9 @@ class TestInventory:
 
     def test_inventory_location_allocation_enforced(self, client, product):
         """Allocated qty cannot exceed stock on hand."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
         from inventory.models import Inventory, Location
 
         user = User.objects.create_user(username="allocuser")
@@ -631,9 +644,9 @@ class TestInventory:
         """Transfer deducts from source, adds to dest, creates ledger entries."""
         from inventory.models import (
             Inventory,
-            Location,
-            InventoryLocation,
             InventoryLedger,
+            InventoryLocation,
+            Location,
             StockTransfer,
         )
 
@@ -645,8 +658,6 @@ class TestInventory:
         bin_b = Location.objects.create(name="Bin B")
         InventoryLocation.objects.create(inventory=inv, location=bin_a, quantity=80)
         InventoryLocation.objects.create(inventory=inv, location=bin_b, quantity=20)
-
-        ledger_before = InventoryLedger.objects.filter(product=product).count()
 
         transfer = StockTransfer(
             inventory=inv,
@@ -680,8 +691,8 @@ class TestInventory:
         """Transfer to an unassigned location creates the InventoryLocation."""
         from inventory.models import (
             Inventory,
-            Location,
             InventoryLocation,
+            Location,
             StockTransfer,
         )
 
@@ -709,13 +720,14 @@ class TestInventory:
 
     def test_stock_transfer_rejects_insufficient_source(self, product):
         """Transfer more than source has should raise ValidationError."""
+        from django.core.exceptions import ValidationError
+
         from inventory.models import (
             Inventory,
-            Location,
             InventoryLocation,
+            Location,
             StockTransfer,
         )
-        from django.core.exceptions import ValidationError
 
         inv = Inventory.objects.get(product=product)
         InventoryAdjust.objects.create(product=product, quantity=10, complete=True)
@@ -739,13 +751,14 @@ class TestInventory:
 
     def test_stock_transfer_rejects_same_location(self, product):
         """Transfer from and to the same location should be rejected."""
+        from django.core.exceptions import ValidationError
+
         from inventory.models import (
             Inventory,
-            Location,
             InventoryLocation,
+            Location,
             StockTransfer,
         )
-        from django.core.exceptions import ValidationError
 
         inv = Inventory.objects.get(product=product)
         InventoryAdjust.objects.create(product=product, quantity=10, complete=True)
@@ -764,12 +777,13 @@ class TestInventory:
 
     def test_stock_transfer_view(self, client, product):
         """Transfer form renders and processes correctly."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
         from inventory.models import (
             Inventory,
-            Location,
             InventoryLocation,
+            Location,
             StockTransfer,
         )
 
@@ -812,9 +826,10 @@ class TestInventory:
 
     def test_inventory_list_does_not_show_locations(self, client, product):
         """Inventory list view no longer includes a locations column."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
-        from inventory.models import Inventory, Location, InventoryLocation
+        from django.urls import reverse
+
+        from inventory.models import Inventory, InventoryLocation, Location
 
         user = User.objects.create_user(username="listlocuser")
         client.force_login(user)
@@ -833,12 +848,13 @@ class TestInventory:
 
     def test_ledger_shows_location(self, client, product):
         """Ledger table displays location when set on an entry."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
         from inventory.models import (
             Inventory,
-            Location,
             InventoryLocation,
+            Location,
             StockTransfer,
         )
 
@@ -880,7 +896,7 @@ class TestInventoryAdjustWithLocation:
         return user
 
     def _setup(self, product, create_location=True, initial_qty=0, bin_qty=0):
-        from inventory.models import Inventory, Location, InventoryLocation
+        from inventory.models import Inventory, InventoryLocation, Location
 
         inv = Inventory.objects.get(product=product)
         if initial_qty:
@@ -899,6 +915,7 @@ class TestInventoryAdjustWithLocation:
     def test_positive_adjust_with_location(self, client, product):
         """Adding +5 to a bin increases InventoryLocation.quantity."""
         from django.urls import reverse
+
         from inventory.models import InventoryLocation
 
         self._login(client)
@@ -916,6 +933,7 @@ class TestInventoryAdjustWithLocation:
     def test_negative_adjust_with_location(self, client, product):
         """Removing -3 from a bin decreases InventoryLocation.quantity."""
         from django.urls import reverse
+
         from inventory.models import InventoryLocation
 
         self._login(client)
@@ -933,6 +951,7 @@ class TestInventoryAdjustWithLocation:
     def test_negative_adjust_rejected_insufficient_bin_stock(self, client, product):
         """Cannot remove more units than a bin holds."""
         from django.urls import reverse
+
         from inventory.models import InventoryLocation
 
         self._login(client)
@@ -952,6 +971,7 @@ class TestInventoryAdjustWithLocation:
     def test_adjust_without_location_leaves_bins_unchanged(self, client, product):
         """Adjusting without selecting a bin doesn't touch InventoryLocation."""
         from django.urls import reverse
+
         from inventory.models import InventoryLocation
 
         self._login(client)

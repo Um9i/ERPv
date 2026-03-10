@@ -1,11 +1,13 @@
+from decimal import ROUND_HALF_UP, Decimal
+
 from django.db import models, transaction
 from django.db.models import F, Sum
-from django.db.models.functions import Coalesce, Greatest
-from django.db.models.signals import post_save, post_delete
+from django.db.models.functions import Greatest
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils import timezone
-from decimal import Decimal, ROUND_HALF_UP
-from inventory.models import Product, Inventory, InventoryLedger
+
+from inventory.models import Inventory, InventoryLedger, Product
 from main.mixins import AddressMixin
 
 
@@ -239,7 +241,7 @@ class PurchaseOrderLine(models.Model):
         # logic still uses `self.quantity` because the order quantity is
         # what drives stock increases; the view responsible for receiving
         # will update `quantity_received` separately.
-        if self.complete == True and self.closed == False:
+        if self.complete and not self.closed:
             product_qs = Inventory.objects.select_for_update().filter(
                 product=self.product.product
             )

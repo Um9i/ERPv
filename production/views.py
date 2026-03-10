@@ -1,29 +1,30 @@
+from django import forms
+from django.db.models import F, Q
+from django.forms.models import inlineformset_factory
+from django.http import JsonResponse
+from django.shortcuts import redirect
+from django.urls import reverse_lazy
+from django.views.generic import (
+    CreateView,
+    DeleteView,
+    DetailView,
+    ListView,
+    TemplateView,
+    UpdateView,
+)
+
+from .forms import (
+    BillOfMaterialsForm,
+    BOMItemForm,
+    ProductionForm,
+    ProductionReceiveForm,
+    ProductionUpdateForm,
+)
 from .models import (
     BillOfMaterials,
     BOMItem,
     Production,
 )
-from .forms import (
-    BillOfMaterialsForm,
-    BOMItemForm,
-    ProductionForm,
-    ProductionUpdateForm,
-    ProductionReceiveForm,
-)
-from django.views.generic import (
-    ListView,
-    DetailView,
-    CreateView,
-    UpdateView,
-    DeleteView,
-    TemplateView,
-)
-from django.forms.models import inlineformset_factory
-from django.urls import reverse_lazy
-from django.shortcuts import redirect
-from django import forms
-from django.db.models import F, Q
-from django.http import JsonResponse
 
 # ----- BOM views -----
 
@@ -175,6 +176,7 @@ class BOMDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         from django.core.paginator import Paginator
+
         from .services import build_bom_tree
 
         context = super().get_context_data(**kwargs)
@@ -327,8 +329,10 @@ class ProductionListView(ListView):
     def get_context_data(self, **kwargs):
         from collections import defaultdict
         from datetime import timedelta
+
         from django.core.paginator import Paginator
         from django.utils import timezone
+
         from inventory.models import Inventory
 
         context = super().get_context_data(**kwargs)
@@ -413,6 +417,7 @@ class ProductionDetailView(DetailView):
 
     def post(self, request, *args, **kwargs):
         from django.contrib import messages
+
         from .services import receive_production_into_location
 
         self.object = self.get_object()
@@ -446,7 +451,9 @@ class ProductionDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         from datetime import timedelta
+
         from django.utils import timezone
+
         from inventory.models import Inventory
 
         context = super().get_context_data(**kwargs)
@@ -538,6 +545,7 @@ class ProductionReceiveView(DetailView):
 
     def post(self, request, *args, **kwargs):
         from django.contrib import messages
+
         from .services import receive_production_into_location
 
         self.object = self.get_object()
@@ -568,7 +576,6 @@ class ProductionDashboardView(TemplateView):
     template_name = "production/production_dashboard.html"
 
     def get_context_data(self, **kwargs):
-        from django.db.models import Count
 
         context = super().get_context_data(**kwargs)
         context["total_boms"] = BillOfMaterials.objects.count()
@@ -582,9 +589,10 @@ class ProductionDashboardView(TemplateView):
         )
         # count products that have a shortage AND have a BOM (can be produced)
         # AND are not already fully covered by active production jobs
-        from inventory.models import Inventory
-        from django.db.models import Sum, F, OuterRef, Subquery, IntegerField
+        from django.db.models import F, IntegerField, OuterRef, Subquery, Sum
         from django.db.models.functions import Coalesce
+
+        from inventory.models import Inventory
 
         producible_ids = set(
             BillOfMaterials.objects.values_list("product_id", flat=True)

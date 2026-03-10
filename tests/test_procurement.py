@@ -1,6 +1,7 @@
 import pytest
-from procurement.models import PurchaseLedger, PurchaseOrder, PurchaseOrderLine
+
 from inventory.models import Inventory, InventoryLedger
+from procurement.models import PurchaseLedger, PurchaseOrder, PurchaseOrderLine
 
 
 @pytest.mark.django_db
@@ -12,9 +13,10 @@ class TestSupplier:
         assert supplier_contact.name == "Test Contact"
 
     def test_supplier_detail_context(self, client, supplier, supplier_product):
-        from django.urls import reverse
-        from procurement.models import PurchaseOrder
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from procurement.models import PurchaseOrder
 
         # login before accessing protected pages
         user = User.objects.create_user(username="tester")
@@ -48,8 +50,8 @@ class TestSupplier:
     def test_supplier_contacts_shown_and_links(
         self, client, supplier, supplier_contact
     ):
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester2")
         client.force_login(user)
@@ -64,8 +66,8 @@ class TestSupplier:
         assert f"supplier-contacts/{supplier_contact.pk}/delete" in content
 
     def test_supplier_contact_create_from_form(self, client, supplier):
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester3")
         client.force_login(user)
@@ -88,8 +90,8 @@ class TestSupplier:
         assert "New Contact" in resp3.content.decode()
 
     def test_supplier_contact_edit_and_delete(self, client, supplier, supplier_contact):
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester4")
         client.force_login(user)
@@ -120,9 +122,10 @@ class TestSupplier:
 
     def test_supplier_list_pagination(self, client, supplier):
         """Supplier list should paginate when many entries exist."""
-        from django.urls import reverse
-        from procurement.models import Supplier
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from procurement.models import Supplier
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -139,9 +142,10 @@ class TestSupplier:
 
     def test_supplier_list_search(self, client, supplier):
         """Search box should filter suppliers by name."""
-        from django.urls import reverse
-        from procurement.models import Supplier
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from procurement.models import Supplier
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -162,10 +166,12 @@ class TestSupplier:
         self, client, supplier, purchase_order, purchase_order_line
     ):
         import datetime
-        from django.urls import reverse
+
         from django.contrib.auth.models import User
-        from procurement.models import PurchaseOrder, PurchaseOrderLine, Supplier
-        from django.db.models import Count, Q, F
+        from django.db.models import Count, F, Q
+        from django.urls import reverse
+
+        from procurement.models import PurchaseOrder, Supplier
 
         # give the fixture PO a due_date of today so it falls in the dashboard filter
         today = datetime.date.today()
@@ -205,8 +211,8 @@ class TestSupplier:
 
     def test_supplier_product_ids_api(self, client, supplier, supplier_product):
         """API should return *supplier-product* ids for a given supplier."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -239,8 +245,8 @@ class TestSupplierProduct:
 
     def test_supplier_product_create_title(self, client, supplier):
         """Form page for a new product shows the "New" heading."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -252,8 +258,8 @@ class TestSupplierProduct:
 
     def test_supplier_product_update_title(self, client, supplier_product):
         """Editing an existing product uses the \"Edit\" heading."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -274,10 +280,11 @@ class TestSupplierProduct:
         that amount.  The parent order's *updated_at* timestamp should
         also be modified.
         """
-        from django.urls import reverse
-        from inventory.models import Inventory, InventoryLedger
-        import datetime
+
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from inventory.models import Inventory, InventoryLedger
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -336,9 +343,10 @@ class TestSupplierProduct:
 
     def test_receive_view_partial_quantity(self, client, purchase_order_line):
         """Receiving less than ordered still updates inventory and keeps line open."""
-        from django.urls import reverse
-        from inventory.models import Inventory, InventoryLedger
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from inventory.models import Inventory, InventoryLedger
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -379,8 +387,8 @@ class TestSupplierProduct:
 
     def test_receiving_list_pagination(self, client, supplier, supplier_product):
         """The receiving list view should paginate when many orders exist."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -401,9 +409,10 @@ class TestSupplierProduct:
 
     def test_receiving_list_search(self, client, supplier, supplier_product):
         """Search box should filter receiving orders by supplier or ID."""
-        from django.urls import reverse
-        from procurement.models import Supplier
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from procurement.models import Supplier
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -430,9 +439,10 @@ class TestSupplierProduct:
 
     def test_receive_all_button(self, client, supplier, supplier_product):
         """Clicking receive-all should mark every line as received."""
-        from django.urls import reverse
-        from inventory.models import Inventory, InventoryLedger
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from inventory.models import Inventory, InventoryLedger
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -469,9 +479,10 @@ class TestSupplierProduct:
 
     def test_receive_refreshes_required_cache(self, client, purchase_order_line):
         """Receiving stock should update required_cached so the low stock list stays accurate."""
-        from django.urls import reverse
-        from inventory.models import Inventory, ProductionAllocated
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from inventory.models import Inventory, ProductionAllocated
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -503,9 +514,10 @@ class TestPurchaseOrder:
 
     def test_purchase_order_list_pagination(self, client, purchase_order):
         """List view should paginate when many orders exist."""
-        from django.urls import reverse
-        from procurement.models import PurchaseOrder
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from procurement.models import PurchaseOrder
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -521,9 +533,10 @@ class TestPurchaseOrder:
 
     def test_purchase_order_list_search(self, client, supplier, purchase_order):
         """Orders should be searchable by supplier name or ID."""
-        from django.urls import reverse
-        from procurement.models import PurchaseOrder, Supplier
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from procurement.models import PurchaseOrder, Supplier
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -544,9 +557,10 @@ class TestPurchaseOrder:
         self, client, supplier, supplier_product
     ):
         """Filter=received should show only fully received purchase orders."""
-        from django.urls import reverse
-        from procurement.models import PurchaseOrder, PurchaseOrderLine
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from procurement.models import PurchaseOrder, PurchaseOrderLine
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -578,9 +592,10 @@ class TestPurchaseOrder:
         self, client, supplier, supplier_product
     ):
         """Filter=pending_receiving should show orders with open lines."""
-        from django.urls import reverse
-        from procurement.models import PurchaseOrder, PurchaseOrderLine
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from procurement.models import PurchaseOrder, PurchaseOrderLine
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -615,7 +630,7 @@ class TestPurchaseOrder:
         assert purchase_order.status == "Open"
         # total amount should always compute from quantity × unit price
         expected = purchase_order_line.product.cost * purchase_order_line.quantity
-        from decimal import Decimal, ROUND_HALF_UP
+        from decimal import ROUND_HALF_UP, Decimal
 
         expected = Decimal(expected).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         assert purchase_order.total_amount == expected
@@ -651,8 +666,8 @@ class TestPurchaseOrder:
 
     def test_purchase_order_detail_shows_received(self, client, purchase_order_line):
         """Detail page includes received and remaining totals."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -672,9 +687,10 @@ class TestPurchaseOrder:
 
     def test_can_close_order_from_list(self, client, purchase_order_line):
         """The list page exposes a close button and orders close via detail POST."""
-        from django.urls import reverse
-        from inventory.models import Inventory
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from inventory.models import Inventory
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -715,8 +731,8 @@ class TestPurchaseOrder:
 
     def test_create_view_prefills_and_filters(self, client, supplier, supplier_product):
         """GET should prefill supplier and limit the product choices on each line."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -739,8 +755,8 @@ class TestPurchaseOrder:
             assert list(qs) == list(supplier.supplier_products.all())
 
     def test_supplier_product_create_prefills_supplier(self, client, supplier, product):
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -765,11 +781,12 @@ class TestPurchaseOrder:
 
     def test_purchase_order_form_js_syntax(self, client, supplier):
         """Ensure the order_form.js static file compiles and is referenced."""
-        from django.urls import reverse
-        from django.contrib.auth.models import User
         import subprocess
         from pathlib import Path
+
         from django.conf import settings
+        from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="js2")
         client.force_login(user)
@@ -790,8 +807,8 @@ class TestPurchaseOrder:
         """The create view should prefill supplier from the query string and
         allow submitting one or more order lines.  Deletion checkboxes should
         be rendered but can be ignored on creation."""
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -828,9 +845,10 @@ class TestPurchaseOrder:
     ):
         """POSTing a supplier-product that doesn't belong to the chosen
         supplier should result in form errors and not create a PO."""
-        from procurement.models import Supplier, SupplierProduct
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from procurement.models import Supplier, SupplierProduct
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)

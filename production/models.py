@@ -1,9 +1,10 @@
+from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import F
-from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from inventory.models import Product, Inventory, InventoryLedger, ProductionAllocated
+
+from inventory.models import Inventory, InventoryLedger, Product, ProductionAllocated
 
 
 class BillOfMaterials(models.Model):
@@ -132,9 +133,6 @@ class Production(models.Model):
             models.Index(fields=["bom_allocated"]),
         ]
 
-    def __str__(self):
-        return self.product.name
-
     def bom(self):
         try:
             bom = [
@@ -194,7 +192,7 @@ class Production(models.Model):
         return cap
 
     def clean(self):
-        if self.bom() == None:
+        if self.bom() is None:
             raise ValidationError(_("Product has no Bill of Materials."))
         # when attempting to receive anything ensure components are available
         if self.quantity_received > 0 and self.bom() is not None:
@@ -211,21 +209,15 @@ class Production(models.Model):
     def save(self, *args, skip_allocation=False, **kwargs):
         # run validation when allocating or if any quantity_received change
         should_validate = (
-            self.bom() is not None
-            and self.bom_allocated == False
-            and not skip_allocation
-        ) or (self.quantity_received > 0 and self.closed == False)
+            self.bom() is not None and not self.bom_allocated and not skip_allocation
+        ) or (self.quantity_received > 0 and not self.closed)
         if should_validate:
             self.full_clean()
 
         affected_product_ids = set()
 
         # handle allocation
-        if (
-            self.bom() is not None
-            and self.bom_allocated == False
-            and not skip_allocation
-        ):
+        if self.bom() is not None and not self.bom_allocated and not skip_allocation:
             for item in self.bom():
                 # accumulate across jobs rather than overwriting existing
                 product = ProductionAllocated.objects.select_for_update().get(

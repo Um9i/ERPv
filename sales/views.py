@@ -1,32 +1,32 @@
-from .models import (
-    Customer,
-    CustomerContact,
-    CustomerProduct,
-    SalesOrder,
-    SalesOrderLine,
-    SalesLedger,
-    PickList,
+from django import forms
+from django.forms.models import inlineformset_factory
+from django.shortcuts import redirect
+from django.urls import reverse_lazy
+from django.views.generic import (
+    CreateView,
+    DeleteView,
+    DetailView,
+    ListView,
+    TemplateView,
+    UpdateView,
 )
+
 from .forms import (
-    CustomerForm,
     CustomerContactForm,
+    CustomerForm,
     CustomerProductForm,
     SalesOrderForm,
     SalesOrderLineForm,
 )
-from django.views.generic import (
-    ListView,
-    DetailView,
-    CreateView,
-    UpdateView,
-    DeleteView,
-    TemplateView,
+from .models import (
+    Customer,
+    CustomerContact,
+    CustomerProduct,
+    PickList,
+    SalesLedger,
+    SalesOrder,
+    SalesOrderLine,
 )
-from django.urls import reverse_lazy
-from django.shortcuts import redirect
-from django import forms
-from django.forms.models import inlineformset_factory
-from django.db.models import F
 
 _CUSTOMER_PREFILL_FIELDS = [
     "name",
@@ -112,9 +112,10 @@ class CustomerDetailView(DetailView):
     context_object_name = "customer"
 
     def get_context_data(self, **kwargs):
+        from decimal import Decimal
+
         from django.core.paginator import Paginator
         from django.db.models import Sum
-        from decimal import Decimal
 
         context = super().get_context_data(**kwargs)
         customer = self.object
@@ -359,7 +360,7 @@ class SalesOrderListView(ListView):
     context_object_name = "sales_orders"
 
     def get_queryset(self):
-        from django.db.models import Q, Exists, OuterRef
+        from django.db.models import Exists, OuterRef, Q
 
         qs = (
             SalesOrder.objects.select_related("customer")
@@ -385,6 +386,7 @@ class SalesOrderListView(ListView):
 
     def get_context_data(self, **kwargs):
         from django.core.paginator import Paginator
+
         from inventory.models import Inventory
 
         context = super().get_context_data(**kwargs)
@@ -682,8 +684,8 @@ class SalesOrderInvoiceView(DetailView):
     model = SalesOrder
 
     def get(self, request, *args, **kwargs):
-        from django.template.loader import render_to_string
         from django.http import HttpResponse
+        from django.template.loader import render_to_string
         from weasyprint import HTML
 
         order = self.get_object()

@@ -1,20 +1,21 @@
 from django.urls import path
+
 from .views import (
     BOMCreateView,
-    BOMUpdateView,
     BOMDeleteView,
-    BOMListView,
     BOMDetailView,
     BOMItemCreateView,
-    BOMItemUpdateView,
     BOMItemDeleteView,
+    BOMItemUpdateView,
+    BOMListView,
+    BOMUpdateView,
     ProductionCreateView,
-    ProductionUpdateView,
-    ProductionListView,
-    ProductionDetailView,
-    ProductionReceiveView,
     ProductionDashboardView,
+    ProductionDetailView,
     ProductionListApiView,
+    ProductionListView,
+    ProductionReceiveView,
+    ProductionUpdateView,
 )
 
 app_name = "production"

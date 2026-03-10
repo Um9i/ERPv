@@ -1,7 +1,7 @@
 import csv
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Dict, Any
+from typing import Any, Dict
 
 from django.db.models import DecimalField, Min, OuterRef, Subquery, Sum
 from django.db.models.functions import Coalesce, TruncMonth
@@ -299,8 +299,9 @@ class OutstandingOrdersView(TemplateView):
         from django.core.paginator import Paginator
         from django.db.models import DecimalField, F, OuterRef, Subquery
         from django.db.models.functions import Coalesce, Greatest
-        from sales.models import SalesOrder, SalesOrderLine
+
         from procurement.models import PurchaseOrder, PurchaseOrderLine
+        from sales.models import SalesOrder, SalesOrderLine
 
         context = super().get_context_data(**kwargs)
 
@@ -376,6 +377,7 @@ class ProductPLView(TemplateView):
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         from django.db.models import DecimalField, OuterRef, Subquery
+
         from procurement.models import SupplierProduct
 
         context = super().get_context_data(**kwargs)
@@ -467,7 +469,6 @@ class ProductPLView(TemplateView):
             avg_margin_pct = sum(margin_values) / len(margin_values)
 
         top10 = sorted(rows, key=lambda r: r["gross_profit"] or 0, reverse=True)[:10]
-        import json
 
         chart_data = {
             "labels": [r["product"].name for r in top10],

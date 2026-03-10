@@ -1,14 +1,16 @@
 from django.contrib import admin
+from django_admin_inline_paginator.admin import TabularInlinePaginated
+
+from inventory.admin import ExportCsvMixin
+
 from .models import (
+    PurchaseLedger,
+    PurchaseOrder,
+    PurchaseOrderLine,
     Supplier,
     SupplierContact,
     SupplierProduct,
-    PurchaseOrder,
-    PurchaseOrderLine,
-    PurchaseLedger,
 )
-from django_admin_inline_paginator.admin import TabularInlinePaginated
-from inventory.admin import ExportCsvMixin
 
 
 class PurchaseLedgerInline(TabularInlinePaginated):

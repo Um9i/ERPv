@@ -1,16 +1,18 @@
 import csv
-from django.http import HttpResponse
+
 from django.contrib import admin
+from django.http import HttpResponse
+from django_admin_inline_paginator.admin import TabularInlinePaginated
+
 from .models import (
-    Product,
     Inventory,
-    InventoryLedger,
     InventoryAdjust,
-    Location,
+    InventoryLedger,
     InventoryLocation,
+    Location,
+    Product,
     StockTransfer,
 )
-from django_admin_inline_paginator.admin import TabularInlinePaginated
 
 
 class ExportCsvMixin:
@@ -25,7 +27,7 @@ class ExportCsvMixin:
 
         writer.writerow(field_names)
         for obj in queryset:
-            row = writer.writerow([getattr(obj, field) for field in field_names])
+            writer.writerow([getattr(obj, field) for field in field_names])
 
         return response
 
@@ -161,14 +163,14 @@ class ProductAdmin(admin.ModelAdmin):
                 [job.quantity for job in obj.product_jobs.filter(complete=False)]
             )
             return jobs
-        except:
+        except Exception:
             pass
 
     def production_allocated(self, obj) -> int:
         try:
             allocated = sum([job.quantity for job in obj.production_allocated.all()])
             return allocated
-        except:
+        except Exception:
             pass
 
     def on_sales_order(self, obj) -> int:
@@ -180,7 +182,7 @@ class ProductAdmin(admin.ModelAdmin):
                 ]
             )
             return orders
-        except:
+        except Exception:
             pass
 
     def on_purchase_order(self, obj) -> int:
@@ -192,24 +194,17 @@ class ProductAdmin(admin.ModelAdmin):
                 ]
             )
             return orders
-        except:
+        except Exception:
             pass
 
     def required(self, obj) -> int:
         allocated = sum([job.quantity for job in obj.production_allocated.all()])
-        purchase_orders = sum(
-            [
-                purchased_product.on_purchase_order()
-                for purchased_product in obj.product_suppliers.all()
-            ]
-        )
         sales_orders = sum(
             [
                 sold_product.on_sales_order()
                 for sold_product in obj.product_customers.all()
             ]
         )
-        planned = sum([job.quantity for job in obj.product_jobs.filter(complete=False)])
         required = obj.product_inventory.quantity - allocated - sales_orders
         if required < 0:
             return abs(required)

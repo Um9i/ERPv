@@ -1,7 +1,7 @@
 import pytest
-from django.core.exceptions import ValidationError
-from sales.models import SalesLedger
+
 from inventory.models import Inventory, InventoryLedger
+from sales.models import SalesLedger
 
 
 @pytest.mark.django_db
@@ -13,9 +13,10 @@ class TestCustomer:
         assert customer_contact.name == "Test Contact"
 
     def test_customer_detail_context(self, client, customer, customer_product):
-        from django.urls import reverse
-        from sales.models import SalesOrder
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from sales.models import SalesOrder
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -45,8 +46,8 @@ class TestCustomer:
     def test_customer_contacts_shown_and_links(
         self, client, customer, customer_contact
     ):
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester2")
         client.force_login(user)
@@ -61,8 +62,8 @@ class TestCustomer:
         assert f"customer-contacts/{customer_contact.pk}/delete" in content
 
     def test_customer_contact_create_from_form(self, client, customer):
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester3")
         client.force_login(user)
@@ -77,8 +78,8 @@ class TestCustomer:
         assert "New C" in resp3.content.decode()
 
     def test_customer_contact_edit_and_delete(self, client, customer, customer_contact):
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester4")
         client.force_login(user)
@@ -106,9 +107,10 @@ class TestCustomer:
         assert not CustomerContact.objects.filter(pk=customer_contact.pk).exists()
 
     def test_customer_list_pagination(self, client, customer):
-        from django.urls import reverse
-        from sales.models import Customer
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from sales.models import Customer
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -122,9 +124,10 @@ class TestCustomer:
         assert resp2.status_code == 200
 
     def test_customer_list_search(self, client, customer):
-        from django.urls import reverse
-        from sales.models import Customer
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from sales.models import Customer
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -143,8 +146,10 @@ class TestCustomer:
     def test_dashboard_metrics(self, client, customer, sales_order, sales_order_line):
         """Dashboard should provide counts that match DB state."""
         import datetime
-        from django.urls import reverse
+
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
         from sales.models import SalesOrder
 
         # give the fixture order a ship_by_date of today so it appears in today's totals
@@ -184,8 +189,8 @@ class TestCustomerProduct:
         assert customer_product.price == 10.00
 
     def test_customer_product_create_title(self, client, customer):
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -196,8 +201,8 @@ class TestCustomerProduct:
         assert "New Customer Product" in resp.content.decode()
 
     def test_customer_product_update_title(self, client, customer_product):
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -217,9 +222,10 @@ class TestSalesOrder:
         assert sales_order.customer.name == "Test Customer"
 
     def test_sales_order_list_pagination(self, client, sales_order):
-        from django.urls import reverse
-        from sales.models import SalesOrder
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from sales.models import SalesOrder
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -234,9 +240,10 @@ class TestSalesOrder:
         assert resp2.status_code == 200
 
     def test_sales_order_list_search(self, client, customer, sales_order):
-        from django.urls import reverse
-        from sales.models import SalesOrder, Customer
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from sales.models import Customer, SalesOrder
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -256,7 +263,7 @@ class TestSalesOrder:
         assert sales_order.date == sales_order.created_at
         assert sales_order.status == "Open"
         expected = sales_order_line.product.price * sales_order_line.quantity
-        from decimal import Decimal, ROUND_HALF_UP
+        from decimal import ROUND_HALF_UP, Decimal
 
         expected = Decimal(expected).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         assert sales_order.total_amount == expected
@@ -283,8 +290,8 @@ class TestSalesOrder:
         assert so.remaining_total == expected_rem
 
     def test_sales_order_detail_shows_shipped(self, client, sales_order_line):
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -302,9 +309,10 @@ class TestSalesOrder:
 
     def test_can_close_order_from_list(self, client, sales_order_line):
         """List page shows close button; closing still posts to detail URL."""
-        from django.urls import reverse
-        from inventory.models import Inventory
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from inventory.models import Inventory
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -336,8 +344,8 @@ class TestSalesOrder:
         assert 'name="close_order"' not in resp3.content.decode()
 
     def test_create_view_prefills_and_filters(self, client, customer, customer_product):
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -360,8 +368,8 @@ class TestSalesOrder:
             assert list(qs) == list(customer.customer_products.all())
 
     def test_customer_product_create_prefills_customer(self, client, customer, product):
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -384,9 +392,10 @@ class TestSalesOrder:
     def test_create_view_auto_customer_and_lines(
         self, client, customer, customer_product
     ):
-        from django.urls import reverse
-        from sales.models import SalesOrder
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from sales.models import SalesOrder
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -419,9 +428,10 @@ class TestSalesOrder:
     def test_create_view_rejects_mismatched_product(
         self, client, customer, customer_product, product
     ):
-        from sales.models import Customer, CustomerProduct, SalesOrder
-        from django.urls import reverse
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from sales.models import Customer, CustomerProduct, SalesOrder
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -452,11 +462,12 @@ class TestSalesOrder:
 
     def test_sales_order_form_js_syntax(self, client, customer):
         """Validate the order_form.js static file is referenced and compiles."""
-        from django.urls import reverse
-        from django.contrib.auth.models import User
         import subprocess
         from pathlib import Path
+
         from django.conf import settings
+        from django.contrib.auth.models import User
+        from django.urls import reverse
 
         user = User.objects.create_user(username="js3")
         client.force_login(user)
@@ -500,10 +511,10 @@ class TestSalesOrderLine:
 @pytest.mark.django_db
 class TestShipping:
     def test_ship_view_marks_lines(self, client, sales_order_line):
-        from django.urls import reverse
-        from inventory.models import Inventory, InventoryLedger
-        from sales.models import SalesOrder
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from inventory.models import Inventory, InventoryLedger
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -546,9 +557,10 @@ class TestShipping:
         assert ledger.quantity == -sales_order_line.quantity
 
     def test_ship_view_partial_quantity(self, client, sales_order_line):
-        from django.urls import reverse
-        from inventory.models import Inventory, InventoryLedger
         from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from inventory.models import Inventory, InventoryLedger
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
@@ -578,10 +590,11 @@ class TestShipping:
         assert ledger.quantity == -partial
 
     def test_ship_all_button(self, client, customer, customer_product):
+        from django.contrib.auth.models import User
         from django.urls import reverse
+
         from inventory.models import Inventory, InventoryLedger
         from sales.models import SalesOrder, SalesOrderLine
-        from django.contrib.auth.models import User
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)

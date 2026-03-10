@@ -1,26 +1,26 @@
 import random
-from datetime import timedelta
-import factory
-from faker import Faker
-from django.utils import timezone
 
-from inventory.models import Product, Inventory
-from sales.models import (
-    Customer,
-    CustomerProduct,
-    SalesOrder,
-    SalesOrderLine,
-)
+import factory
+from django.utils import timezone
+from faker import Faker
+
+from inventory.models import Inventory, Product
 from procurement.models import (
-    Supplier,
-    SupplierProduct,
     PurchaseOrder,
     PurchaseOrderLine,
+    Supplier,
+    SupplierProduct,
 )
 from production.models import (
     BillOfMaterials,
     BOMItem,
     Production,
+)
+from sales.models import (
+    Customer,
+    CustomerProduct,
+    SalesOrder,
+    SalesOrderLine,
 )
 
 fake = Faker()

@@ -1,18 +1,20 @@
+from decimal import ROUND_HALF_UP, Decimal
+
+from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import F, Sum
 from django.db.models.functions import Greatest
-from django.db.models.signals import post_save, post_delete
-from django.core.exceptions import ValidationError
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
-from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
-from decimal import Decimal, ROUND_HALF_UP
+from django.utils.translation import gettext_lazy as _
+
 from inventory.models import (
-    Product,
     Inventory,
     InventoryLedger,
     InventoryLocation,
     Location,
+    Product,
 )
 from main.mixins import AddressMixin
 
@@ -203,7 +205,7 @@ class SalesOrderLine(models.Model):
         ]
 
     def clean(self):
-        if self.complete == True and self.closed == False:
+        if self.complete and not self.closed:
             product = Inventory.objects.get(product=self.product.product)
             if product.quantity - self.quantity < 0:
                 raise ValidationError(
@@ -217,7 +219,7 @@ class SalesOrderLine(models.Model):
         # only adjust inventory when the entire line is being closed for the
         # first time; partial shipments are handled by the view logic which
         # manually updates stock/ledgers and increments ``quantity_shipped``.
-        if self.complete == True and self.closed == False:
+        if self.complete and not self.closed:
             product_qs = Inventory.objects.select_for_update().filter(
                 product=self.product.product
             )

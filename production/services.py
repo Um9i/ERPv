@@ -4,7 +4,7 @@ from collections.abc import Iterable
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Sum, F
+from django.db.models import F, Sum
 
 from inventory.models import Inventory, InventoryLedger, InventoryLocation, Location
 from production.models import BillOfMaterials, Production

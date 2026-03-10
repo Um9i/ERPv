@@ -1,40 +1,41 @@
-from django.shortcuts import render
-from .models import (
-    Product,
-    Inventory,
-    InventoryAdjust,
-    InventoryLedger,
-    Location,
-    InventoryLocation,
-    StockTransfer,
-)
-from .forms import (
-    ProductForm,
-    InventoryAdjustForm,
-    LocationForm,
-    InventoryLocationForm,
-    StockTransferForm,
-)
-from django.views.generic import (
-    ListView,
-    DetailView,
-    CreateView,
-    UpdateView,
-    DeleteView,
-    TemplateView,
-)
-from django.urls import reverse_lazy
+import hmac
+
+from django.contrib import messages
 from django.http import JsonResponse
+from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
-import hmac
-from django.contrib import messages
+from django.views.generic import (
+    CreateView,
+    DeleteView,
+    DetailView,
+    ListView,
+    TemplateView,
+    UpdateView,
+)
 
 from config.models import PairedInstance
 from config.notifications import (
     _notify_remote_customer_product,
     _notify_remote_supplier_product_cost,
+)
+
+from .forms import (
+    InventoryAdjustForm,
+    InventoryLocationForm,
+    LocationForm,
+    ProductForm,
+    StockTransferForm,
+)
+from .models import (
+    Inventory,
+    InventoryAdjust,
+    InventoryLedger,
+    InventoryLocation,
+    Location,
+    Product,
+    StockTransfer,
 )
 
 
@@ -150,12 +151,13 @@ class InventoryDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         from django.core.paginator import Paginator
-        from django.db.models import Sum, F
+        from django.db.models import F, Sum
+
+        from procurement.models import PurchaseOrderLine
+        from production.models import Production
 
         # import lazily to avoid circular deps
         from sales.models import SalesOrderLine
-        from procurement.models import PurchaseOrderLine
-        from production.models import Production
 
         context = super().get_context_data(**kwargs)
         inv = self.object
@@ -405,18 +407,16 @@ class InventoryDashboardView(TemplateView):
 
         from django.db.models import (
             DecimalField,
-            F,
             Min,
             OuterRef,
             Q,
             Subquery,
             Sum,
-            Value,
         )
-        from django.db.models.functions import Coalesce
         from django.utils import timezone
+
         from procurement.models import SupplierProduct
-        from production.models import BillOfMaterials, BOMItem
+        from production.models import BOMItem
 
         context = super().get_context_data(**kwargs)
         context["total_products"] = Product.objects.count()
@@ -594,7 +594,6 @@ class InventoryDashboardView(TemplateView):
                     continue
                 prod_amount = job_map.get(inv.product_id, 0)
                 po_amount = po_map.get(inv.product_id, 0)
-                needed_po = max(required_qty - po_amount, 0)
                 supplierproduct = supplier_map.get(inv.product_id)
                 supplier_id = supplierproduct.supplier_id if supplierproduct else None
                 has_bom = inv.product_id in bom_ids
@@ -732,7 +731,6 @@ class InventoryListApiView(TemplateView):
     """API view to return inventory data for dashboard charts."""
 
     def get(self, request, *args, **kwargs):
-        from django.db.models import Sum
 
         # compute inventory levels for all products
         data = []

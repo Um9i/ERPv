@@ -1,11 +1,12 @@
-import pytest
 from decimal import Decimal
 from unittest.mock import patch
+
+import pytest
 from django.urls import reverse
 
+from config.models import PairedInstance
 from inventory.models import Product
 from procurement.models import Supplier, SupplierProduct
-from config.models import PairedInstance
 
 
 @pytest.fixture

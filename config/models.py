@@ -1,6 +1,7 @@
 import secrets
 
 from django.db import models
+
 from main.mixins import AddressMixin
 
 

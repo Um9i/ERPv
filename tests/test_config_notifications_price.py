@@ -1,10 +1,11 @@
-import pytest
 from decimal import Decimal
 from unittest.mock import patch
+
+import pytest
 from django.urls import reverse
 
-from inventory.models import Product
 from config.models import PairedInstance
+from inventory.models import Product
 from procurement.models import Supplier, SupplierProduct
 
 

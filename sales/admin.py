@@ -1,14 +1,16 @@
 from django.contrib import admin
+from django_admin_inline_paginator.admin import TabularInlinePaginated
+
+from inventory.admin import ExportCsvMixin
+
 from .models import (
     Customer,
     CustomerContact,
     CustomerProduct,
+    SalesLedger,
     SalesOrder,
     SalesOrderLine,
-    SalesLedger,
 )
-from django_admin_inline_paginator.admin import TabularInlinePaginated
-from inventory.admin import ExportCsvMixin
 
 
 class SalesLedgerInline(TabularInlinePaginated):

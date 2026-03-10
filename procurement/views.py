@@ -1,36 +1,38 @@
+import hmac
+
+from django import forms
+from django.db.models import F
+from django.forms.models import inlineformset_factory
+from django.http import JsonResponse
+from django.shortcuts import redirect
+from django.urls import reverse_lazy
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+from django.views.generic import (
+    CreateView,
+    DeleteView,
+    DetailView,
+    ListView,
+    TemplateView,
+    UpdateView,
+)
+
+from .forms import (
+    PurchaseOrderForm,
+    PurchaseOrderLineForm,
+    SupplierContactForm,
+    SupplierForm,
+    SupplierProductForm,
+)
 from .models import (
+    PurchaseLedger,
+    PurchaseOrder,
+    PurchaseOrderLine,
     Supplier,
     SupplierContact,
     SupplierProduct,
-    PurchaseOrder,
-    PurchaseOrderLine,
-    PurchaseLedger,
 )
-from .forms import (
-    SupplierForm,
-    SupplierContactForm,
-    SupplierProductForm,
-    PurchaseOrderForm,
-    PurchaseOrderLineForm,
-)
-from django.views.generic import (
-    ListView,
-    DetailView,
-    CreateView,
-    UpdateView,
-    DeleteView,
-    TemplateView,
-)
-from django.urls import reverse_lazy
-from django.shortcuts import redirect
-from django import forms
-from django.forms.models import inlineformset_factory
-from django.db.models import F
-from django.http import JsonResponse
-from django.views import View
-from django.views.decorators.csrf import csrf_exempt
-import hmac
-from django.utils.decorators import method_decorator
 
 _SUPPLIER_PREFILL_FIELDS = [
     "name",
@@ -136,9 +138,10 @@ class SupplierDetailView(DetailView):
     def get_context_data(self, **kwargs):
         # include related objects so the template can render tables without
         # additional queries in the template itself; add pagination
+        from decimal import Decimal
+
         from django.core.paginator import Paginator
         from django.db.models import Sum
-        from decimal import Decimal
 
         context = super().get_context_data(**kwargs)
         supplier = self.object
@@ -326,13 +329,6 @@ class SupplierProductIDsView(DetailView):
         return JsonResponse({"product_ids": ids})
 
 
-class PurchaseOrderCreateView(CreateView):
-    model = PurchaseOrder
-    template_name = "procurement/purchase_order_form.html"
-    form_class = PurchaseOrderForm
-    success_url = reverse_lazy("procurement:supplier-list")
-
-
 class PurchaseOrderDeleteView(DeleteView):
     model = PurchaseOrder
     template_name = "procurement/purchase_order_confirm_delete.html"
@@ -343,7 +339,7 @@ class ProcurementDashboardView(TemplateView):
     template_name = "procurement/procurement_dashboard.html"
 
     def get_context_data(self, **kwargs):
-        from django.db.models import Count, Q, F
+        from django.db.models import Count, F, Q
 
         context = super().get_context_data(**kwargs)
         from django.utils import timezone
@@ -372,10 +368,11 @@ class ProcurementDashboardView(TemplateView):
         # count products that have a live shortage, have a supplier, and are not
         # fully covered by open purchase orders.  Use live ``required`` to avoid
         # stale cache discrepancies with the low-stock list.
+        from django.urls import reverse
+
         from inventory.models import Inventory
         from procurement.models import SupplierProduct
         from procurement.services import best_supplier_products, pending_po_by_product
-        from django.urls import reverse
 
         inv_list = list(
             Inventory.objects.select_related("product").filter(required_cached__gt=0)
@@ -560,7 +557,7 @@ class PurchaseOrderListView(ListView):
     context_object_name = "purchase_orders"
 
     def get_queryset(self):
-        from django.db.models import Count, Q, F, Exists, OuterRef
+        from django.db.models import Exists, OuterRef, Q
 
         qs = (
             PurchaseOrder.objects.select_related("supplier")
@@ -623,7 +620,6 @@ class PurchaseOrderDetailView(DetailView):
             # we use queryset.update() so that the save() hooks (which would
             # adjust inventory) are bypassed; closing an order should not
             # change stock levels.
-            from django.db.models import F
 
             open_lines = self.object.purchase_order_lines.filter(complete=False)
             # iterate so we can safely compute values and set closed/complete
@@ -703,10 +699,10 @@ class PurchaseOrderReceiveView(DetailView):
                 touched = True
                 # update inventory and ledgers manually (qty may be less
                 # than order quantity, so we don't rely on the model hook)
+                from django.utils import timezone
+
                 from inventory.models import Inventory, InventoryLedger
                 from procurement.models import PurchaseLedger
-
-                from django.utils import timezone
 
                 Inventory.objects.filter(product=line.product.product).update(
                     quantity=F("quantity") + qty, last_updated=timezone.now()
@@ -786,6 +782,7 @@ class NotifySupplierProductView(View):
     def post(self, request, *args, **kwargs):
         import json
         from decimal import Decimal, InvalidOperation
+
         from config.models import PairedInstance
 
         auth = request.META.get("HTTP_AUTHORIZATION", "")

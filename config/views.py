@@ -1,6 +1,7 @@
-import httpx
+import hmac
 from urllib.parse import urlencode
 
+import httpx
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import JsonResponse
@@ -9,8 +10,7 @@ from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
-import hmac
-from django.views.generic import ListView, CreateView, DeleteView
+from django.views.generic import CreateView, DeleteView, ListView
 from django.views.generic.edit import UpdateView
 
 from .forms import CompanyConfigForm, CompletePairingForm, PairedInstanceForm
@@ -275,8 +275,8 @@ class ImportCatalogueProductView(LoginRequiredMixin, UserPassesTestMixin, View):
     def post(self, request, pk, *args, **kwargs):
         from decimal import Decimal, InvalidOperation
 
-        from procurement.models import Supplier, SupplierProduct
         from inventory.models import Product
+        from procurement.models import Supplier, SupplierProduct
 
         instance = get_object_or_404(PairedInstance, pk=pk)
         browse_url = reverse_lazy(
@@ -399,8 +399,8 @@ class NotifyCustomerProductView(View):
         import json
         from decimal import Decimal, InvalidOperation
 
-        from sales.models import CustomerProduct
         from inventory.models import Product
+        from sales.models import CustomerProduct
 
         auth = request.META.get("HTTP_AUTHORIZATION", "")
         if not auth.startswith("Bearer "):

@@ -1,8 +1,8 @@
-from django.test import TestCase
 from django.contrib.auth.models import User
+from django.test import TestCase
 from django.urls import reverse
 
-from config.models import PairedInstance, CompanyConfig
+from config.models import CompanyConfig, PairedInstance
 
 
 class PairedInstanceModelTest(TestCase):
