@@ -7,12 +7,14 @@ movements, and computed requirements based on sales and production demand.
 ## Models
 
 * **Product** – core entity with a unique name, optional description, image,
-  and sale price. The `unit_cost` property returns the cheapest supplier cost
-  or, if no supplier exists, recursively computes cost from an attached Bill of
-  Materials (BOM). The `effective_sale_price` property returns `sale_price` if
-  set, otherwise falls back to the most recent sales order line price.
-  The `can_produce` property checks whether sufficient component inventory
-  exists for a single unit.
+  sale price, and a `catalogue_item` boolean flag. When `catalogue_item` is
+  set, a sale price is required; the product then appears in the public
+  catalogue API for paired-instance browsing. The `unit_cost` property returns
+  the cheapest supplier cost or, if no supplier exists, recursively computes
+  cost from an attached Bill of Materials (BOM). The `effective_sale_price`
+  property returns `sale_price` if set, otherwise falls back to the most
+  recent sales order line price. The `can_produce` property checks whether
+  sufficient component inventory exists for a single unit.
 
 * **Inventory** – one-to-one with `Product`. Records `quantity`,
   `last_updated` timestamp, and caches a computed `required` quantity
@@ -30,11 +32,13 @@ movements, and computed requirements based on sales and production demand.
   product must remain ≤ total stock on hand.
 
 * **StockTransfer** – records an atomic transfer of quantity between two
-  locations for the same product. On save, deducts from the source
-  `InventoryLocation`, adds to the destination (creating it if it does not
-  exist), and writes two signed `InventoryLedger` entries (one negative, one
-  positive) both tagged with their respective locations. `Inventory.quantity`
-  is never modified by a transfer.
+  locations for the same product. Either `from_location` or `to_location` may
+  be null, representing unallocated stock — enabling transfers from a bin to
+  unallocated or from unallocated into a bin. On save, deducts from the source
+  `InventoryLocation` (or unallocated pool), adds to the destination (creating
+  it if it does not exist), and writes two signed `InventoryLedger` entries
+  (one negative, one positive) tagged with their respective locations.
+  `Inventory.quantity` is never modified by a transfer.
 
 * **ProductionAllocated** – helper used by `Inventory.required` to record how
   many units have been reserved for active production jobs.
@@ -93,18 +97,32 @@ or production lines change.
   destination. The atomic save updates both `InventoryLocation` records and
   writes two ledger entries.
 
-* **Dashboard** – aggregates global totals (product count, total quantity,
-  stock value using `unit_cost`), low-stock count, and optionally renders a
-  table of shortage items with suggested actions (purchase or produce).
+* **Dashboard** – comprehensive stock health overview:
+  - Global totals: product count, total quantity, stock value (using cheapest
+    supplier cost with BOM cost fallback)
+  - Low-stock count and percentage of total products
+  - Stock health distribution: low stock, zero stock, dead stock (quantity
+    > 0, no demand, no movement in 90 days), and healthy buckets
+  - Top 5 most-needed items with fill-percentage progress bars
+  - 30-day stock IN/OUT movement trends with comparison arrows against the
+    prior 30-day period
+  - When `?required=1`, enriches context with low-stock items including
+    production and purchase order coverage for suggested actions
 
 * **Low Stock List** – paginated list of all products where `required_cached`
   > 0, with supplier and BOM context, filterable by purchasable or producible,
   and links to pre-populated purchase order creation.
 
+* **Catalogue API** – `CatalogueApiView` returns catalogue products as JSON.
+  Requires Bearer token authentication matching a `PairedInstance.our_key`.
+  Returns product name, description, sale price, and SKU for products with
+  `catalogue_item=True` and a sale price set.
+
 ## Key Features
 
 * Hierarchical warehouse locations with enforced quantity integrity
-* Atomic stock transfers with dual ledger entries and location tagging
+* Atomic stock transfers with dual ledger entries and location tagging,
+  including transfers from and to unallocated stock
 * Location-aware inventory adjustments with bin-level validation
 * Full audit ledger with running balance and location column
 * Indexed fields on all frequently-filtered columns
@@ -112,4 +130,6 @@ or production lines change.
 * Cross-app dependencies: inventory queries sales, procurement, and production
   for pending figures
 * Chart.js visualisations on dashboard and detail pages
+* Stock health dashboard with dead stock detection and 30-day trend analysis
+* Catalogue API endpoint for paired-instance product browsing
 * Authentication enforced via middleware; all views require login

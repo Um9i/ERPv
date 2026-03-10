@@ -44,8 +44,20 @@ reporting.
 
 * `SupplierProductIDsView` (JSON) – used by front‑end forms to restrict line
   product choices when a supplier is selected.
-* `PurchaseOrderListView` and similar endpoints may be consumed indirectly via
-  the standard views.
+* **NotifySupplierProductView** – CSRF-exempt POST endpoint at
+  `/procurement/api/notify/supplier-product/` for remote paired instances to
+  notify cost updates.  Validates a Bearer token against
+  `PairedInstance.our_key`, expects JSON with `product_name` and `cost`, and
+  updates the corresponding `SupplierProduct.cost`.
+
+## Services
+
+* `supplier_cost_totals()` – returns a dict of supplier ID → total cost across
+  all their products.
+* `best_supplier_products()` – picks the cheapest `SupplierProduct` per
+  product ID, breaking ties by supplier total cost.
+* `pending_po_by_product()` – returns a dict of product ID → remaining
+  quantity on open purchase orders.
 
 ## Notes
 
@@ -54,5 +66,7 @@ reporting.
   model save methods and ledger utilities.
 * The receiving logic is written imperatively due to the need to update
   inventory and ledgers atomically while handling partial quantities.
+* Supplier creation supports pre-filling from GET parameters and automatic
+  linking to a `PairedInstance` for multi-site workflows.
 
 ---

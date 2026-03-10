@@ -6,20 +6,23 @@ A Django-based ERP (Enterprise Resource Planning) web application covering inven
 
 | Module | Description |
 |---|---|
-| **Inventory** | Product catalogue, stock tracking, warehouse locations, ledger history, and demand analysis |
-| **Procurement** | Suppliers, purchase orders, receiving workflows, and purchase ledger |
-| **Production** | Bill of Materials (BOM) management, manufacturing jobs, component allocation, and receiving |
-| **Sales** | Customers, sales orders, shipment processing, and sales ledger |
-| **Finance** | Dashboard aggregating revenue, purchase costs, and gross profit from ledgers |
+| **Inventory** | Product catalogue with images, stock tracking, hierarchical warehouse locations (Warehouse → Zone → Bin), stock transfers, catalogue API, full audit ledger, stock health dashboard, and demand analysis |
+| **Procurement** | Suppliers, supplier contacts, purchase orders with receiving workflows, purchase ledger, and supplier product cost tracking |
+| **Production** | Recursive Bill of Materials management, interactive BOM visualiser, manufacturing jobs with due-date tracking, component shortage analysis, cost roll-up, margin analysis, and bin-level receiving |
+| **Sales** | Customers, customer contacts, sales orders, pick lists, shipment processing with stock availability checks, sales ledger, and PDF invoice generation via WeasyPrint |
+| **Finance** | Sales and purchase ledgers with filtering and CSV export, monthly breakdowns, outstanding orders report, product P&L with margin analysis, and a dashboard with 12-month sales vs purchases chart |
+| **Dashboards** | Shipping and delivery schedule views with day/week navigation, overdue order tracking, and per-module dashboards with search and KPI metrics |
+| **Config** | Company configuration, paired instance management for multi-site ERPv deployments with API-key authentication, remote catalogue browsing, and automated supplier/customer import |
 
 ## Tech Stack
 
-- **Backend:** Django 6, Python 3.14
+- **Backend:** Django 6.0.3, Python 3.14
 - **Database:** PostgreSQL (production) / SQLite (development)
 - **Frontend:** Bootstrap 5 via django-crispy-forms
 - **PDF generation:** WeasyPrint
 - **Static files:** WhiteNoise
 - **Server:** Gunicorn
+- **Testing:** pytest, factory_boy, 225+ tests
 
 ## Getting Started
 
@@ -88,12 +91,14 @@ Coverage reports are written to `htmlcov/`.
 ## Project Structure
 
 ```
-main/          # Django project settings, URLs, base views, middleware, and template tags
-inventory/     # Stock management, warehouse locations, ledger, and adjustments
-procurement/   # Suppliers, purchase orders, and receiving
-production/    # BOM management and manufacturing jobs
-sales/         # Customers, sales orders, and shipping
-finance/       # Financial dashboard and ledger reporting
+main/          # Django project settings, URLs, middleware, template tags, and test factories
+inventory/     # Stock management, warehouse locations, ledger, adjustments, and catalogue API
+procurement/   # Suppliers, purchase orders, receiving, and supplier product notifications
+production/    # BOM management, manufacturing jobs, cost roll-up, and BOM visualiser
+sales/         # Customers, sales orders, shipping, and PDF invoices
+finance/       # Ledger views, CSV export, outstanding orders, and product P&L reports
+config/        # Company configuration and paired instance management
+dashboards/    # Shipping and delivery schedule views
 docs/          # Module-level documentation
 templates/     # HTML templates
 static/        # Static assets
@@ -107,6 +112,7 @@ Detailed documentation for each module lives in the [`docs/`](docs/) directory:
 - [Procurement](docs/procurement.md)
 - [Production](docs/production.md)
 - [Sales](docs/sales.md)
+- [Finance](docs/finance.md)
 
 ## License
 

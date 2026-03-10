@@ -38,18 +38,34 @@ roll-up, and bin-level receiving of finished goods.
 
 * **`build_bom_tree(product, quantity, visited)`** – recursively builds a
   serialisable tree structure from a product's BOM, scaling quantities down
-  each level (`item.quantity × parent_quantity`). Each node carries `name`,
-  `quantity`, `stock`, `sufficient` (bool), and `children`. Includes a
+  each level (`item.quantity × parent_quantity`). Each node carries `id`,
+  `name`, `quantity`, `stock`, `sufficient` (bool), and `children`. Includes a
   circular reference guard via an immutable `visited` set copied per branch.
-  Missing `Inventory` records are treated as `stock=0`. Used by the production
-  detail view to drive the interactive BOM visualiser.
+  Missing `Inventory` records are treated as `stock=0`. Used by both the BOM
+  detail view and the production detail view to drive the interactive BOM
+  visualiser.
+
+* **`receive_production_into_location(job, quantity, location)`** – atomic
+  transaction that updates `job.quantity_received`, calls `Production.save()`
+  (firing all allocation, ledger, and closure logic), routes the finished
+  goods delta to the specified `InventoryLocation` (creating it if it doesn’t
+  exist), and tags the finished-goods `InventoryLedger` entry with the
+  destination location.
+
+* **`bom_product_ids()`** – returns the set of product IDs that have a
+  `BillOfMaterials` attached.
+
+* **`pending_jobs_by_product()`** – returns a dict of product ID → remaining
+  quantity on active (non-closed) production jobs.
 
 ## Features & Views
 
 ### BOM Management
 
 * CRUD views for BOMs and BOM items. List views support search and pagination.
-* BOM detail pages show component lists and link to product inventory.
+* BOM detail pages show component lists, link to product inventory, and render
+  the full BOM tree via `build_bom_tree()` with unit cost, component cost,
+  sale price, and margin percentage calculations.
 * The BOM create/update forms embed an inline formset for `BOMItem` lines,
   allowing multiple components to be added or edited on a single page. A
   JavaScript helper replicates the last row for "Add another component"
@@ -60,7 +76,9 @@ roll-up, and bin-level receiving of finished goods.
 
 * `ProductionCreateView` and `UpdateView` for starting and editing jobs.
   Only products with an existing BOM may be selected.
-* List view with search, status filter, and pagination. Each row shows:
+* List view with search, status filter, and pagination. Bulk N+1 mitigation
+  pre-loads BOM items and inventory to compute a materials-ok flag in a single
+  pass. Each row shows:
   - Due date badge colour-coded by urgency (red = overdue, amber = due within
     7 days, muted = on track, dash = no date)
   - Sufficient Materials indicator (green check or red warning triangle)
@@ -114,8 +132,10 @@ The detail page combines:
 
 `ProductionDashboardView` summarises:
 * Total BOMs defined
-* Count of active (not closed) production jobs
-* Count of completed jobs
+* Count of active (not closed) production jobs and jobs due today or earlier
+* Count of completed jobs and completion rate percentage
+* Producible items: products with a shortage and a BOM that are not yet fully
+  covered by active production jobs, with links to create new jobs
 
 Rendered as metric cards with links to the appropriate lists.
 
@@ -127,8 +147,11 @@ Rendered as metric cards with links to the appropriate lists.
   detection
 * Per-job margin analysis using `effective_sale_price` (sale price or last
   sold price)
-* Interactive BOM visualiser with live stock state and quantity scaling
+* Interactive BOM visualiser with live stock state and quantity scaling,
+  shared between BOM detail and production detail views
 * Due date urgency system with colour-coded list view badges
 * Bin-level finished goods receiving integrated with inventory location system
 * Component shortage warnings at both list and detail level
+* Bulk N+1 query mitigation on the production list view
+* Dashboard with producible-item suggestions and due-date awareness
 * All views require authentication
