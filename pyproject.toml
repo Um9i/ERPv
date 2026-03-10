@@ -5,3 +5,30 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = []
+
+[tool.ruff]
+exclude = ["migrations", "htmlcov", "staticfiles"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
+
+[tool.mypy]
+plugins = ["mypy_django_plugin.main"]
+exclude = ["migrations", "htmlcov", "staticfiles"]
+ignore_missing_imports = true
+warn_return_any = false
+warn_unused_configs = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "finance.views"
+disable_error_code = ["misc", "attr-defined", "arg-type", "return-value", "override", "assignment", "union-attr", "operator", "type-var", "var-annotated"]
+
+[[tool.mypy.overrides]]
+module = ["config.models", "inventory.models", "production.models"]
+disable_error_code = ["assignment", "no-redef"]
+
+[tool.django-stubs]
+django_settings_module = "main.settings"

@@ -22,7 +22,8 @@ A Django-based ERP (Enterprise Resource Planning) web application covering inven
 - **PDF generation:** WeasyPrint
 - **Static files:** WhiteNoise
 - **Server:** Gunicorn
-- **Testing:** pytest, factory_boy, 225+ tests
+- **Testing:** pytest, factory_boy, 227+ tests
+- **Quality:** ruff, black, mypy, bandit, pip-audit, pre-commit
 
 ## Getting Started
 
@@ -36,11 +37,12 @@ A Django-based ERP (Enterprise Resource Planning) web application covering inven
    pip install -r requirements.txt
    ```
 
-2. **Configure environment variables** (optional – defaults shown):
+2. **Configure environment variables:**
 
    ```bash
-   export SECRETKEY="your-secret-key"
-   export DEBUG=True
+   export SECRETKEY="your-secret-key"   # required in production; optional in dev
+   export DEBUG=True                     # defaults to False — must opt in for dev
+   export ALLOWED_HOSTS="localhost,127.0.0.1"  # comma-separated, defaults shown
    export CURRENCY_SYMBOL="£"
    ```
 
@@ -51,6 +53,10 @@ A Django-based ERP (Enterprise Resource Planning) web application covering inven
    ```
 
    Without `DATABASE_URL` the app falls back to the local `db.sqlite3` file.
+
+   > **Note:** When `DEBUG=False`, `SECRETKEY` is mandatory — the app will
+   > refuse to start without it. Production security headers (`HSTS`,
+   > `SECURE_SSL_REDIRECT`, secure cookies) are enabled automatically.
 
 3. **Run migrations and start the development server:**
 
@@ -73,8 +79,9 @@ The entrypoint script waits for the database, runs migrations, collects static f
 
 | Variable | Default | Description |
 |---|---|---|
-| `SECRETKEY` | `SECRET` | Django secret key – change in production |
-| `DEBUG` | `True` | Set to `False` in production |
+| `SECRETKEY` | *(required)* | Django secret key – must be set in production |
+| `DEBUG` | `False` | Set to `True` for development |
+| `ALLOWED_HOSTS` | `localhost,127.0.0.1` | Comma-separated list of allowed hostnames |
 | `DATABASE_URL` | SQLite | Full database connection URL |
 | `CURRENCY_SYMBOL` | `£` | Currency symbol used in the UI |
 
@@ -83,10 +90,27 @@ The entrypoint script waits for the database, runs migrations, collects static f
 Tests use pytest with pytest-django and coverage reporting:
 
 ```bash
-pytest
+DEBUG=True SECRETKEY=test pytest
 ```
 
 Coverage reports are written to `htmlcov/`.
+
+### Code Quality
+
+The project uses [pre-commit](https://pre-commit.com/) hooks for automated checks:
+
+```bash
+pre-commit install          # one-time setup
+pre-commit run --all-files  # manual run
+```
+
+Hooks include **black** (formatting), **ruff** (linting), and **bandit** (security).
+
+Type checking is available via mypy (currently scoped to the finance module):
+
+```bash
+DEBUG=True SECRETKEY=test mypy finance/
+```
 
 ## Project Structure
 
