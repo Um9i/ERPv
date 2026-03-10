@@ -1,6 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
-from django.db.models import F, Min, Sum
+from django.db.models import Min, Sum
 from django.db.models.functions import Lower
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
@@ -332,27 +332,7 @@ class InventoryAdjust(models.Model):
 
     @transaction.atomic
     def save(self, *args, **kwargs):
-        # only apply quantity changes when creating new records
         self.full_clean()
-        if self.pk is None and self.complete:
-            product_qs = Inventory.objects.select_for_update().filter(
-                product=self.product
-            )
-            # also update last_updated timestamp
-            from django.utils import timezone
-
-            product_qs.update(
-                quantity=F("quantity") + self.quantity, last_updated=timezone.now()
-            )
-            InventoryLedger.objects.create(
-                product=self.product,
-                quantity=self.quantity,
-                action="Inventory Adjustment",
-                transaction_id=self.product.pk,
-            )
-            # refresh cached required value for this inventory
-            inv = Inventory.objects.get(product=self.product)
-            inv.update_required_cached()
         super().save(*args, **kwargs)
 
 

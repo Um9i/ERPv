@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.forms.models import inlineformset_factory
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
@@ -42,7 +43,7 @@ _CUSTOMER_PREFILL_FIELDS = [
 ]
 
 
-class CustomerCreateView(CreateView):
+class CustomerCreateView(LoginRequiredMixin, CreateView):
     model = Customer
     template_name = "sales/customer_form.html"
     form_class = CustomerForm
@@ -69,23 +70,24 @@ class CustomerCreateView(CreateView):
         return reverse_lazy("sales:customer-detail", args=[self.object.pk])
 
 
-class CustomerUpdateView(UpdateView):
+class CustomerUpdateView(LoginRequiredMixin, UpdateView):
     model = Customer
     template_name = "sales/customer_form.html"
     form_class = CustomerForm
     success_url = reverse_lazy("sales:customer-list")
 
 
-class CustomerDeleteView(DeleteView):
+class CustomerDeleteView(LoginRequiredMixin, DeleteView):
     model = Customer
     template_name = "sales/customer_confirm_delete.html"
     success_url = reverse_lazy("sales:customer-list")
 
 
-class CustomerListView(ListView):
+class CustomerListView(LoginRequiredMixin, ListView):
     model = Customer
     template_name = "sales/customer_list.html"
     context_object_name = "customers"
+    paginate_by = 20
 
     def get_queryset(self):
         qs = Customer.objects.all().order_by("name")
@@ -95,18 +97,12 @@ class CustomerListView(ListView):
         return qs
 
     def get_context_data(self, **kwargs):
-        from django.core.paginator import Paginator
-
         context = super().get_context_data(**kwargs)
-        customer_list = self.get_queryset()
-        page_num = self.request.GET.get("page")
-        paginator = Paginator(customer_list, 20)
-        context["customers"] = paginator.get_page(page_num)
         context["q"] = self.request.GET.get("q", "")
         return context
 
 
-class CustomerDetailView(DetailView):
+class CustomerDetailView(LoginRequiredMixin, DetailView):
     model = Customer
     template_name = "sales/customer_detail.html"
     context_object_name = "customer"
@@ -160,7 +156,7 @@ class CustomerDetailView(DetailView):
         return context
 
 
-class CustomerContactCreateView(CreateView):
+class CustomerContactCreateView(LoginRequiredMixin, CreateView):
     model = CustomerContact
     template_name = "sales/customer_contact_form.html"
     form_class = CustomerContactForm
@@ -184,7 +180,7 @@ class CustomerContactCreateView(CreateView):
         return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
 
 
-class CustomerContactUpdateView(UpdateView):
+class CustomerContactUpdateView(LoginRequiredMixin, UpdateView):
     model = CustomerContact
     template_name = "sales/customer_contact_form.html"
     form_class = CustomerContactForm
@@ -193,7 +189,7 @@ class CustomerContactUpdateView(UpdateView):
         return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
 
 
-class CustomerContactDeleteView(DeleteView):
+class CustomerContactDeleteView(LoginRequiredMixin, DeleteView):
     model = CustomerContact
     template_name = "sales/customer_contact_confirm_delete.html"
 
@@ -201,7 +197,7 @@ class CustomerContactDeleteView(DeleteView):
         return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
 
 
-class CustomerProductCreateView(CreateView):
+class CustomerProductCreateView(LoginRequiredMixin, CreateView):
     model = CustomerProduct
     template_name = "sales/customer_product_form.html"
     form_class = CustomerProductForm
@@ -225,7 +221,7 @@ class CustomerProductCreateView(CreateView):
         return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
 
 
-class CustomerProductUpdateView(UpdateView):
+class CustomerProductUpdateView(LoginRequiredMixin, UpdateView):
     model = CustomerProduct
     template_name = "sales/customer_product_form.html"
     form_class = CustomerProductForm
@@ -235,7 +231,7 @@ class CustomerProductUpdateView(UpdateView):
         return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
 
 
-class CustomerProductDeleteView(DeleteView):
+class CustomerProductDeleteView(LoginRequiredMixin, DeleteView):
     model = CustomerProduct
     template_name = "sales/customer_product_confirm_delete.html"
     success_url = reverse_lazy("sales:customer-list")
@@ -244,27 +240,29 @@ class CustomerProductDeleteView(DeleteView):
         return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
 
 
-class CustomerSalesOrderListView(ListView):
+class CustomerSalesOrderListView(LoginRequiredMixin, ListView):
     model = SalesOrder
     template_name = "sales/customer_salesorder_list.html"
     context_object_name = "sales_orders"
+    paginate_by = 20
 
     def get_queryset(self):
         customer_id = self.kwargs.get("pk")
         return SalesOrder.objects.filter(customer_id=customer_id)
 
 
-class CustomerProductListView(ListView):
+class CustomerProductListView(LoginRequiredMixin, ListView):
     model = CustomerProduct
     template_name = "sales/customer_product_list.html"
     context_object_name = "customer_products"
+    paginate_by = 20
 
     def get_queryset(self):
         customer_id = self.kwargs.get("pk")
         return CustomerProduct.objects.filter(customer_id=customer_id)
 
 
-class CustomerProductIDsView(DetailView):
+class CustomerProductIDsView(LoginRequiredMixin, DetailView):
     model = Customer
 
     def get(self, request, *args, **kwargs):
@@ -279,7 +277,7 @@ class CustomerProductIDsView(DetailView):
         return JsonResponse({"product_ids": ids})
 
 
-class SalesOrderCreateView(CreateView):
+class SalesOrderCreateView(LoginRequiredMixin, CreateView):
     model = SalesOrder
     template_name = "sales/sales_order_form.html"
     form_class = SalesOrderForm
@@ -354,7 +352,7 @@ class SalesOrderCreateView(CreateView):
         return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
 
 
-class SalesOrderListView(ListView):
+class SalesOrderListView(LoginRequiredMixin, ListView):
     model = SalesOrder
     template_name = "sales/sales_order_list.html"
     context_object_name = "sales_orders"
@@ -455,7 +453,7 @@ class SalesOrderListView(ListView):
         return context
 
 
-class SalesOrderDetailView(DetailView):
+class SalesOrderDetailView(LoginRequiredMixin, DetailView):
     model = SalesOrder
     template_name = "sales/sales_order_detail.html"
     context_object_name = "sales_order"
@@ -495,7 +493,7 @@ class SalesOrderDetailView(DetailView):
         return context
 
 
-class SalesOrderShipView(DetailView):
+class SalesOrderShipView(LoginRequiredMixin, DetailView):
     model = SalesOrder
     template_name = "sales/sales_order_ship.html"
     context_object_name = "sales_order"
@@ -648,7 +646,7 @@ class SalesOrderShipView(DetailView):
         return reverse_lazy("sales:sales-order-list")
 
 
-class SalesDashboardView(TemplateView):
+class SalesDashboardView(LoginRequiredMixin, TemplateView):
     template_name = "sales/sales_dashboard.html"
 
     def get_context_data(self, **kwargs):
@@ -680,7 +678,7 @@ class SalesDashboardView(TemplateView):
         return context
 
 
-class SalesOrderInvoiceView(DetailView):
+class SalesOrderInvoiceView(LoginRequiredMixin, DetailView):
     model = SalesOrder
 
     def get(self, request, *args, **kwargs):

@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import logging
+
 from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 
 from inventory.models import Inventory, InventoryLedger
+
+logger = logging.getLogger(__name__)
 
 
 @transaction.atomic
@@ -41,3 +45,13 @@ def complete_sales_line(line) -> None:
         transaction_id=line.sales_order.pk,
     )
     line.closed = True
+    logger.info(
+        "sales_line_completed",
+        extra={
+            "line_id": line.pk,
+            "order_id": line.sales_order_id,
+            "product_id": line.product.product_id,
+            "quantity": line.quantity,
+            "value": str(line.value),
+        },
+    )

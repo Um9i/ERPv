@@ -1,16 +1,17 @@
 from datetime import date, timedelta
 
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
 
 from procurement.models import PurchaseOrder
 from sales.models import SalesOrder
 
 
-class DashboardHomeView(TemplateView):
+class DashboardHomeView(LoginRequiredMixin, TemplateView):
     template_name = "dashboards/home.html"
 
 
-class ShippingScheduleView(TemplateView):
+class ShippingScheduleView(LoginRequiredMixin, TemplateView):
     """Day-based shipping schedule driven by SalesOrder.ship_by_date."""
 
     template_name = "dashboards/shipping_schedule.html"
@@ -81,7 +82,7 @@ class ShippingScheduleView(TemplateView):
         return context
 
 
-class DeliveryScheduleView(TemplateView):
+class DeliveryScheduleView(LoginRequiredMixin, TemplateView):
     """Day-based delivery schedule driven by PurchaseOrder.due_date."""
 
     template_name = "dashboards/delivery_schedule.html"

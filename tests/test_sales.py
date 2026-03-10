@@ -114,12 +114,12 @@ class TestCustomer:
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
-        for i in range(12):
+        for i in range(25):
             Customer.objects.create(name=f"C{i}")
         url = reverse("sales:customer-list")
         resp = client.get(url)
         assert resp.status_code == 200
-        assert resp.context["customers"].paginator is not None
+        assert resp.context["page_obj"].paginator is not None
         resp2 = client.get(url + "?page=2")
         assert resp2.status_code == 200
 

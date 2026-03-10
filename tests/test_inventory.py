@@ -2,6 +2,13 @@ import pytest
 from django.db.models import Sum
 
 from inventory.models import Inventory, InventoryAdjust, InventoryLedger
+from inventory.services import apply_inventory_adjustment
+
+
+def _adjust(product, quantity, location=None):
+    """Create and apply an inventory adjustment via the service layer."""
+    adj = InventoryAdjust(product=product, quantity=quantity, complete=True)
+    apply_inventory_adjustment(adj, location=location)
 
 
 @pytest.mark.django_db
@@ -11,12 +18,12 @@ class TestInventory:
         assert inventory.product.name == "product"
 
     def test_inventory_adjustment_alters_inventory_quantity(self, product):
-        InventoryAdjust.objects.create(product=product, quantity=1, complete=True)
+        _adjust(product, 1)
         inventory = Inventory.objects.get(pk=product.pk)
         assert inventory.quantity == 1
 
     def test_inventory_adjustment_ledger_is_created(self, product):
-        InventoryAdjust.objects.create(product=product, quantity=1, complete=True)
+        _adjust(product, 1)
         ledger = InventoryLedger.objects.filter(product=product).order_by("pk").first()
         assert ledger is not None
         assert ledger.product == product
@@ -94,8 +101,8 @@ class TestInventory:
 
         inv = Inventory.objects.get(product=product)
         # perform two adjustments to generate ledger entries
-        InventoryAdjust.objects.create(product=product, quantity=5, complete=True)
-        InventoryAdjust.objects.create(product=product, quantity=-2, complete=True)
+        _adjust(product, 5)
+        _adjust(product, -2)
         # detail page should show ledger entries and sensible totals
         url = reverse("inventory:inventory-detail", args=[inv.pk])
         resp = client.get(url)
@@ -145,7 +152,7 @@ class TestInventory:
         inv = Inventory.objects.get(product=product)
         orig = inv.last_updated
         # adjust inventory
-        InventoryAdjust.objects.create(product=product, quantity=1, complete=True)
+        _adjust(product, 1)
         inv.refresh_from_db()
         assert inv.last_updated > orig
 
@@ -618,7 +625,7 @@ class TestInventory:
         client.force_login(user)
 
         inv = Inventory.objects.get(product=product)
-        InventoryAdjust.objects.create(product=product, quantity=10, complete=True)
+        _adjust(product, 10)
         inv.refresh_from_db()
         assert inv.quantity == 10
 
@@ -651,7 +658,7 @@ class TestInventory:
         )
 
         inv = Inventory.objects.get(product=product)
-        InventoryAdjust.objects.create(product=product, quantity=100, complete=True)
+        _adjust(product, 100)
         inv.refresh_from_db()
 
         bin_a = Location.objects.create(name="Bin A")
@@ -697,7 +704,7 @@ class TestInventory:
         )
 
         inv = Inventory.objects.get(product=product)
-        InventoryAdjust.objects.create(product=product, quantity=50, complete=True)
+        _adjust(product, 50)
         inv.refresh_from_db()
 
         bin_a = Location.objects.create(name="Bin A")
@@ -730,7 +737,7 @@ class TestInventory:
         )
 
         inv = Inventory.objects.get(product=product)
-        InventoryAdjust.objects.create(product=product, quantity=10, complete=True)
+        _adjust(product, 10)
         inv.refresh_from_db()
 
         bin_a = Location.objects.create(name="Bin A")
@@ -761,7 +768,7 @@ class TestInventory:
         )
 
         inv = Inventory.objects.get(product=product)
-        InventoryAdjust.objects.create(product=product, quantity=10, complete=True)
+        _adjust(product, 10)
         inv.refresh_from_db()
 
         bin_a = Location.objects.create(name="Bin A")
@@ -791,7 +798,7 @@ class TestInventory:
         client.force_login(user)
 
         inv = Inventory.objects.get(product=product)
-        InventoryAdjust.objects.create(product=product, quantity=100, complete=True)
+        _adjust(product, 100)
         inv.refresh_from_db()
 
         bin_a = Location.objects.create(name="Bin A")
@@ -835,7 +842,7 @@ class TestInventory:
         client.force_login(user)
 
         inv = Inventory.objects.get(product=product)
-        InventoryAdjust.objects.create(product=product, quantity=50, complete=True)
+        _adjust(product, 50)
         inv.refresh_from_db()
 
         bin_x = Location.objects.create(name="Bin X")
@@ -862,7 +869,7 @@ class TestInventory:
         client.force_login(user)
 
         inv = Inventory.objects.get(product=product)
-        InventoryAdjust.objects.create(product=product, quantity=100, complete=True)
+        _adjust(product, 100)
         inv.refresh_from_db()
 
         bin_a = Location.objects.create(name="LocLedgerA")
@@ -900,9 +907,7 @@ class TestInventoryAdjustWithLocation:
 
         inv = Inventory.objects.get(product=product)
         if initial_qty:
-            InventoryAdjust.objects.create(
-                product=product, quantity=initial_qty, complete=True
-            )
+            _adjust(product, initial_qty)
             inv.refresh_from_db()
         loc = None
         if create_location:

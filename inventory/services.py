@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 
-from inventory.models import Inventory
+from django.db import transaction
+from django.db.models import F
+from django.utils import timezone
+
+from inventory.models import Inventory, InventoryLedger, InventoryLocation, Location
+
+logger = logging.getLogger(__name__)
 
 
 def refresh_required_cache_for_products(product_ids: Iterable[int]) -> None:
@@ -26,3 +33,67 @@ def refresh_required_cache_for_products(product_ids: Iterable[int]) -> None:
 
     if updates:
         Inventory.objects.bulk_update(updates, ["required_cached"])
+        logger.info(
+            "required_cache_refreshed",
+            extra={
+                "product_ids": [u.product_id for u in updates],
+                "count": len(updates),
+            },
+        )
+
+
+@transaction.atomic
+def apply_inventory_adjustment(
+    adjustment,
+    location: Location | None = None,
+) -> None:
+    """Apply an inventory adjustment and record it in the ledger.
+
+    *adjustment* is an unsaved ``InventoryAdjust`` instance.  The function
+    updates on-hand stock, creates a ledger entry, optionally routes the
+    delta to *location*, and refreshes the required-stock cache.
+    """
+
+    product = adjustment.product
+
+    # persist the adjustment row first
+    adjustment.full_clean()
+    adjustment.save_base()
+
+    # update on-hand stock
+    Inventory.objects.select_for_update().filter(product=product).update(
+        quantity=F("quantity") + adjustment.quantity, last_updated=timezone.now()
+    )
+
+    # ledger entry
+    InventoryLedger.objects.create(
+        product=product,
+        quantity=adjustment.quantity,
+        action="Inventory Adjustment",
+        transaction_id=product.pk,
+        location=location,
+    )
+
+    # route delta to a specific bin when requested
+    if location:
+        inv_obj = Inventory.objects.get(product=product)
+        inv_loc, _ = InventoryLocation.objects.get_or_create(
+            inventory=inv_obj,
+            location=location,
+            defaults={"quantity": 0},
+        )
+        inv_loc.quantity = max(inv_loc.quantity + adjustment.quantity, 0)
+        inv_loc.save()
+
+    # refresh required-stock cache
+    inv = Inventory.objects.get(product=product)
+    inv.update_required_cached()
+
+    logger.info(
+        "inventory_adjusted",
+        extra={
+            "product_id": product.pk,
+            "quantity": adjustment.quantity,
+            "location": str(location) if location else None,
+        },
+    )

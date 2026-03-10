@@ -130,13 +130,13 @@ class TestSupplier:
         user = User.objects.create_user(username="tester")
         client.force_login(user)
         # create enough extra suppliers to require more than one page
-        for i in range(12):
+        for i in range(25):
             Supplier.objects.create(name=f"Pagi{i}")
         url = reverse("procurement:supplier-list")
         resp = client.get(url)
         assert resp.status_code == 200
         # paginator exists regardless of page count
-        assert resp.context["suppliers"].paginator is not None
+        assert resp.context["page_obj"].paginator is not None
         resp2 = client.get(url + "?page=2")
         assert resp2.status_code == 200
 
@@ -228,12 +228,12 @@ class TestSupplier:
         # pagination assertions for supplier list remain unchanged
         from procurement.models import Supplier
 
-        for i in range(12):
+        for i in range(25):
             Supplier.objects.create(name=f"Pagi{i}")
         url = reverse("procurement:supplier-list")
         resp = client.get(url)
         assert resp.status_code == 200
-        assert resp.context["suppliers"].paginator is not None
+        assert resp.context["page_obj"].paginator is not None
         resp2 = client.get(url + "?page=2")
         assert resp2.status_code == 200
 
@@ -886,11 +886,13 @@ class TestPurchaseOrderLine:
     def test_purchase_order_line_creation(self, purchase_order_line):
         assert purchase_order_line.quantity == 5
 
-    def test_purchase_order_line_save(self, purchase_order_line):
+    def test_purchase_order_line_receive(self, purchase_order_line):
+        from procurement.services import receive_purchase_order_line
+
         inventory = Inventory.objects.get(product=purchase_order_line.product.product)
-        purchase_order_line.complete = True
-        purchase_order_line.save()
-        assert inventory.quantity == 0
+        receive_purchase_order_line(purchase_order_line, purchase_order_line.quantity)
+        inventory.refresh_from_db()
+        assert inventory.quantity == 5
         ledger = (
             InventoryLedger.objects.filter(product=purchase_order_line.product.product)
             .order_by("pk")
@@ -903,3 +905,6 @@ class TestPurchaseOrderLine:
         ).first()
         assert purchase_ledger is not None
         assert purchase_ledger.quantity == 5
+        purchase_order_line.refresh_from_db()
+        assert purchase_order_line.complete is True
+        assert purchase_order_line.closed is True

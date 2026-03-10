@@ -1,8 +1,10 @@
 import csv
+import logging
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Dict
 
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import DecimalField, Min, OuterRef, Subquery, Sum
 from django.db.models.functions import Coalesce, TruncMonth
 from django.http import HttpResponse
@@ -16,8 +18,10 @@ from procurement.models import PurchaseLedger, Supplier, SupplierProduct
 from production.models import BOMItem
 from sales.models import Customer, SalesLedger
 
+logger = logging.getLogger(__name__)
 
-class FinanceDashboardView(TemplateView):
+
+class FinanceDashboardView(LoginRequiredMixin, TemplateView):
     template_name = "finance/dashboard.html"
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
@@ -189,7 +193,7 @@ class SalesLedgerFilterMixin:
 
 
 class SalesLedgerArchiveView(
-    SalesLedgerFilterMixin, LedgerArchiveMixin, ArchiveIndexView
+    SalesLedgerFilterMixin, LedgerArchiveMixin, LoginRequiredMixin, ArchiveIndexView
 ):
     model = SalesLedger
     template_name = "finance/salesledger_archive.html"
@@ -209,7 +213,7 @@ class SalesLedgerArchiveView(
 
 
 class SalesLedgerMonthArchiveView(
-    SalesLedgerFilterMixin, LedgerArchiveMixin, MonthArchiveView
+    SalesLedgerFilterMixin, LedgerArchiveMixin, LoginRequiredMixin, MonthArchiveView
 ):
     model = SalesLedger
     template_name = "finance/salesledger_month.html"
@@ -250,7 +254,7 @@ class PurchaseLedgerFilterMixin:
 
 
 class PurchaseLedgerArchiveView(
-    PurchaseLedgerFilterMixin, LedgerArchiveMixin, ArchiveIndexView
+    PurchaseLedgerFilterMixin, LedgerArchiveMixin, LoginRequiredMixin, ArchiveIndexView
 ):
     model = PurchaseLedger
     template_name = "finance/purchaseledger_archive.html"
@@ -269,7 +273,7 @@ class PurchaseLedgerArchiveView(
 
 
 class PurchaseLedgerMonthArchiveView(
-    PurchaseLedgerFilterMixin, LedgerArchiveMixin, MonthArchiveView
+    PurchaseLedgerFilterMixin, LedgerArchiveMixin, LoginRequiredMixin, MonthArchiveView
 ):
     model = PurchaseLedger
     template_name = "finance/purchaseledger_month.html"
@@ -292,7 +296,7 @@ class PurchaseLedgerMonthArchiveView(
 # ---------------------------------------------------------------------------
 
 
-class OutstandingOrdersView(TemplateView):
+class OutstandingOrdersView(LoginRequiredMixin, TemplateView):
     template_name = "finance/outstanding_orders.html"
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
@@ -372,7 +376,7 @@ class OutstandingOrdersView(TemplateView):
         return context
 
 
-class ProductPLView(TemplateView):
+class ProductPLView(LoginRequiredMixin, TemplateView):
     template_name = "finance/product_pl.html"
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
@@ -493,7 +497,7 @@ class ProductPLView(TemplateView):
         return context
 
 
-class SalesLedgerExportView(View):
+class SalesLedgerExportView(LoginRequiredMixin, View):
     def get(self, request):
         qs = SalesLedger.objects.select_related("customer", "product").order_by("-date")
         customer_id = request.GET.get("customer")
@@ -526,7 +530,7 @@ class SalesLedgerExportView(View):
         return response
 
 
-class PurchaseLedgerExportView(View):
+class PurchaseLedgerExportView(LoginRequiredMixin, View):
     def get(self, request):
         qs = PurchaseLedger.objects.select_related("supplier", "product").order_by(
             "-date"

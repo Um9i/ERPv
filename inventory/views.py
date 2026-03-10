@@ -1,7 +1,9 @@
 import hmac
 
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
+from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views import View
@@ -39,7 +41,7 @@ from .models import (
 )
 
 
-class ProductCreateView(CreateView):
+class ProductCreateView(LoginRequiredMixin, CreateView):
     model = Product
     template_name = "inventory/product_form.html"
     form_class = ProductForm
@@ -49,7 +51,7 @@ class ProductCreateView(CreateView):
         return reverse_lazy("inventory:inventory-detail", args=[self.object.pk])
 
 
-class ProductUpdateView(UpdateView):
+class ProductUpdateView(LoginRequiredMixin, UpdateView):
     model = Product
     template_name = "inventory/product_form.html"
     form_class = ProductForm
@@ -102,16 +104,17 @@ class ProductUpdateView(UpdateView):
         return reverse_lazy("inventory:inventory-detail", args=[self.object.pk])
 
 
-class ProductDeleteView(DeleteView):
+class ProductDeleteView(LoginRequiredMixin, DeleteView):
     model = Product
     template_name = "inventory/product_confirm_delete.html"
     success_url = reverse_lazy("inventory:inventory-list")
 
 
-class InventoryListView(ListView):
+class InventoryListView(LoginRequiredMixin, ListView):
     model = Inventory
     template_name = "inventory/inventory_list.html"
     context_object_name = "inventories"
+    paginate_by = 20
 
     def get_queryset(self):
         qs = (
@@ -130,18 +133,12 @@ class InventoryListView(ListView):
         return qs
 
     def get_context_data(self, **kwargs):
-        from django.core.paginator import Paginator
-
         context = super().get_context_data(**kwargs)
-        inv_list = self.get_queryset()
-        page = self.request.GET.get("page")
-        paginator = Paginator(inv_list, 20)
-        context["inventories"] = paginator.get_page(page)
         context["q"] = self.request.GET.get("q", "")
         return context
 
 
-class InventoryDetailView(DetailView):
+class InventoryDetailView(LoginRequiredMixin, DetailView):
     model = Inventory
     template_name = "inventory/inventory_detail.html"
     context_object_name = "inventory"
@@ -328,7 +325,7 @@ class InventoryDetailView(DetailView):
         return context
 
 
-class InventoryAdjustCreateView(CreateView):
+class InventoryAdjustCreateView(LoginRequiredMixin, CreateView):
     model = InventoryAdjust
     template_name = "inventory/inventory_adjust_form.html"
     form_class = InventoryAdjustForm
@@ -356,48 +353,23 @@ class InventoryAdjustCreateView(CreateView):
         return form
 
     def form_valid(self, form):
+        from inventory.services import apply_inventory_adjustment
+
         inventory = self.get_inventory()
         form.instance.product = inventory.product
         form.instance.complete = True
         location = form.cleaned_data.get("location")
 
-        # save the adjustment (updates Inventory.quantity and ledger)
-        response = super().form_valid(form)
+        apply_inventory_adjustment(form.instance, location=location)
 
-        # if a location was selected, route the delta to that bin
-        if location:
-            qty_delta = form.instance.quantity
-            inv_loc, _ = InventoryLocation.objects.get_or_create(
-                inventory=inventory,
-                location=location,
-                defaults={"quantity": 0},
-            )
-            inv_loc.quantity = max(inv_loc.quantity + qty_delta, 0)
-            inv_loc.save()
-
-            # tag the ledger entry with the location
-            from .models import InventoryLedger
-
-            entry = (
-                InventoryLedger.objects.filter(
-                    product=inventory.product,
-                    action="Inventory Adjustment",
-                    location__isnull=True,
-                )
-                .order_by("-date")
-                .first()
-            )
-            if entry:
-                entry.location = location
-                entry.save(update_fields=["location"])
-
-        return response
+        self.object = form.instance
+        return redirect(self.get_success_url())
 
     def get_success_url(self):
         return reverse_lazy("inventory:inventory-detail", args=[self.kwargs.get("pk")])
 
 
-class InventoryDashboardView(TemplateView):
+class InventoryDashboardView(LoginRequiredMixin, TemplateView):
     """Dashboard showing inventory metrics for the inventory app."""
 
     template_name = "inventory/inventory_dashboard.html"
@@ -613,7 +585,7 @@ class InventoryDashboardView(TemplateView):
         return context
 
 
-class LowStockListView(TemplateView):
+class LowStockListView(LoginRequiredMixin, TemplateView):
     """Page listing all products currently below required stock."""
 
     template_name = "inventory/low_stock_list.html"
@@ -748,7 +720,7 @@ class InventoryListApiView(TemplateView):
 # ── Location CRUD ──────────────────────────────────────────────
 
 
-class LocationListView(ListView):
+class LocationListView(LoginRequiredMixin, ListView):
     model = Location
     template_name = "inventory/location_list.html"
     context_object_name = "locations"
@@ -759,7 +731,7 @@ class LocationListView(ListView):
         )
 
 
-class LocationCreateView(CreateView):
+class LocationCreateView(LoginRequiredMixin, CreateView):
     model = Location
     form_class = LocationForm
     template_name = "inventory/location_form.html"
@@ -773,14 +745,14 @@ class LocationCreateView(CreateView):
         return initial
 
 
-class LocationUpdateView(UpdateView):
+class LocationUpdateView(LoginRequiredMixin, UpdateView):
     model = Location
     form_class = LocationForm
     template_name = "inventory/location_form.html"
     success_url = reverse_lazy("inventory:location-list")
 
 
-class LocationDeleteView(DeleteView):
+class LocationDeleteView(LoginRequiredMixin, DeleteView):
     model = Location
     template_name = "inventory/location_confirm_delete.html"
     success_url = reverse_lazy("inventory:location-list")
@@ -789,7 +761,7 @@ class LocationDeleteView(DeleteView):
 # ── Stock location assignment ──────────────────────────────────
 
 
-class InventoryLocationCreateView(CreateView):
+class InventoryLocationCreateView(LoginRequiredMixin, CreateView):
     model = InventoryLocation
     form_class = InventoryLocationForm
     template_name = "inventory/inventory_location_form.html"
@@ -815,7 +787,7 @@ class InventoryLocationCreateView(CreateView):
         return context
 
 
-class InventoryLocationUpdateView(UpdateView):
+class InventoryLocationUpdateView(LoginRequiredMixin, UpdateView):
     model = InventoryLocation
     form_class = InventoryLocationForm
     template_name = "inventory/inventory_location_form.html"
@@ -836,7 +808,7 @@ class InventoryLocationUpdateView(UpdateView):
         return context
 
 
-class InventoryLocationDeleteView(DeleteView):
+class InventoryLocationDeleteView(LoginRequiredMixin, DeleteView):
     model = InventoryLocation
     template_name = "inventory/inventory_location_confirm_delete.html"
 
@@ -846,7 +818,7 @@ class InventoryLocationDeleteView(DeleteView):
         )
 
 
-class StockTransferCreateView(CreateView):
+class StockTransferCreateView(LoginRequiredMixin, CreateView):
     model = StockTransfer
     form_class = StockTransferForm
     template_name = "inventory/stock_transfer_form.html"

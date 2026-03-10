@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import F, Q
 from django.forms.models import inlineformset_factory
 from django.http import JsonResponse
@@ -29,7 +30,7 @@ from .models import (
 # ----- BOM views -----
 
 
-class BOMCreateView(CreateView):
+class BOMCreateView(LoginRequiredMixin, CreateView):
     model = BillOfMaterials
     template_name = "production/bom_form.html"
     form_class = BillOfMaterialsForm
@@ -98,7 +99,7 @@ class BOMCreateView(CreateView):
             return self.form_invalid(form)
 
 
-class BOMUpdateView(UpdateView):
+class BOMUpdateView(LoginRequiredMixin, UpdateView):
     model = BillOfMaterials
     template_name = "production/bom_form.html"
     form_class = BillOfMaterialsForm
@@ -139,16 +140,16 @@ class BOMUpdateView(UpdateView):
             return self.form_invalid(form)
 
 
-class BOMDeleteView(DeleteView):
-    model = BillOfMaterials
+class BOMDeleteView(LoginRequiredMixin, DeleteView):
     template_name = "production/bom_confirm_delete.html"
     success_url = reverse_lazy("production:bom-list")
 
 
-class BOMListView(ListView):
+class BOMListView(LoginRequiredMixin, ListView):
     model = BillOfMaterials
     template_name = "production/bom_list.html"
     context_object_name = "boms"
+    paginate_by = 20
 
     def get_queryset(self):
         qs = BillOfMaterials.objects.all().select_related("product")
@@ -158,18 +159,12 @@ class BOMListView(ListView):
         return qs
 
     def get_context_data(self, **kwargs):
-        from django.core.paginator import Paginator
-
         context = super().get_context_data(**kwargs)
-        boms = self.get_queryset()
-        page = self.request.GET.get("page")
-        paginator = Paginator(boms, 20)
-        context["boms"] = paginator.get_page(page)
         context["q"] = self.request.GET.get("q", "")
         return context
 
 
-class BOMDetailView(DetailView):
+class BOMDetailView(LoginRequiredMixin, DetailView):
     model = BillOfMaterials
     template_name = "production/bom_detail.html"
     context_object_name = "bom"
@@ -201,7 +196,7 @@ class BOMDetailView(DetailView):
         return context
 
 
-class BOMItemCreateView(CreateView):
+class BOMItemCreateView(LoginRequiredMixin, CreateView):
     model = BOMItem
     template_name = "production/bom_item_form.html"
     form_class = BOMItemForm
@@ -225,7 +220,7 @@ class BOMItemCreateView(CreateView):
         return reverse_lazy("production:bom-detail", args=[self.object.bom.pk])
 
 
-class BOMItemUpdateView(UpdateView):
+class BOMItemUpdateView(LoginRequiredMixin, UpdateView):
     model = BOMItem
     template_name = "production/bom_item_form.html"
     form_class = BOMItemForm
@@ -234,7 +229,7 @@ class BOMItemUpdateView(UpdateView):
         return reverse_lazy("production:bom-detail", args=[self.object.bom.pk])
 
 
-class BOMItemDeleteView(DeleteView):
+class BOMItemDeleteView(LoginRequiredMixin, DeleteView):
     model = BOMItem
     template_name = "production/bom_item_confirm_delete.html"
 
@@ -245,7 +240,7 @@ class BOMItemDeleteView(DeleteView):
 # ----- Production job views -----
 
 
-class ProductionCreateView(CreateView):
+class ProductionCreateView(LoginRequiredMixin, CreateView):
     model = Production
     template_name = "production/production_form.html"
     form_class = ProductionForm
@@ -280,7 +275,7 @@ class ProductionCreateView(CreateView):
         return super().form_valid(form)
 
 
-class ProductionUpdateView(UpdateView):
+class ProductionUpdateView(LoginRequiredMixin, UpdateView):
     model = Production
     template_name = "production/production_form.html"
     form_class = ProductionUpdateForm
@@ -301,7 +296,7 @@ class ProductionUpdateView(UpdateView):
         return form
 
 
-class ProductionListView(ListView):
+class ProductionListView(LoginRequiredMixin, ListView):
     model = Production
     template_name = "production/production_list.html"
     context_object_name = "productions"
@@ -410,7 +405,7 @@ class ProductionListApiView(TemplateView):
         return JsonResponse({"productions": data})
 
 
-class ProductionDetailView(DetailView):
+class ProductionDetailView(LoginRequiredMixin, DetailView):
     model = Production
     template_name = "production/production_detail.html"
     context_object_name = "production"
@@ -532,7 +527,7 @@ class ProductionDetailView(DetailView):
         return context
 
 
-class ProductionReceiveView(DetailView):
+class ProductionReceiveView(LoginRequiredMixin, DetailView):
     model = Production
     template_name = "production/production_receive.html"
     context_object_name = "production"
@@ -572,7 +567,7 @@ class ProductionReceiveView(DetailView):
         return reverse_lazy("production:production-detail", args=[self.object.pk])
 
 
-class ProductionDashboardView(TemplateView):
+class ProductionDashboardView(LoginRequiredMixin, TemplateView):
     template_name = "production/production_dashboard.html"
 
     def get_context_data(self, **kwargs):

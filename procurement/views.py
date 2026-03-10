@@ -1,6 +1,7 @@
 import hmac
 
 from django import forms
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import F
 from django.forms.models import inlineformset_factory
 from django.http import JsonResponse
@@ -48,7 +49,7 @@ _SUPPLIER_PREFILL_FIELDS = [
 ]
 
 
-class SupplierCreateView(CreateView):
+class SupplierCreateView(LoginRequiredMixin, CreateView):
     model = Supplier
     template_name = "procurement/supplier_form.html"
     form_class = SupplierForm
@@ -85,23 +86,24 @@ class SupplierCreateView(CreateView):
         return reverse_lazy("procurement:supplier-detail", args=[self.object.pk])
 
 
-class SupplierUpdateView(UpdateView):
+class SupplierUpdateView(LoginRequiredMixin, UpdateView):
     model = Supplier
     template_name = "procurement/supplier_form.html"
     form_class = SupplierForm
     success_url = reverse_lazy("procurement:supplier-list")
 
 
-class SupplierDeleteView(DeleteView):
+class SupplierDeleteView(LoginRequiredMixin, DeleteView):
     model = Supplier
     template_name = "procurement/supplier_confirm_delete.html"
     success_url = reverse_lazy("procurement:supplier-list")
 
 
-class SupplierListView(ListView):
+class SupplierListView(LoginRequiredMixin, ListView):
     model = Supplier
     template_name = "procurement/supplier_list.html"
     context_object_name = "suppliers"
+    paginate_by = 20
 
     def get_queryset(self):
         """Allow filtering by a simple ``q`` query parameter.
@@ -117,20 +119,12 @@ class SupplierListView(ListView):
         return qs
 
     def get_context_data(self, **kwargs):
-        from django.core.paginator import Paginator
-
         context = super().get_context_data(**kwargs)
-        # rely on ``get_queryset`` so the pagination respects the search
-        supplier_list = self.get_queryset()
-        page_num = self.request.GET.get("page")
-        paginator = Paginator(supplier_list, 20)
-        context["suppliers"] = paginator.get_page(page_num)
-        # preserve the search term for templates
         context["q"] = self.request.GET.get("q", "")
         return context
 
 
-class SupplierDetailView(DetailView):
+class SupplierDetailView(LoginRequiredMixin, DetailView):
     model = Supplier
     template_name = "procurement/supplier_detail.html"
     context_object_name = "supplier"
@@ -188,7 +182,7 @@ class SupplierDetailView(DetailView):
         return context
 
 
-class SupplierContactCreateView(CreateView):
+class SupplierContactCreateView(LoginRequiredMixin, CreateView):
     model = SupplierContact
     template_name = "procurement/supplier_contact_form.html"
     form_class = SupplierContactForm
@@ -214,7 +208,7 @@ class SupplierContactCreateView(CreateView):
         )
 
 
-class SupplierContactUpdateView(UpdateView):
+class SupplierContactUpdateView(LoginRequiredMixin, UpdateView):
     model = SupplierContact
     template_name = "procurement/supplier_contact_form.html"
     form_class = SupplierContactForm
@@ -225,7 +219,7 @@ class SupplierContactUpdateView(UpdateView):
         )
 
 
-class SupplierContactDeleteView(DeleteView):
+class SupplierContactDeleteView(LoginRequiredMixin, DeleteView):
     model = SupplierContact
     template_name = "procurement/supplier_contact_confirm_delete.html"
 
@@ -235,7 +229,7 @@ class SupplierContactDeleteView(DeleteView):
         )
 
 
-class SupplierProductCreateView(CreateView):
+class SupplierProductCreateView(LoginRequiredMixin, CreateView):
     model = SupplierProduct
     template_name = "procurement/supplier_product_form.html"
     form_class = SupplierProductForm
@@ -262,7 +256,7 @@ class SupplierProductCreateView(CreateView):
         )
 
 
-class SupplierProductUpdateView(UpdateView):
+class SupplierProductUpdateView(LoginRequiredMixin, UpdateView):
     model = SupplierProduct
     template_name = "procurement/supplier_product_form.html"
     form_class = SupplierProductForm
@@ -275,7 +269,7 @@ class SupplierProductUpdateView(UpdateView):
         )
 
 
-class SupplierProductDeleteView(DeleteView):
+class SupplierProductDeleteView(LoginRequiredMixin, DeleteView):
     model = SupplierProduct
     template_name = "procurement/supplier_product_confirm_delete.html"
     success_url = reverse_lazy("procurement:supplier-list")
@@ -287,27 +281,29 @@ class SupplierProductDeleteView(DeleteView):
         )
 
 
-class SupplierPurchaseOrderListView(ListView):
+class SupplierPurchaseOrderListView(LoginRequiredMixin, ListView):
     model = PurchaseOrder
     template_name = "procurement/supplier_purchaseorder_list.html"
     context_object_name = "purchase_orders"
+    paginate_by = 20
 
     def get_queryset(self):
         supplier_id = self.kwargs.get("pk")
         return PurchaseOrder.objects.filter(supplier_id=supplier_id)
 
 
-class SupplierProductListView(ListView):
+class SupplierProductListView(LoginRequiredMixin, ListView):
     model = SupplierProduct
     template_name = "procurement/supplier_product_list.html"
     context_object_name = "supplier_products"
+    paginate_by = 20
 
     def get_queryset(self):
         supplier_id = self.kwargs.get("pk")
         return SupplierProduct.objects.filter(supplier_id=supplier_id)
 
 
-class SupplierProductIDsView(DetailView):
+class SupplierProductIDsView(LoginRequiredMixin, DetailView):
     """Return JSON list of *supplier‑product* IDs for a supplier.
 
     This matches the values used in the purchase order line form, which
@@ -329,17 +325,17 @@ class SupplierProductIDsView(DetailView):
         return JsonResponse({"product_ids": ids})
 
 
-class PurchaseOrderDeleteView(DeleteView):
+class PurchaseOrderDeleteView(LoginRequiredMixin, DeleteView):
     model = PurchaseOrder
     template_name = "procurement/purchase_order_confirm_delete.html"
     success_url = reverse_lazy("procurement:supplier-list")
 
 
-class ProcurementDashboardView(TemplateView):
+class ProcurementDashboardView(LoginRequiredMixin, TemplateView):
     template_name = "procurement/procurement_dashboard.html"
 
     def get_context_data(self, **kwargs):
-        from django.db.models import Count, F, Q
+        from django.db.models import Count, Q
 
         context = super().get_context_data(**kwargs)
         from django.utils import timezone
@@ -443,7 +439,7 @@ class ProcurementDashboardView(TemplateView):
         return context
 
 
-class PurchaseOrderCreateView(CreateView):
+class PurchaseOrderCreateView(LoginRequiredMixin, CreateView):
     model = PurchaseOrder
     template_name = "procurement/purchase_order_form.html"
     form_class = PurchaseOrderForm
@@ -551,7 +547,7 @@ class PurchaseOrderCreateView(CreateView):
         )
 
 
-class PurchaseOrderListView(ListView):
+class PurchaseOrderListView(LoginRequiredMixin, ListView):
     model = PurchaseOrder
     template_name = "procurement/purchase_order_list.html"
     context_object_name = "purchase_orders"
@@ -606,7 +602,7 @@ class PurchaseOrderListView(ListView):
         return context
 
 
-class PurchaseOrderDetailView(DetailView):
+class PurchaseOrderDetailView(LoginRequiredMixin, DetailView):
     model = PurchaseOrder
     template_name = "procurement/purchase_order_detail.html"
     context_object_name = "purchase_order"
@@ -670,18 +666,17 @@ class PurchaseOrderDetailView(DetailView):
 # The dedicated template and URL have been deleted as well.
 
 
-class PurchaseOrderReceiveView(DetailView):
+class PurchaseOrderReceiveView(LoginRequiredMixin, DetailView):
     model = PurchaseOrder
     template_name = "procurement/purchase_order_receive.html"
     context_object_name = "purchase_order"
 
     def post(self, request, *args, **kwargs):
-        # process received quantities and mark lines complete
+        from inventory.services import refresh_required_cache_for_products
+        from procurement.services import receive_purchase_order_line
+
         self.object = self.get_object()
-        # if receive-all button was clicked, treat each line as if the
-        # remaining amount were entered
         receive_all = "receive_all" in request.POST
-        touched = False
         affected_product_ids: set[int] = set()
         for line in self.object.purchase_order_lines.filter(complete=False):
             if receive_all:
@@ -694,79 +689,13 @@ class PurchaseOrderReceiveView(DetailView):
                     qty = int(request.POST[key])
                 except ValueError:
                     continue
-            # any positive quantity should be treated as received;
-            if qty > 0:
-                touched = True
-                # update inventory and ledgers manually (qty may be less
-                # than order quantity, so we don't rely on the model hook)
-                from django.utils import timezone
+            product_id = receive_purchase_order_line(line, qty)
+            if product_id is not None:
+                affected_product_ids.add(product_id)
 
-                from inventory.models import Inventory, InventoryLedger
-                from procurement.models import PurchaseLedger
-
-                Inventory.objects.filter(product=line.product.product).update(
-                    quantity=F("quantity") + qty, last_updated=timezone.now()
-                )
-                affected_product_ids.add(line.product.product_id)
-
-                # route received stock to location if product has exactly one
-                from inventory.models import InventoryLocation
-
-                inv_obj = Inventory.objects.get(product=line.product.product)
-                stock_locs = list(inv_obj.stock_locations.all())
-                recv_location = None
-                if len(stock_locs) == 1:
-                    sl = InventoryLocation.objects.select_for_update().get(
-                        pk=stock_locs[0].pk
-                    )
-                    sl.quantity += qty
-                    sl.save(update_fields=["quantity", "last_updated"])
-                    recv_location = sl.location
-
-                InventoryLedger.objects.create(
-                    product=line.product.product,
-                    quantity=qty,
-                    action="Purchase Order",
-                    transaction_id=self.object.pk,
-                    location=recv_location,
-                )
-                PurchaseLedger.objects.create(
-                    product=line.product.product,
-                    quantity=qty,
-                    supplier=self.object.supplier,
-                    value=(line.product.cost or 0) * qty,
-                    transaction_id=self.object.pk,
-                )
-
-                # update received quantity; only mark complete/closed when
-                # we've now received at least the ordered amount
-                line.quantity_received = line.quantity_received + qty
-                if line.quantity_received >= line.quantity:
-                    line.complete = True
-                    line.closed = True
-                    # store the full-order value once the line is closed; do
-                    # not touch it during partial receipts.
-                    try:
-                        line.value = line.product.cost * line.quantity
-                    except Exception:
-                        line.value = None
-                # the monetary *order* value should stay the same; we only want
-                # to record it once the line is fully received.  partial
-                # receipts leave `value` untouched.
-                fields = ["quantity_received"]
-                if line.complete:
-                    fields += ["complete", "closed", "value"]
-                line.save(update_fields=fields)
-        # if any lines were changed, update the purchase order timestamp so
-        # users can see that something happened
-        if touched:
-            # auto_now takes care of the actual value
+        if affected_product_ids:
             self.object.save(update_fields=["updated_at"])
-            # refresh required_cached for all products whose stock changed
-            if affected_product_ids:
-                from inventory.services import refresh_required_cache_for_products
-
-                refresh_required_cache_for_products(affected_product_ids)
+            refresh_required_cache_for_products(affected_product_ids)
         return redirect(self.get_success_url())
 
     def get_success_url(self):

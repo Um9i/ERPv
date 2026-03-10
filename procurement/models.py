@@ -7,7 +7,7 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-from inventory.models import Inventory, InventoryLedger, Product
+from inventory.models import Product
 from main.mixins import AddressMixin
 
 
@@ -243,43 +243,7 @@ class PurchaseOrderLine(models.Model):
 
     @transaction.atomic
     def save(self, *args, **kwargs):
-        # Ensure validation runs before making inventory changes
         self.full_clean()
-        # when the line is being marked complete (first time) and not
-        # previously closed we perform the inventory adjustment. this
-        # logic still uses `self.quantity` because the order quantity is
-        # what drives stock increases; the view responsible for receiving
-        # will update `quantity_received` separately.
-        if self.complete and not self.closed:
-            product_qs = Inventory.objects.select_for_update().filter(
-                product=self.product.product
-            )
-            product_qs.update(
-                quantity=F("quantity") + self.quantity, last_updated=timezone.now()
-            )
-            # record monetary value
-            try:
-                self.value = self.product.cost * self.quantity
-            except Exception:
-                self.value = None
-            InventoryLedger.objects.create(
-                product=self.product.product,
-                quantity=self.quantity,
-                action="Purchase Order",
-                transaction_id=self.purchase_order.pk,
-            )
-            PurchaseLedger.objects.create(
-                product=self.product.product,
-                quantity=self.quantity,
-                supplier=self.purchase_order.supplier,
-                value=self.value or 0,
-                transaction_id=self.purchase_order.pk,
-            )
-            # keep inventory shortage cache in sync when stock increases
-            from inventory.services import refresh_required_cache_for_products
-
-            refresh_required_cache_for_products([self.product.product_id])
-            self.closed = True
         super().save(*args, **kwargs)
 
 

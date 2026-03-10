@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 
 from django.core.exceptions import ValidationError
@@ -14,6 +15,8 @@ from inventory.models import (
     ProductionAllocated,
 )
 from production.models import BillOfMaterials, Production
+
+logger = logging.getLogger(__name__)
 
 
 @transaction.atomic
@@ -37,6 +40,14 @@ def allocate_production(job: Production) -> None:
 
     job.bom_allocated = True
     job.bom_allocated_amount = job.quantity
+    logger.info(
+        "production_allocated",
+        extra={
+            "job_id": job.pk,
+            "product_id": job.product_id,
+            "quantity": job.quantity,
+        },
+    )
 
 
 @transaction.atomic
@@ -95,7 +106,20 @@ def receive_production(job: Production, delta: int) -> set[int]:
     if job.quantity_received >= job.quantity:
         job.closed = True
         job.complete = True
+        logger.info(
+            "production_completed",
+            extra={"job_id": job.pk, "product_id": job.product_id},
+        )
 
+    logger.info(
+        "production_received",
+        extra={
+            "job_id": job.pk,
+            "product_id": job.product_id,
+            "delta": delta,
+            "affected_products": list(affected_product_ids),
+        },
+    )
     return affected_product_ids
 
 
@@ -148,6 +172,15 @@ def receive_production_into_location(production_id, quantity_to_receive, locatio
     if entry:
         entry.location = location
         entry.save(update_fields=["location"])
+
+    logger.info(
+        "production_received_into_location",
+        extra={
+            "job_id": production_id,
+            "location_id": location_id,
+            "quantity": quantity_to_receive,
+        },
+    )
 
 
 def bom_product_ids(product_ids: Iterable[int]) -> set[int]:
