@@ -3,7 +3,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import F, Sum
-from django.db.models.functions import Greatest
+from django.db.models.functions import Greatest, Lower
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -11,7 +11,6 @@ from django.utils.translation import gettext_lazy as _
 
 from inventory.models import (
     Inventory,
-    InventoryLedger,
     InventoryLocation,
     Location,
     Product,
@@ -31,6 +30,9 @@ class Customer(AddressMixin, models.Model):
     class Meta:
         ordering = ["name"]
         verbose_name_plural = "Customer Management"
+        constraints = [
+            models.UniqueConstraint(Lower("name"), name="customer_name_ci_unique"),
+        ]
 
 
 class CustomerContact(AddressMixin, models.Model):
@@ -94,6 +96,7 @@ class SalesOrder(models.Model):
         indexes = [
             models.Index(fields=["customer"]),
             models.Index(fields=["created_at"]),
+            models.Index(fields=["ship_by_date"]),
         ]
 
     def __str__(self):
@@ -220,30 +223,9 @@ class SalesOrderLine(models.Model):
         # first time; partial shipments are handled by the view logic which
         # manually updates stock/ledgers and increments ``quantity_shipped``.
         if self.complete and not self.closed:
-            product_qs = Inventory.objects.select_for_update().filter(
-                product=self.product.product
-            )
-            product_qs.update(
-                quantity=F("quantity") - self.quantity, last_updated=timezone.now()
-            )
-            try:
-                self.value = self.product.price * self.quantity
-            except Exception:
-                self.value = None
-            InventoryLedger.objects.create(
-                product=self.product.product,
-                quantity=-abs(self.quantity),
-                action="Sales Order",
-                transaction_id=self.sales_order.pk,
-            )
-            SalesLedger.objects.create(
-                product=self.product.product,
-                quantity=self.quantity,
-                customer=self.sales_order.customer,
-                value=self.value or 0,
-                transaction_id=self.sales_order.pk,
-            )
-            self.closed = True
+            from sales.services import complete_sales_line
+
+            complete_sales_line(self)
         super().save(*args, **kwargs)
 
     def __str__(self):

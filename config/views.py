@@ -186,7 +186,7 @@ class ImportAsCustomerView(LoginRequiredMixin, UserPassesTestMixin, View):
             )
             resp.raise_for_status()
             data = resp.json()
-        except Exception as exc:
+        except (httpx.HTTPStatusError, httpx.RequestError) as exc:
             messages.error(request, f"Could not fetch data from {instance.name}: {exc}")
             return redirect(reverse_lazy("config:paired-instance-list"))
         params = {f: data.get(f, "") for f in _IMPORT_FIELDS}
@@ -230,7 +230,7 @@ class ImportAsSupplierView(LoginRequiredMixin, UserPassesTestMixin, View):
             )
             resp.raise_for_status()
             data = resp.json()
-        except Exception as exc:
+        except (httpx.HTTPStatusError, httpx.RequestError) as exc:
             messages.error(request, f"Could not fetch data from {instance.name}: {exc}")
             return redirect(reverse_lazy("config:paired-instance-list"))
         params = {f: data.get(f, "") for f in _IMPORT_FIELDS}
@@ -475,7 +475,7 @@ class BrowseCatalogueView(LoginRequiredMixin, UserPassesTestMixin, View):
                 catalogue = resp.json()
         except httpx.TimeoutException:
             error = f"Request to {instance.name} timed out."
-        except Exception as exc:
+        except (httpx.HTTPStatusError, httpx.RequestError) as exc:
             error = f"Could not fetch catalogue from {instance.name}: {exc}"
 
         if catalogue and instance.supplier:

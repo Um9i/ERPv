@@ -6,8 +6,97 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import F, Sum
 
-from inventory.models import Inventory, InventoryLedger, InventoryLocation, Location
+from inventory.models import (
+    Inventory,
+    InventoryLedger,
+    InventoryLocation,
+    Location,
+    ProductionAllocated,
+)
 from production.models import BillOfMaterials, Production
+
+
+@transaction.atomic
+def allocate_production(job: Production) -> None:
+    """Allocate BOM components for a production job.
+
+    Increments the ``ProductionAllocated`` quantities for each component and
+    marks the job as allocated.  Raises ``ValidationError`` if the product has
+    no bill of materials.
+    """
+    bom_items = job.bom()
+    if bom_items is None:
+        raise ValidationError("Product has no Bill of Materials.")
+
+    for item in bom_items:
+        alloc = ProductionAllocated.objects.select_for_update().get(
+            product=item.product
+        )
+        alloc.quantity = (alloc.quantity or 0) + item.quantity * job.quantity
+        alloc.save()
+
+    job.bom_allocated = True
+    job.bom_allocated_amount = job.quantity
+
+
+@transaction.atomic
+def receive_production(job: Production, delta: int) -> set[int]:
+    """Receive ``delta`` units of a production job.
+
+    Validates component stock, increases finished product inventory,
+    decreases component inventories and allocations, and creates ledger
+    entries.  Returns the set of affected product IDs so callers can
+    refresh caches.
+    """
+    if delta <= 0:
+        return set()
+
+    bom_items = job.bom()
+    affected_product_ids: set[int] = set()
+
+    # ensure all components have enough stock
+    if bom_items is not None:
+        for item in bom_items:
+            inv = Inventory.objects.select_for_update().get(product=item.product)
+            if inv.quantity - item.quantity * delta < 0:
+                raise ValidationError("Not enough Inventory to complete production.")
+
+    # increase finished product
+    prod_obj = Inventory.objects.select_for_update().get(product=job.product)
+    prod_obj.quantity = prod_obj.quantity + delta
+    prod_obj.save()
+    affected_product_ids.add(job.product_id)
+
+    # deduct components and create ledger entries
+    if bom_items is not None:
+        for item in bom_items:
+            qty_change = item.quantity * delta
+            Inventory.objects.select_for_update().filter(product=item.product).update(
+                quantity=F("quantity") - qty_change
+            )
+            ProductionAllocated.objects.select_for_update().filter(
+                product=item.product
+            ).update(quantity=F("quantity") - qty_change)
+            InventoryLedger.objects.create(
+                product=item.product,
+                quantity=-abs(qty_change),
+                action="Production",
+                transaction_id=job.pk,
+            )
+            affected_product_ids.add(item.product_id)
+        InventoryLedger.objects.create(
+            product=job.product,
+            quantity=delta,
+            action="Production",
+            transaction_id=job.pk,
+        )
+
+    # mark complete if fully received
+    if job.quantity_received >= job.quantity:
+        job.closed = True
+        job.complete = True
+
+    return affected_product_ids
 
 
 @transaction.atomic

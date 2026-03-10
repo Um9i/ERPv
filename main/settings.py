@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     "finance.apps.FinanceConfig",
     "config.apps.ConfigConfig",
     "dashboards.apps.DashboardsConfig",
+    "django_migration_linter",
 ]
 
 if DEBUG:

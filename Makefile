@@ -1,7 +1,7 @@
 PYTHON = .venv/bin/python
 PYTEST = .venv/bin/pytest
 
-.PHONY: dev prod test lint format check mypy audit migrate shell clean
+.PHONY: dev prod test lint format check mypy audit migrate shell clean lint-migrations
 
 dev:
 	podman compose up --build
@@ -32,6 +32,9 @@ audit:
 
 migrate:
 	$(PYTHON) manage.py migrate
+
+lint-migrations:
+	DEBUG=True SECRETKEY=test-secret $(PYTHON) manage.py lintmigrations --no-cache
 
 shell:
 	$(PYTHON) manage.py shell

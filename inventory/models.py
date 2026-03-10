@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import F, Min, Sum
+from django.db.models.functions import Lower
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
@@ -151,6 +152,9 @@ class Product(models.Model):
     class Meta:
         ordering = ["name"]
         verbose_name_plural = "Inventory Management"
+        constraints = [
+            models.UniqueConstraint(Lower("name"), name="product_name_ci_unique"),
+        ]
 
 
 @receiver(post_save, sender=Product)
@@ -259,7 +263,12 @@ class InventoryLocation(models.Model):
     last_updated = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ["inventory", "location"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["inventory", "location"],
+                name="unique_inventory_location",
+            ),
+        ]
         ordering = ["location"]
         verbose_name_plural = "Inventory Locations"
 
@@ -396,6 +405,12 @@ class StockTransfer(models.Model):
     class Meta:
         ordering = ["-transferred_at"]
         verbose_name_plural = "Stock Transfers"
+        indexes = [
+            models.Index(fields=["inventory"]),
+            models.Index(fields=["transferred_at"]),
+            models.Index(fields=["from_location"]),
+            models.Index(fields=["to_location"]),
+        ]
 
     def __str__(self):
         src = self.from_location or "Unallocated"

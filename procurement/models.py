@@ -2,7 +2,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from django.db import models, transaction
 from django.db.models import F, Sum
-from django.db.models.functions import Greatest
+from django.db.models.functions import Greatest, Lower
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -23,6 +23,9 @@ class Supplier(AddressMixin, models.Model):
     class Meta:
         ordering = ["name"]
         verbose_name_plural = "Supplier Management"
+        constraints = [
+            models.UniqueConstraint(Lower("name"), name="supplier_name_ci_unique"),
+        ]
 
 
 class SupplierContact(AddressMixin, models.Model):
@@ -52,7 +55,12 @@ class SupplierProduct(models.Model):
 
     class Meta:
         ordering = ["product__name"]
-        unique_together = ("supplier", "product")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["supplier", "product"],
+                name="unique_supplier_product",
+            ),
+        ]
         indexes = [
             models.Index(fields=["supplier"]),
             models.Index(fields=["product"]),
@@ -88,6 +96,7 @@ class PurchaseOrder(models.Model):
         indexes = [
             models.Index(fields=["supplier"]),
             models.Index(fields=["created_at"]),
+            models.Index(fields=["due_date"]),
         ]
 
     def __str__(self):
