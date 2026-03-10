@@ -1,112 +1,120 @@
+<div align="center">
+
 # ERPv
 
-A Django-based ERP (Enterprise Resource Planning) web application covering inventory, procurement, production, sales, and finance management.
+**A modern, open-source ERP built with Django — covering everything from purchase orders to production, shipping to finance.**
 
-## Features
+[![Python 3.14](https://img.shields.io/badge/python-3.14-blue.svg)](https://www.python.org/downloads/)
+[![Django 6.0](https://img.shields.io/badge/django-6.0-green.svg)](https://www.djangoproject.com/)
+[![Tests](https://img.shields.io/badge/tests-227%2B%20passing-brightgreen.svg)](#testing)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-| Module | Description |
-|---|---|
-| **Inventory** | Product catalogue with images, stock tracking, hierarchical warehouse locations (Warehouse → Zone → Bin), stock transfers, catalogue API, full audit ledger, stock health dashboard, and demand analysis |
-| **Procurement** | Suppliers, supplier contacts, purchase orders with receiving workflows, purchase ledger, and supplier product cost tracking |
-| **Production** | Recursive Bill of Materials management, interactive BOM visualiser, manufacturing jobs with due-date tracking, component shortage analysis, cost roll-up, margin analysis, and bin-level receiving |
-| **Sales** | Customers, customer contacts, sales orders, pick lists, shipment processing with stock availability checks, sales ledger, and PDF invoice generation via WeasyPrint |
-| **Finance** | Sales and purchase ledgers with filtering and CSV export, monthly breakdowns, outstanding orders report, product P&L with margin analysis, and a dashboard with 12-month sales vs purchases chart |
-| **Dashboards** | Shipping and delivery schedule views with day/week navigation, overdue order tracking, and per-module dashboards with search and KPI metrics |
-| **Config** | Company configuration, paired instance management for multi-site ERPv deployments with API-key authentication, remote catalogue browsing, and automated supplier/customer import |
+</div>
+
+---
+
+ERPv is a full-featured ERP web application designed for small-to-medium manufacturing and distribution businesses. It connects your inventory, procurement, production, sales, and finance workflows in a single system — with multi-site pairing, PDF invoices, and real-time dashboards out of the box.
+
+## What's Inside
+
+🏭 **Inventory** — Product catalogue with images, hierarchical warehouse locations (Warehouse → Zone → Bin), stock transfers, demand analysis, health dashboards, and a full audit ledger.
+
+🛒 **Procurement** — Manage suppliers and contacts, raise purchase orders, track receiving workflows, and monitor supplier product costs through the purchase ledger.
+
+⚙️ **Production** — Recursive Bill of Materials with an interactive tree visualiser, manufacturing jobs with due-date tracking, component shortage analysis, cost roll-ups, and margin analysis.
+
+📦 **Sales** — Customer management, sales orders with pick lists, shipment processing with real-time stock checks, and PDF invoice generation via WeasyPrint.
+
+💰 **Finance** — Sales and purchase ledgers with filtering and CSV export, monthly breakdowns, outstanding orders reports, product-level P&L, and a 12-month sales vs purchases chart.
+
+📊 **Dashboards** — Shipping and delivery schedules with day/week navigation, overdue order tracking, and per-module dashboards with search and KPI cards.
+
+🔗 **Multi-site Pairing** — Connect multiple ERPv instances together with API-key authentication, browse remote catalogues, and automatically import suppliers and customers across sites.
 
 ## Tech Stack
 
-- **Backend:** Django 6.0.3, Python 3.14
-- **Database:** PostgreSQL (production) / SQLite (development)
-- **Frontend:** Bootstrap 5 via django-crispy-forms
-- **PDF generation:** WeasyPrint
-- **Static files:** WhiteNoise
-- **Server:** Gunicorn
-- **Testing:** pytest, factory_boy, 227+ tests
-- **Quality:** ruff, black, mypy, bandit, pip-audit, pre-commit
+| Layer | Technology |
+|---|---|
+| Backend | Django 6.0.3, Python 3.14 |
+| Database | PostgreSQL (production), SQLite (development) |
+| Frontend | Bootstrap 5 via django-crispy-forms |
+| PDF Generation | WeasyPrint |
+| Static Files | WhiteNoise |
+| Server | Gunicorn |
+| Testing | pytest, factory_boy — 227+ tests |
+| Code Quality | ruff, black, mypy, bandit, pip-audit, pre-commit |
 
-## Getting Started
+## Quick Start
 
-### Local Development
+### Option 1: Docker (recommended)
 
-1. **Clone the repository and create a virtual environment:**
-
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   ```
-
-2. **Configure environment variables:**
-
-   ```bash
-   export SECRETKEY="your-secret-key"   # required in production; optional in dev
-   export DEBUG=True                     # defaults to False — must opt in for dev
-   export ALLOWED_HOSTS="localhost,127.0.0.1"  # comma-separated, defaults shown
-   export CURRENCY_SYMBOL="£"
-   ```
-
-   For PostgreSQL, set:
-
-   ```bash
-   export DATABASE_URL="postgres://user:password@localhost:5432/erpv"
-   ```
-
-   Without `DATABASE_URL` the app falls back to the local `db.sqlite3` file.
-
-   > **Note:** When `DEBUG=False`, `SECRETKEY` is mandatory — the app will
-   > refuse to start without it. Production security headers (`HSTS`,
-   > `SECURE_SSL_REDIRECT`, secure cookies) are enabled automatically.
-
-3. **Run migrations and start the development server:**
-
-   ```bash
-   python manage.py migrate
-   python manage.py runserver
-   ```
-
-### Docker (Recommended for Production)
-
-The repository includes a `docker-compose.yml` that spins up a PostgreSQL database and the Django app together.
+The fastest way to get up and running. Docker Compose spins up PostgreSQL and the app together:
 
 ```bash
 docker compose up --build
 ```
 
-The entrypoint script waits for the database, runs migrations, collects static files, then starts Gunicorn on port **8000**.
-
-**Key environment variables for Docker:**
+The entrypoint script handles migrations, static file collection, and starts Gunicorn on port **8000** — you just need to set a few environment variables:
 
 | Variable | Default | Description |
 |---|---|---|
-| `SECRETKEY` | *(required)* | Django secret key – must be set in production |
-| `DEBUG` | `False` | Set to `True` for development |
-| `ALLOWED_HOSTS` | `localhost,127.0.0.1` | Comma-separated list of allowed hostnames |
-| `DATABASE_URL` | SQLite | Full database connection URL |
-| `CURRENCY_SYMBOL` | `£` | Currency symbol used in the UI |
+| `SECRETKEY` | *(required in production)* | Django secret key |
+| `DEBUG` | `False` | Set `True` for development |
+| `ALLOWED_HOSTS` | `localhost,127.0.0.1` | Comma-separated hostnames |
+| `DATABASE_URL` | SQLite fallback | PostgreSQL connection URL |
+| `CURRENCY_SYMBOL` | `£` | Currency symbol shown in the UI |
 
-## Running Tests
+### Option 2: Local Development
 
-Tests use pytest with pytest-django and coverage reporting:
+```bash
+# 1. Clone and set up a virtual environment
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# 2. Configure your environment
+export DEBUG=True
+export SECRETKEY="your-secret-key"       # optional when DEBUG=True
+export ALLOWED_HOSTS="localhost,127.0.0.1"
+
+# 3. Run migrations and start the server
+python manage.py migrate
+python manage.py runserver
+```
+
+To use PostgreSQL locally, set `DATABASE_URL`:
+
+```bash
+export DATABASE_URL="postgres://user:password@localhost:5432/erpv"
+```
+
+Without it, the app falls back to a local SQLite file — fine for development.
+
+> **Production note:** When `DEBUG=False`, `SECRETKEY` is mandatory and security headers (HSTS, SSL redirect, secure cookies) are enabled automatically.
+
+## Testing
+
+Tests run with pytest and include coverage reporting:
 
 ```bash
 DEBUG=True SECRETKEY=test pytest
 ```
 
-Coverage reports are written to `htmlcov/`.
+Coverage reports are generated in `htmlcov/`.
 
 ### Code Quality
 
-The project uses [pre-commit](https://pre-commit.com/) hooks for automated checks:
+The project uses [pre-commit](https://pre-commit.com/) hooks to keep things clean:
 
 ```bash
 pre-commit install          # one-time setup
 pre-commit run --all-files  # manual run
 ```
 
-Hooks include **black** (formatting), **ruff** (linting), and **bandit** (security).
+This runs **black** (formatting), **ruff** (linting), and **bandit** (security scanning) automatically.
 
-Type checking is available via mypy (currently scoped to the finance module):
+Type checking via mypy is available for the finance module:
 
 ```bash
 DEBUG=True SECRETKEY=test mypy finance/
@@ -115,12 +123,12 @@ DEBUG=True SECRETKEY=test mypy finance/
 ## Project Structure
 
 ```
-main/          # Django project settings, URLs, middleware, template tags, and test factories
-inventory/     # Stock management, warehouse locations, ledger, adjustments, and catalogue API
-procurement/   # Suppliers, purchase orders, receiving, and supplier product notifications
-production/    # BOM management, manufacturing jobs, cost roll-up, and BOM visualiser
+main/          # Settings, URLs, middleware, template tags, and test factories
+inventory/     # Stock management, warehouse locations, ledger, and catalogue API
+procurement/   # Suppliers, purchase orders, receiving, and notifications
+production/    # BOM management, manufacturing jobs, cost roll-up, and visualiser
 sales/         # Customers, sales orders, shipping, and PDF invoices
-finance/       # Ledger views, CSV export, outstanding orders, and product P&L reports
+finance/       # Ledger views, CSV export, outstanding orders, and product P&L
 config/        # Company configuration and paired instance management
 dashboards/    # Shipping and delivery schedule views
 docs/          # Module-level documentation
@@ -128,15 +136,15 @@ templates/     # HTML templates
 static/        # Static assets
 ```
 
-## Module Documentation
+## Documentation
 
-Detailed documentation for each module lives in the [`docs/`](docs/) directory:
+Each module has its own detailed docs in the [`docs/`](docs/) directory:
 
-- [Inventory](docs/inventory.md)
-- [Procurement](docs/procurement.md)
-- [Production](docs/production.md)
-- [Sales](docs/sales.md)
-- [Finance](docs/finance.md)
+- [Inventory](docs/inventory.md) — stock tracking, locations, adjustments, and the catalogue API
+- [Procurement](docs/procurement.md) — suppliers, purchase orders, and receiving
+- [Production](docs/production.md) — BOMs, manufacturing jobs, and cost analysis
+- [Sales](docs/sales.md) — customers, orders, shipping, and invoicing
+- [Finance](docs/finance.md) — ledgers, P&L, and the finance dashboard
 
 ## License
 
