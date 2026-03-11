@@ -10,10 +10,10 @@ prod:
 	podman compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 
 test:
-	DEBUG=True SECRETKEY=test-secret $(PYTEST) -o "addopts=" --tb=short -q
+	DEBUG=True SECRETKEY=test-secret $(PYTEST) -o "addopts=" --tb=short -q -n auto
 
 test-coverage:
-	DEBUG=True SECRETKEY=test-secret $(PYTEST) -o "addopts=" --tb=short --cov=. --cov-report=html --cov-report=term-missing
+	DEBUG=True SECRETKEY=test-secret $(PYTEST) -o "addopts=" --tb=short -n auto --cov=. --cov-report=html --cov-report=term-missing
 
 seed:
 	DEBUG=True SECRETKEY=test-secret $(PYTHON) manage.py seeddata

@@ -33,6 +33,7 @@ pyphen==0.17.2
 pytest==9.0.2
 pytest-cov==7.0.0
 pytest-django==4.11.1
+pytest-xdist==3.8.0
 python-dotenv==1.2.1
 sqlparse==0.5.5
 tinycss2==1.5.1
