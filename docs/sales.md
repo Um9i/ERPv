@@ -21,6 +21,10 @@ dashboards.
   creates a pick list with location-aware bin breakdown, allocating stock
   from assigned inventory locations first and falling back to unallocated
   stock.  Lines with insufficient inventory are flagged as shortages.
+  The `refresh()` method deletes existing lines and regenerates them from
+  current stock levels.  The `_populate_lines()` instance method contains
+  the core allocation logic shared by both `generate_for_order()` and
+  `refresh()`.
 * **PickListLine** – individual picking instruction referencing a sales order
   line, an optional `Location`, and an `is_shortage` flag.  Also tracks
   `confirmed` (boolean) and `confirmed_at` (timestamp) for the scan-to-pick
@@ -63,8 +67,10 @@ Indexes on product and customer fields assist with searching and reporting.
 * **PickListCreateView** generates a new pick list for an order and redirects
   to the pick list detail page.
 * **PickListDetailView** displays the picking guide with lines, locations,
-  and shortage flags.  Includes a "Scan & Confirm" button linking to the
-  confirmation workflow.
+  and shortage flags.  Auto-refreshes pick list data on every view when
+  shortages exist and the order is still open — ensuring warehouse staff
+  always see current stock availability without manual intervention.
+  Includes a "Scan & Confirm" button linking to the confirmation workflow.
 * **PickConfirmView** provides a scan-to-pick confirmation workflow:
   * GET renders a scanner UI with manual and camera-based barcode/QR input.
   * POST accepts `scan_value` (barcode or SKU lookup) or `line_id` (manual

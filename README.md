@@ -6,7 +6,7 @@
 
 [![Python 3.14](https://img.shields.io/badge/python-3.14-blue.svg)](https://www.python.org/downloads/)
 [![Django 6.0](https://img.shields.io/badge/django-6.0-green.svg)](https://www.djangoproject.com/)
-[![Tests](https://img.shields.io/badge/tests-424%2B%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-500%2B%20passing-brightgreen.svg)](#testing)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -45,7 +45,7 @@ ERPv is a full-featured ERP web application designed for small-to-medium manufac
 | QR Codes | python-qrcode |
 | Static Files | WhiteNoise |
 | Server | Gunicorn |
-| Testing | pytest, factory_boy — 424+ tests |
+| Testing | pytest, pytest-xdist, factory_boy — 500+ tests |
 | Code Quality | ruff, black, mypy, bandit, pip-audit, pre-commit |
 
 ## Quick Start
