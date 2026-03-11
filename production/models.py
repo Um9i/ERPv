@@ -287,3 +287,24 @@ class Production(AuditMixin, models.Model):
             from inventory.services import refresh_required_cache_for_products
 
             refresh_required_cache_for_products(affected_product_ids)
+
+
+class ProductionLedger(models.Model):
+    product = models.ForeignKey(
+        Product, on_delete=models.CASCADE, related_name="production_ledger"
+    )
+    quantity = models.BigIntegerField()
+    value = models.DecimalField(max_digits=10, decimal_places=2)
+    date = models.DateTimeField(auto_now_add=True)
+    transaction_id = models.PositiveBigIntegerField()
+
+    def __str__(self) -> str:
+        return f"{self.product}"
+
+    class Meta:
+        ordering = ["-date"]
+        verbose_name_plural = "Production Ledger"
+        indexes = [
+            models.Index(fields=["product"]),
+            models.Index(fields=["date"]),
+        ]

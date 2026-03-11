@@ -63,6 +63,8 @@ class BOMCreateView(LoginRequiredMixin, CreateView):
             form=BOMItemForm,
             extra=1,
             can_delete=True,
+            min_num=1,
+            validate_min=True,
         )
         if self.request.POST:
             parent = None
@@ -115,6 +117,8 @@ class BOMUpdateView(LoginRequiredMixin, UpdateView):
             form=BOMItemForm,
             extra=1,
             can_delete=True,
+            min_num=1,
+            validate_min=True,
         )
         if self.request.POST:
             context["lines_formset"] = LineFormset(
@@ -141,6 +145,7 @@ class BOMUpdateView(LoginRequiredMixin, UpdateView):
 
 
 class BOMDeleteView(LoginRequiredMixin, DeleteView):
+    model = BillOfMaterials
     template_name = "production/bom_confirm_delete.html"
     success_url = reverse_lazy("production:bom-list")
 

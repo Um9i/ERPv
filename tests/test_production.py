@@ -213,7 +213,7 @@ class TestProduction:
             "product": product.pk,
             "bom_items-TOTAL_FORMS": "2",
             "bom_items-INITIAL_FORMS": "0",
-            "bom_items-MIN_NUM_FORMS": "0",
+            "bom_items-MIN_NUM_FORMS": "1",
             "bom_items-MAX_NUM_FORMS": "1000",
             "bom_items-0-product": comp1.pk,
             "bom_items-0-quantity": "5",
@@ -228,6 +228,56 @@ class TestProduction:
         assert len(items) == 2
         assert items[0].product == comp1 and items[0].quantity == 5
         assert items[1].product == comp2 and items[1].quantity == 7
+
+    def test_bom_create_rejects_empty(self, client, product):
+        """A BOM with no component items should be rejected."""
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from production.models import BillOfMaterials
+
+        user = User.objects.create_user(username="bomempty")
+        client.force_login(user)
+        url = reverse("production:bom-create")
+        data = {
+            "product": product.pk,
+            "bom_items-TOTAL_FORMS": "0",
+            "bom_items-INITIAL_FORMS": "0",
+            "bom_items-MIN_NUM_FORMS": "1",
+            "bom_items-MAX_NUM_FORMS": "1000",
+        }
+        resp = client.post(url, data)
+        # should re-render form with errors, not redirect
+        assert resp.status_code == 200
+        assert not BillOfMaterials.objects.exists()
+
+    def test_bom_update_rejects_all_deleted(self, client, product, bom):
+        """Deleting all items from an existing BOM should be rejected."""
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        existing = list(bom.bom_items.all())
+        user = User.objects.create_user(username="bomdelall")
+        client.force_login(user)
+        url = reverse("production:bom-update", args=[bom.pk])
+        data = {
+            "product": product.pk,
+            "bom_items-TOTAL_FORMS": str(len(existing)),
+            "bom_items-INITIAL_FORMS": str(len(existing)),
+            "bom_items-MIN_NUM_FORMS": "1",
+            "bom_items-MAX_NUM_FORMS": "1000",
+        }
+        for idx, itm in enumerate(existing):
+            data[f"bom_items-{idx}-id"] = itm.pk
+            data[f"bom_items-{idx}-product"] = itm.product.pk
+            data[f"bom_items-{idx}-quantity"] = str(itm.quantity)
+            data[f"bom_items-{idx}-DELETE"] = "on"
+        resp = client.post(url, data)
+        # should re-render form with errors, not redirect
+        assert resp.status_code == 200
+        # items should still exist
+        bom.refresh_from_db()
+        assert bom.bom_items.count() == len(existing)
 
     def test_bom_update_can_modify_lines(self, client, product, bom):
         """Editing an existing BOM lets us change quantities and add new line."""
@@ -246,7 +296,7 @@ class TestProduction:
             "product": product.pk,
             "bom_items-TOTAL_FORMS": "3",
             "bom_items-INITIAL_FORMS": "2",
-            "bom_items-MIN_NUM_FORMS": "0",
+            "bom_items-MIN_NUM_FORMS": "1",
             "bom_items-MAX_NUM_FORMS": "1000",
         }
         for idx, itm in enumerate(existing):
@@ -347,20 +397,23 @@ class TestProduction:
         from django.contrib.auth.models import User
         from django.urls import reverse
 
+        from inventory.models import Product as InvProduct
         from production.models import BillOfMaterials, BOMItem
 
         # must be logged in because middleware enforces auth
         user = User.objects.create_user(username="test")
         client.force_login(user)
-        # create bom - supply an empty components formset so validation
-        # passes (the new form requires management data even if no lines).
+        # create bom — must include at least one component
+        comp = InvProduct.objects.create(name="component1")
         url = reverse("production:bom-create")
         data = {
             "product": product.pk,
-            "bom_items-TOTAL_FORMS": "0",
+            "bom_items-TOTAL_FORMS": "1",
             "bom_items-INITIAL_FORMS": "0",
-            "bom_items-MIN_NUM_FORMS": "0",
+            "bom_items-MIN_NUM_FORMS": "1",
             "bom_items-MAX_NUM_FORMS": "1000",
+            "bom_items-0-product": comp.pk,
+            "bom_items-0-quantity": "3",
         }
         resp = client.post(url, data)
         assert resp.status_code == 302
@@ -370,18 +423,11 @@ class TestProduction:
         url = reverse("production:bom-detail", args=[bom.pk])
         resp = client.get(url)
         assert resp.status_code == 200
-        # add item (use a different component product)
-        from inventory.models import Product as InvProduct
-
-        prod2 = InvProduct.objects.create(name="component1")
-        url = reverse("production:bomitem-create") + f"?bom={bom.pk}"
-        resp = client.post(url, {"bom": bom.pk, "product": prod2.pk, "quantity": 3})
-        assert resp.status_code == 302
         item = BOMItem.objects.first()
         assert item.bom == bom
         # edit item
         url = reverse("production:bomitem-update", args=[item.pk])
-        resp = client.post(url, {"bom": bom.pk, "product": prod2.pk, "quantity": 5})
+        resp = client.post(url, {"bom": bom.pk, "product": comp.pk, "quantity": 5})
         assert resp.status_code == 302
         item.refresh_from_db()
         assert item.quantity == 5

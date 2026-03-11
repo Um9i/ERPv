@@ -7,6 +7,7 @@
 {% block dashboard_links %}
 <a href="{% url 'finance:sales-ledger-archive' %}"><i class="bi bi-receipt me-2"></i>Sales ledger</a>
 <a href="{% url 'finance:purchase-ledger-archive' %}"><i class="bi bi-bag me-2"></i>Purchase ledger</a>
+<a href="{% url 'finance:production-ledger-archive' %}"><i class="bi bi-gear me-2"></i>Production ledger</a>
 <a href="{% url 'finance:outstanding-orders' %}"><i class="bi bi-clock-history me-2"></i>Outstanding Orders</a>
 <a href="{% url 'finance:product-pl' %}"><i class="bi bi-graph-up me-2"></i>Product P&amp;L</a>
 {% endblock %}
@@ -59,6 +60,11 @@
   <li class="nav-item" role="presentation">
     <button class="nav-link" id="tab-purchases" data-bs-toggle="tab" data-bs-target="#pane-purchases" type="button" role="tab">
       <i class="bi bi-bag me-1"></i>Recent Purchases
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="tab-production" data-bs-toggle="tab" data-bs-target="#pane-production" type="button" role="tab">
+      <i class="bi bi-gear me-1"></i>Recent Production
     </button>
   </li>
   <li class="nav-item" role="presentation">
@@ -220,6 +226,42 @@
       {% endif %}
     </div>
   </div>{# /pane-purchases #}
+
+  {# ── Recent Production pane ── #}
+  <div class="tab-pane fade" id="pane-production" role="tabpanel">
+    <div class="detail-section">
+      <div class="detail-section-header">
+        <h2 class="detail-section-title">Recent Production</h2>
+        <a class="btn btn-sm btn-outline-success" href="{% url 'finance:production-ledger-archive' %}">View all</a>
+      </div>
+      {% if recent_production %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Product</th>
+              <th class="text-end">Qty</th>
+              <th class="text-end">Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in recent_production %}
+            <tr>
+              <td class="text-nowrap">{{ row.date|date:"d M Y" }}</td>
+              <td class="text-truncate" style="max-width:220px;" title="{{ row.product }}">{{ row.product }}</td>
+              <td class="text-end">{{ row.quantity }}</td>
+              <td class="text-end text-nowrap">{{ row.value|currency }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted mb-0 p-3">No production ledger entries yet.</p>
+      {% endif %}
+    </div>
+  </div>{# /pane-production #}
 
   {# ── Monthly chart pane ── #}
   <div class="tab-pane fade" id="pane-chart" role="tabpanel">

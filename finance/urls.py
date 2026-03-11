@@ -42,4 +42,19 @@ urlpatterns = [
         views.ProductPLView.as_view(),
         name="product-pl",
     ),
+    path(
+        "production/",
+        views.ProductionLedgerArchiveView.as_view(),
+        name="production-ledger-archive",
+    ),
+    path(
+        "production/<int:year>/<int:month>/",
+        views.ProductionLedgerMonthArchiveView.as_view(),
+        name="production-ledger-month",
+    ),
+    path(
+        "production/export/",
+        views.ProductionLedgerExportView.as_view(),
+        name="production-ledger-export",
+    ),
 ]

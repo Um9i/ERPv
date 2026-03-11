@@ -14,6 +14,7 @@ from django.views.generic.dates import ArchiveIndexView, MonthArchiveView
 
 from inventory.models import Product
 from procurement.models import PurchaseLedger, PurchaseOrder, Supplier
+from production.models import Production, ProductionLedger
 from sales.models import Customer, SalesLedger, SalesOrder
 
 logger = logging.getLogger(__name__)
@@ -62,6 +63,9 @@ class FinanceDashboardView(LoginRequiredMixin, TemplateView):
                 ).order_by("-date")[:5],
                 "recent_purchases": PurchaseLedger.objects.select_related(
                     "supplier", "product"
+                ).order_by("-date")[:5],
+                "recent_production": ProductionLedger.objects.select_related(
+                    "product"
                 ).order_by("-date")[:5],
                 "chart_data": chart_data,
                 "stock_value": snapshot.stock_value,
@@ -550,6 +554,138 @@ class PurchaseLedgerExportView(LoginRequiredMixin, View):
                     entry.quantity,
                     entry.value,
                     f"PO{entry.transaction_id:05d}",
+                    entry.created_by_username or "",
+                    entry.updated_by_username or "",
+                ]
+            )
+        return response
+
+
+# ---------------------------------------------------------------------------
+# Production ledger
+# ---------------------------------------------------------------------------
+
+
+class ProductionLedgerFilterMixin:
+    """Shared queryset filtering for production ledger views."""
+
+    def get_queryset(self):
+        qs = super().get_queryset().select_related("product")
+        qs = qs.annotate(
+            created_by_username=Subquery(
+                Production.objects.filter(pk=OuterRef("transaction_id")).values(
+                    "created_by__username"
+                )[:1]
+            ),
+            updated_by_username=Subquery(
+                Production.objects.filter(pk=OuterRef("transaction_id")).values(
+                    "updated_by__username"
+                )[:1]
+            ),
+        )
+        product_id = self.request.GET.get("product")
+        if product_id:
+            qs = qs.filter(product_id=product_id)
+        return qs
+
+    def _production_context(self, context: dict) -> dict:
+        context["ledger_label"] = "Production Ledger"
+        context["products"] = (
+            Product.objects.filter(production_ledger__isnull=False)
+            .distinct()
+            .order_by("name")
+        )
+        context["selected_product"] = self.request.GET.get("product", "")
+        return context
+
+
+class ProductionLedgerArchiveView(
+    ProductionLedgerFilterMixin,
+    LedgerArchiveMixin,
+    LoginRequiredMixin,
+    ArchiveIndexView,
+):
+    model = ProductionLedger
+    template_name = "finance/productionledger_archive.html"
+
+    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        self._production_context(context)
+        qs = self.get_queryset()
+        context["overall_total"] = qs.aggregate(
+            total=Coalesce(Sum("value"), Decimal("0"))
+        )["total"] or Decimal("0")
+        context["page_total"] = sum(
+            (e.value for e in context["object_list"]), Decimal("0")
+        )
+        return context
+
+
+class ProductionLedgerMonthArchiveView(
+    ProductionLedgerFilterMixin,
+    LedgerArchiveMixin,
+    LoginRequiredMixin,
+    MonthArchiveView,
+):
+    model = ProductionLedger
+    template_name = "finance/productionledger_month.html"
+
+    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        self._production_context(context)
+        context["month_total"] = self.object_list.aggregate(
+            total=Coalesce(Sum("value"), Decimal("0"))
+        )["total"] or Decimal("0")
+        context["page_total"] = sum(
+            (e.value for e in context["object_list"]), Decimal("0")
+        )
+        return context
+
+
+class ProductionLedgerExportView(LoginRequiredMixin, View):
+    def get(self, request):
+        qs = ProductionLedger.objects.select_related("product").order_by("-date")
+        qs = qs.annotate(
+            created_by_username=Subquery(
+                Production.objects.filter(pk=OuterRef("transaction_id")).values(
+                    "created_by__username"
+                )[:1]
+            ),
+            updated_by_username=Subquery(
+                Production.objects.filter(pk=OuterRef("transaction_id")).values(
+                    "updated_by__username"
+                )[:1]
+            ),
+        )
+        product_id = request.GET.get("product")
+        if product_id:
+            qs = qs.filter(product_id=product_id)
+        year = request.GET.get("year")
+        month = request.GET.get("month")
+        if year and month:
+            qs = qs.filter(date__year=year, date__month=month)
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="production_ledger.csv"'
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                "Date",
+                "Product",
+                "Quantity",
+                "Value",
+                "Transaction",
+                "Created By",
+                "Updated By",
+            ]
+        )
+        for entry in qs:
+            writer.writerow(
+                [
+                    entry.date.strftime("%Y-%m-%d %H:%M"),
+                    entry.product.name,
+                    entry.quantity,
+                    entry.value,
+                    f"PR{entry.transaction_id:05d}",
                     entry.created_by_username or "",
                     entry.updated_by_username or "",
                 ]

@@ -129,8 +129,8 @@ def test_finance_dashboard_query_count(client):
         response = client.get("/finance/")
     assert response.status_code == 200
     # With the materialized cache the dashboard needs far fewer queries
-    # (session/auth + snapshot read + recent activity).
-    assert len(ctx) <= 30, f"Finance dashboard ran {len(ctx)} queries (expected ≤30)"
+    # (session/auth + snapshot read + recent activity + recent production).
+    assert len(ctx) <= 32, f"Finance dashboard ran {len(ctx)} queries (expected ≤32)"
 
 
 @pytest.mark.django_db

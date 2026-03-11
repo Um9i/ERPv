@@ -14,7 +14,7 @@ from inventory.models import (
     Location,
     ProductionAllocated,
 )
-from production.models import BillOfMaterials, Production
+from production.models import BillOfMaterials, Production, ProductionLedger
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +101,15 @@ def receive_production(job: Production, delta: int) -> set[int]:
             action="Production",
             transaction_id=job.pk,
         )
+
+    # create production ledger entry for the finished goods received
+    unit_cost = job.product.unit_cost or 0
+    ProductionLedger.objects.create(
+        product=job.product,
+        quantity=delta,
+        value=unit_cost * delta,
+        transaction_id=job.pk,
+    )
 
     # mark complete if fully received
     if job.quantity_received >= job.quantity:
