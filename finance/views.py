@@ -1,21 +1,19 @@
 import csv
 import logging
-from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Dict
 
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import DecimalField, Min, OuterRef, Subquery, Sum
-from django.db.models.functions import Coalesce, TruncMonth
+from django.db.models import Sum
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.utils import timezone
 from django.views import View
 from django.views.generic import TemplateView
 from django.views.generic.dates import ArchiveIndexView, MonthArchiveView
 
-from inventory.models import Inventory, Product
-from procurement.models import PurchaseLedger, Supplier, SupplierProduct
-from production.models import BOMItem
+from inventory.models import Product
+from procurement.models import PurchaseLedger, Supplier
 from sales.models import Customer, SalesLedger
 
 logger = logging.getLogger(__name__)
@@ -26,102 +24,29 @@ class FinanceDashboardView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
-        sales_total = SalesLedger.objects.aggregate(
-            total=Coalesce(Sum("value"), Decimal("0"))
-        )["total"] or Decimal("0")
-        purchase_total = PurchaseLedger.objects.aggregate(
-            total=Coalesce(Sum("value"), Decimal("0"))
-        )["total"] or Decimal("0")
-
         now = timezone.now()
-        month_filter = {"date__year": now.year, "date__month": now.month}
-        month_sales = SalesLedger.objects.filter(**month_filter).aggregate(
-            total=Coalesce(Sum("value"), Decimal("0"))
-        )["total"] or Decimal("0")
-        month_purchases = PurchaseLedger.objects.filter(**month_filter).aggregate(
-            total=Coalesce(Sum("value"), Decimal("0"))
-        )["total"] or Decimal("0")
 
-        # Monthly chart – past 12 months
-        today = now.date()
-        first_of_month = today.replace(day=1)
-        chart_months = []
-        for i in range(11, -1, -1):
-            m = first_of_month.month - i
-            y = first_of_month.year
-            while m <= 0:
-                m += 12
-                y -= 1
-            chart_months.append(date(y, m, 1))
-        from_dt = timezone.make_aware(
-            datetime(chart_months[0].year, chart_months[0].month, 1)
-        )
-        sales_monthly = (
-            SalesLedger.objects.filter(date__gte=from_dt)
-            .annotate(month=TruncMonth("date"))
-            .values("month")
-            .annotate(total=Sum("value"))
-            .order_by("month")
-        )
-        purchases_monthly = (
-            PurchaseLedger.objects.filter(date__gte=from_dt)
-            .annotate(month=TruncMonth("date"))
-            .values("month")
-            .annotate(total=Sum("value"))
-            .order_by("month")
-        )
-        sales_lu = {
-            entry["month"].strftime("%Y-%m"): float(entry["total"])
-            for entry in sales_monthly
-        }
-        purchases_lu = {
-            entry["month"].strftime("%Y-%m"): float(entry["total"])
-            for entry in purchases_monthly
-        }
-        month_labels = [m.strftime("%Y-%m") for m in chart_months]
-        chart_data = {
-            "months": month_labels,
-            "sales": [sales_lu.get(m, 0) for m in month_labels],
-            "purchases": [purchases_lu.get(m, 0) for m in month_labels],
-        }
+        from finance.models import FinanceDashboardSnapshot
 
-        # Stock value from inventory (min supplier cost, BOM fallback)
-        min_cost_sq = (
-            SupplierProduct.objects.filter(product=OuterRef("product"))
-            .values("product")
-            .annotate(mc=Min("cost"))
-            .values("mc")[:1]
-        )
-        inventories = list(
-            Inventory.objects.annotate(
-                unit_cost=Subquery(min_cost_sq, output_field=DecimalField()),
-            ).values_list("product_id", "quantity", "unit_cost")
-        )
-        no_cost_ids = [pid for pid, qty, cost in inventories if cost is None and qty]
-        bom_costs = {}
-        if no_cost_ids:
-            bom_items = (
-                BOMItem.objects.filter(bom__product_id__in=no_cost_ids)
-                .annotate(
-                    comp_cost=Subquery(
-                        SupplierProduct.objects.filter(product=OuterRef("product"))
-                        .values("product")
-                        .annotate(mc=Min("cost"))
-                        .values("mc")[:1],
-                        output_field=DecimalField(),
-                    )
-                )
-                .values_list("bom__product_id", "quantity", "comp_cost")
-            )
-            for parent_id, bom_qty, comp_cost in bom_items:
-                if comp_cost is not None:
-                    bom_costs[parent_id] = (
-                        bom_costs.get(parent_id, 0) + bom_qty * comp_cost
-                    )
-        stock_value = sum(
-            qty * (cost if cost is not None else bom_costs.get(pid, 0))
-            for pid, qty, cost in inventories
-        )
+        snapshot = FinanceDashboardSnapshot.load()
+
+        # If the snapshot has never been populated, do a one-time refresh.
+        if not snapshot.updated_at:
+            from finance.services import refresh_finance_dashboard_cache
+
+            snapshot = refresh_finance_dashboard_cache()
+
+        # If the cached month is stale (different month/year), refresh.
+        if snapshot.month_year != now.year or snapshot.month_month != now.month:
+            from finance.services import refresh_finance_dashboard_cache
+
+            snapshot = refresh_finance_dashboard_cache()
+
+        sales_total = snapshot.sales_total
+        purchase_total = snapshot.purchase_total
+        month_sales = snapshot.month_sales_total
+        month_purchases = snapshot.month_purchase_total
+        chart_data = snapshot.chart_data
 
         context.update(
             {
@@ -139,7 +64,7 @@ class FinanceDashboardView(LoginRequiredMixin, TemplateView):
                     "supplier", "product"
                 ).order_by("-date")[:5],
                 "chart_data": chart_data,
-                "stock_value": stock_value,
+                "stock_value": snapshot.stock_value,
             }
         )
         return context
