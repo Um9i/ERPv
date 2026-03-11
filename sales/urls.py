@@ -15,8 +15,11 @@ from .views import (
     CustomerProductUpdateView,
     CustomerSalesOrderListView,
     CustomerUpdateView,
+    PickConfirmResetView,
+    PickConfirmView,
     PickListCreateView,
     PickListDetailView,
+    ProductQRCodeView,
     SalesDashboardView,
     SalesOrderCreateView,
     SalesOrderDetailView,
@@ -123,5 +126,20 @@ urlpatterns = [
         "pick-lists/<int:pk>/",
         PickListDetailView.as_view(),
         name="pick-list-detail",
+    ),
+    path(
+        "pick-lists/<int:pk>/confirm/",
+        PickConfirmView.as_view(),
+        name="pick-confirm",
+    ),
+    path(
+        "pick-lists/<int:pk>/confirm/reset/",
+        PickConfirmResetView.as_view(),
+        name="pick-confirm-reset",
+    ),
+    path(
+        "products/<int:pk>/qrcode/",
+        ProductQRCodeView.as_view(),
+        name="product-qrcode",
     ),
 ]

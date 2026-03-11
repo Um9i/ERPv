@@ -6,7 +6,7 @@
 
 [![Python 3.14](https://img.shields.io/badge/python-3.14-blue.svg)](https://www.python.org/downloads/)
 [![Django 6.0](https://img.shields.io/badge/django-6.0-green.svg)](https://www.djangoproject.com/)
-[![Tests](https://img.shields.io/badge/tests-237%2B%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-401%2B%20passing-brightgreen.svg)](#testing)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -24,7 +24,7 @@ ERPv is a full-featured ERP web application designed for small-to-medium manufac
 
 ⚙️ **Production** — Recursive Bill of Materials with an interactive tree visualiser, manufacturing jobs with due-date tracking, component shortage analysis, cost roll-ups, and margin analysis.
 
-📦 **Sales** — Customer management, sales orders with pick lists, shipment processing with real-time stock checks, and PDF invoice generation via WeasyPrint.
+📦 **Sales** — Customer management, sales orders with pick lists, scan-to-pick confirmation with barcode/QR scanning, shipment processing with real-time stock checks, and PDF invoice generation via WeasyPrint.
 
 💰 **Finance** — Sales and purchase ledgers with filtering and CSV export, monthly breakdowns, outstanding orders reports, product-level P&L, and a 12-month sales vs purchases chart.
 
@@ -40,9 +40,10 @@ ERPv is a full-featured ERP web application designed for small-to-medium manufac
 | Database | PostgreSQL (production), SQLite (development) |
 | Frontend | Bootstrap 5 via django-crispy-forms |
 | PDF Generation | WeasyPrint |
+| QR Codes | python-qrcode |
 | Static Files | WhiteNoise |
 | Server | Gunicorn |
-| Testing | pytest, factory_boy — 237+ tests |
+| Testing | pytest, factory_boy — 401+ tests |
 | Code Quality | ruff, black, mypy, bandit, pip-audit, pre-commit |
 
 ## Quick Start

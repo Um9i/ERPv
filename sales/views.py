@@ -28,6 +28,7 @@ from .models import (
     CustomerContact,
     CustomerProduct,
     PickList,
+    PickListLine,
     SalesLedger,
     SalesOrder,
     SalesOrderLine,
@@ -745,6 +746,138 @@ class PickListDetailView(DetailView):
             "location",
         ).all()
         return context
+
+
+class PickConfirmView(LoginRequiredMixin, DetailView):
+    """Scan-to-pick confirmation workflow for warehouse staff."""
+
+    model = PickList
+    template_name = "sales/pick_confirm.html"
+    context_object_name = "pick_list"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        lines = list(
+            self.object.lines.select_related(
+                "sales_order_line__product__product",
+                "location",
+            ).all()
+        )
+        context["lines"] = lines
+        total = sum(1 for ln in lines if not ln.is_shortage)
+        confirmed = sum(1 for ln in lines if ln.confirmed and not ln.is_shortage)
+        context["total_lines"] = total
+        context["confirmed_lines"] = confirmed
+        context["all_confirmed"] = self.object.all_confirmed
+        return context
+
+    def post(self, request, *args, **kwargs):
+        from django.http import JsonResponse
+        from django.utils import timezone
+
+        from inventory.models import Product
+
+        self.object = self.get_object()
+        scan_value = request.POST.get("scan_value", "").strip()
+        line_id = request.POST.get("line_id", "").strip()
+
+        # Manual confirm by line ID
+        if line_id:
+            try:
+                line = self.object.lines.get(pk=int(line_id), is_shortage=False)
+            except PickListLine.DoesNotExist, ValueError:
+                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return JsonResponse({"ok": False, "error": "Line not found."})
+                return redirect(request.path)
+            line.confirmed = True
+            line.confirmed_at = timezone.now()
+            line.save(update_fields=["confirmed", "confirmed_at"])
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse(
+                    {
+                        "ok": True,
+                        "line_id": line.pk,
+                        "all_confirmed": self.object.all_confirmed,
+                    }
+                )
+            return redirect(request.path)
+
+        # Barcode / QR scan
+        if scan_value:
+            product = (
+                Product.objects.filter(barcode=scan_value).first()
+                or Product.objects.filter(sku=scan_value).first()
+            )
+            if not product:
+                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return JsonResponse(
+                        {"ok": False, "error": f"No product matches scan: {scan_value}"}
+                    )
+                return redirect(request.path)
+
+            # Find the first unconfirmed line for this product on this pick list
+            line = (
+                self.object.lines.filter(
+                    sales_order_line__product__product=product,
+                    is_shortage=False,
+                    confirmed=False,
+                )
+                .select_related("sales_order_line__product__product")
+                .first()
+            )
+            if not line:
+                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return JsonResponse(
+                        {
+                            "ok": False,
+                            "error": f"{product.name} has no unconfirmed lines on this pick list.",
+                        }
+                    )
+                return redirect(request.path)
+
+            line.confirmed = True
+            line.confirmed_at = timezone.now()
+            line.save(update_fields=["confirmed", "confirmed_at"])
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse(
+                    {
+                        "ok": True,
+                        "line_id": line.pk,
+                        "product_name": product.name,
+                        "all_confirmed": self.object.all_confirmed,
+                    }
+                )
+            return redirect(request.path)
+
+        return redirect(request.path)
+
+
+class PickConfirmResetView(LoginRequiredMixin, View):
+    """Reset all confirmations on a pick list."""
+
+    def post(self, request, pk):
+        pick_list = PickList.objects.get(pk=pk)
+        pick_list.lines.update(confirmed=False, confirmed_at=None)
+        return redirect("sales:pick-confirm", pk=pick_list.pk)
+
+
+class ProductQRCodeView(LoginRequiredMixin, View):
+    """Generate a QR code PNG for a product's barcode or SKU."""
+
+    def get(self, request, pk):
+        import io
+
+        import qrcode
+
+        from inventory.models import Product
+
+        product = Product.objects.get(pk=pk)
+        value = product.barcode or product.sku or product.name
+        img = qrcode.make(value, box_size=8, border=2)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        return HttpResponse(buf.getvalue(), content_type="image/png")
 
 
 class SalesOrderExportView(LoginRequiredMixin, View):

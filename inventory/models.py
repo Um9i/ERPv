@@ -9,6 +9,20 @@ from django.utils.translation import gettext_lazy as _
 
 class Product(models.Model):
     name = models.CharField(max_length=256, unique=True)
+    sku = models.CharField(
+        max_length=64,
+        unique=True,
+        blank=True,
+        null=True,
+        help_text=_("Stock Keeping Unit identifier."),
+    )
+    barcode = models.CharField(
+        max_length=128,
+        unique=True,
+        blank=True,
+        null=True,
+        help_text=_("Barcode or QR code value for scanning."),
+    )
     description = models.TextField(blank=True, default="")
     image = models.ImageField(upload_to="products/", blank=True, null=True)
     sale_price = models.DecimalField(
@@ -395,7 +409,7 @@ class StockTransfer(models.Model):
     def __str__(self):
         src = self.from_location or "Unallocated"
         dest = self.to_location or "Unallocated"
-        return f"{self.inventory.product.name}: {self.quantity} " f"{src} → {dest}"
+        return f"{self.inventory.product.name}: {self.quantity} {src} → {dest}"
 
     def clean(self):
         if not self.from_location_id and not self.to_location_id:

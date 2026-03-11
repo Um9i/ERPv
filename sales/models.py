@@ -286,6 +286,11 @@ class PickList(models.Model):
     def __str__(self):
         return f"Pick List for {self.sales_order.order_number}"
 
+    @property
+    def all_confirmed(self):
+        """Return True if every non-shortage line has been confirmed."""
+        return not self.lines.filter(is_shortage=False, confirmed=False).exists()
+
     @classmethod
     def generate_for_order(cls, sales_order):
         """Create a pick list with lines showing where to pick each product."""
@@ -375,6 +380,8 @@ class PickListLine(models.Model):
     )
     quantity = models.PositiveBigIntegerField()
     is_shortage = models.BooleanField(default=False)
+    confirmed = models.BooleanField(default=False)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["sales_order_line", "location"]

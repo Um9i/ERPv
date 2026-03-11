@@ -22,7 +22,9 @@ dashboards.
   from assigned inventory locations first and falling back to unallocated
   stock.  Lines with insufficient inventory are flagged as shortages.
 * **PickListLine** – individual picking instruction referencing a sales order
-  line, an optional `Location`, and an `is_shortage` flag.
+  line, an optional `Location`, and an `is_shortage` flag.  Also tracks
+  `confirmed` (boolean) and `confirmed_at` (timestamp) for the scan-to-pick
+  confirmation workflow.
 
 Indexes on product and customer fields assist with searching and reporting.
 
@@ -61,7 +63,19 @@ Indexes on product and customer fields assist with searching and reporting.
 * **PickListCreateView** generates a new pick list for an order and redirects
   to the pick list detail page.
 * **PickListDetailView** displays the picking guide with lines, locations,
-  and shortage flags.
+  and shortage flags.  Includes a "Scan & Confirm" button linking to the
+  confirmation workflow.
+* **PickConfirmView** provides a scan-to-pick confirmation workflow:
+  * GET renders a scanner UI with manual and camera-based barcode/QR input.
+  * POST accepts `scan_value` (barcode or SKU lookup) or `line_id` (manual
+    confirm) via AJAX, returning JSON responses.
+  * Confirms the first unconfirmed line matching the scanned product.
+  * Tracks confirmation progress with a live counter badge.
+  * When all non-shortage lines are confirmed, offers a "Proceed to Ship"
+    button.
+* **PickConfirmResetView** resets all confirmations on a pick list.
+* **ProductQRCodeView** generates a QR code PNG for a product's barcode,
+  SKU, or name using `python-qrcode`.
 * **SalesDashboardView** presents metrics: totals, shipped vs pending lines,
   customer count, fulfilment rate, and due-date awareness (orders due today
   or earlier).
@@ -71,7 +85,9 @@ Indexes on product and customer fields assist with searching and reporting.
 1. Create customer and define what products they may buy along with prices.
 2. Create sales order (single or multiple lines); submit to enter order.
    A pick list is generated automatically.
-3. Use ship interface to allocate stock; inventory and ledgers are updated
+3. Use the pick confirmation workflow to scan-to-pick: scan barcodes/QR
+   codes or manually confirm each line.  Progress is tracked in real time.
+4. Use ship interface to allocate stock; inventory and ledgers are updated
    with location-level traceability.
 4. Close orders either automatically when lines are fully shipped or manually
    via detail page.

@@ -35,11 +35,11 @@ class TestCustomer:
         assert hasattr(orders_page, "paginator")
         content = response.content.decode()
         assert (
-            f"href=\"{reverse('sales:customer-salesorders', args=[customer.pk])}\""
+            f'href="{reverse("sales:customer-salesorders", args=[customer.pk])}"'
             in content
         )
         assert (
-            f"href=\"{reverse('sales:customer-products', args=[customer.pk])}\""
+            f'href="{reverse("sales:customer-products", args=[customer.pk])}"'
             in content
         )
 
@@ -630,3 +630,254 @@ class TestShipping:
         assert ledger.quantity in (-5, -3)
         getresp = client.get(url)
         assert 'max="0"' in getresp.content.decode()
+
+
+@pytest.mark.django_db
+class TestPickConfirmation:
+    """Tests for the scan-to-pick confirmation workflow."""
+
+    def _make_pick_list(self, sales_order_line):
+        """Create a pick list with one line for the given sales order line."""
+        from sales.models import PickList, PickListLine
+
+        pick_list = PickList.objects.create(sales_order=sales_order_line.sales_order)
+        line = PickListLine.objects.create(
+            pick_list=pick_list,
+            sales_order_line=sales_order_line,
+            location=None,
+            quantity=sales_order_line.quantity,
+        )
+        return pick_list, line
+
+    def test_pick_confirm_get(self, client, sales_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        pick_list, _ = self._make_pick_list(sales_order_line)
+        url = reverse("sales:pick-confirm", args=[pick_list.pk])
+        resp = client.get(url)
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert "Pick Confirmation" in content
+        assert "0 / 1 confirmed" in content
+
+    def test_pick_confirm_manual_line(self, client, sales_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        pick_list, line = self._make_pick_list(sales_order_line)
+        url = reverse("sales:pick-confirm", args=[pick_list.pk])
+        resp = client.post(
+            url,
+            {"line_id": str(line.pk)},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is True
+        assert data["line_id"] == line.pk
+        assert data["all_confirmed"] is True
+
+        line.refresh_from_db()
+        assert line.confirmed is True
+        assert line.confirmed_at is not None
+
+    def test_pick_confirm_scan_barcode(self, client, sales_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        product = sales_order_line.product.product
+        product.barcode = "TEST-BARCODE-123"
+        product.save(update_fields=["barcode"])
+
+        pick_list, line = self._make_pick_list(sales_order_line)
+        url = reverse("sales:pick-confirm", args=[pick_list.pk])
+        resp = client.post(
+            url,
+            {"scan_value": "TEST-BARCODE-123"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is True
+        assert data["product_name"] == product.name
+
+        line.refresh_from_db()
+        assert line.confirmed is True
+
+    def test_pick_confirm_scan_sku(self, client, sales_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        product = sales_order_line.product.product
+        product.sku = "SKU-999"
+        product.save(update_fields=["sku"])
+
+        pick_list, line = self._make_pick_list(sales_order_line)
+        url = reverse("sales:pick-confirm", args=[pick_list.pk])
+        resp = client.post(
+            url,
+            {"scan_value": "SKU-999"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is True
+
+        line.refresh_from_db()
+        assert line.confirmed is True
+
+    def test_pick_confirm_scan_no_match(self, client, sales_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        pick_list, _ = self._make_pick_list(sales_order_line)
+        url = reverse("sales:pick-confirm", args=[pick_list.pk])
+        resp = client.post(
+            url,
+            {"scan_value": "UNKNOWN-CODE"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is False
+        assert "No product matches" in data["error"]
+
+    def test_pick_confirm_scan_already_confirmed(self, client, sales_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        product = sales_order_line.product.product
+        product.barcode = "BC-DONE"
+        product.save(update_fields=["barcode"])
+
+        pick_list, line = self._make_pick_list(sales_order_line)
+        line.confirmed = True
+        line.save(update_fields=["confirmed"])
+
+        url = reverse("sales:pick-confirm", args=[pick_list.pk])
+        resp = client.post(
+            url,
+            {"scan_value": "BC-DONE"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        data = resp.json()
+        assert data["ok"] is False
+        assert "no unconfirmed lines" in data["error"].lower()
+
+    def test_pick_confirm_invalid_line_id(self, client, sales_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        pick_list, _ = self._make_pick_list(sales_order_line)
+        url = reverse("sales:pick-confirm", args=[pick_list.pk])
+        resp = client.post(
+            url,
+            {"line_id": "99999"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        data = resp.json()
+        assert data["ok"] is False
+        assert "not found" in data["error"].lower()
+
+    def test_pick_confirm_reset(self, client, sales_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        pick_list, line = self._make_pick_list(sales_order_line)
+        line.confirmed = True
+        line.save(update_fields=["confirmed"])
+
+        url = reverse("sales:pick-confirm-reset", args=[pick_list.pk])
+        resp = client.post(url)
+        assert resp.status_code == 302
+
+        line.refresh_from_db()
+        assert line.confirmed is False
+
+    def test_all_confirmed_property(self, sales_order_line):
+
+        pick_list, line = self._make_pick_list(sales_order_line)
+        assert pick_list.all_confirmed is False
+
+        line.confirmed = True
+        line.save(update_fields=["confirmed"])
+        assert pick_list.all_confirmed is True
+
+    def test_qrcode_view_returns_png(self, client, product):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        product.barcode = "QR-TEST"
+        product.save(update_fields=["barcode"])
+
+        url = reverse("sales:product-qrcode", args=[product.pk])
+        resp = client.get(url)
+        assert resp.status_code == 200
+        assert resp["Content-Type"] == "image/png"
+        # PNG magic bytes
+        assert resp.content[:4] == b"\x89PNG"
+
+    def test_pick_list_detail_has_scan_link(self, client, sales_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        pick_list, _ = self._make_pick_list(sales_order_line)
+        url = reverse("sales:pick-list-detail", args=[pick_list.pk])
+        resp = client.get(url)
+        content = resp.content.decode()
+        confirm_url = reverse("sales:pick-confirm", args=[pick_list.pk])
+        assert confirm_url in content
+        assert "Scan" in content
+
+    def test_pick_confirm_non_ajax_redirect(self, client, sales_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        pick_list, line = self._make_pick_list(sales_order_line)
+        url = reverse("sales:pick-confirm", args=[pick_list.pk])
+        # POST without AJAX header should redirect
+        resp = client.post(url, {"line_id": str(line.pk)})
+        assert resp.status_code == 302
+
+    def test_pick_confirm_requires_login(self, client, sales_order_line):
+        from django.urls import reverse
+
+        pick_list, _ = self._make_pick_list(sales_order_line)
+        url = reverse("sales:pick-confirm", args=[pick_list.pk])
+        resp = client.get(url)
+        assert resp.status_code == 302
+        assert "/login/" in resp.url or "/accounts/login/" in resp.url
