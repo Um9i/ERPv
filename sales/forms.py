@@ -67,11 +67,13 @@ class CustomerContactForm(forms.ModelForm):
         max_length=128,
         required=False,
         validators=[EmailValidator()],
+        help_text="Optional email address.",
     )
     phone = forms.CharField(
         max_length=64,
         required=False,
         validators=[phone_validator],
+        help_text="Digits, spaces, dashes and parentheses accepted.",
     )
 
     class Meta:
@@ -92,6 +94,12 @@ class CustomerProductForm(forms.ModelForm):
     class Meta:
         model = CustomerProduct
         fields = ["customer", "product", "price"]
+        help_texts = {
+            "price": "Selling price for this customer (must be greater than zero).",
+        }
+        widgets = {
+            "price": forms.NumberInput(attrs={"step": "0.01", "min": "0.01"}),
+        }
 
     def clean_price(self):
         price = self.cleaned_data["price"]
@@ -110,12 +118,18 @@ class SalesOrderForm(forms.ModelForm):
         widgets = {
             "ship_by_date": forms.DateInput(attrs={"type": "date"}),
         }
+        help_texts = {
+            "ship_by_date": "Target date to ship this order by.",
+        }
 
 
 class SalesOrderLineForm(forms.ModelForm):
     class Meta:
         model = SalesOrderLine
         fields = ["product", "quantity"]
+        help_texts = {
+            "quantity": "Number of units to include (must be at least 1).",
+        }
 
     def clean_quantity(self):
         qty = self.cleaned_data.get("quantity")

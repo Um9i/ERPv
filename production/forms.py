@@ -10,7 +10,10 @@ class BillOfMaterialsForm(forms.ModelForm):
         model = BillOfMaterials
         fields = ["product", "production_cost"]
         widgets = {
-            "production_cost": forms.NumberInput(attrs={"step": "0.01"}),
+            "production_cost": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
+        }
+        help_texts = {
+            "production_cost": "Additional cost to produce one unit (optional).",
         }
 
     def __init__(self, *args, **kwargs):
@@ -22,6 +25,9 @@ class BOMItemForm(forms.ModelForm):
     class Meta:
         model = BOMItem
         fields = ["bom", "product", "quantity"]
+        help_texts = {
+            "quantity": "Number of units required per production run.",
+        }
 
     def clean_quantity(self):
         qty = self.cleaned_data.get("quantity")
@@ -36,6 +42,10 @@ class ProductionForm(forms.ModelForm):
         fields = ["product", "quantity", "due_date"]
         widgets = {
             "due_date": forms.DateInput(attrs={"type": "date"}),
+        }
+        help_texts = {
+            "quantity": "Number of units to produce (must be at least 1).",
+            "due_date": "Target completion date for this production run.",
         }
 
     def clean_quantity(self):
@@ -53,6 +63,11 @@ class ProductionUpdateForm(forms.ModelForm):
         fields = ["product", "quantity", "due_date", "complete"]
         widgets = {
             "due_date": forms.DateInput(attrs={"type": "date"}),
+        }
+        help_texts = {
+            "quantity": "Number of units to produce (must be at least 1).",
+            "due_date": "Target completion date for this production run.",
+            "complete": "Tick to mark this production run as finished.",
         }
 
     def clean_quantity(self):

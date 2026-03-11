@@ -18,6 +18,13 @@ class ProductForm(forms.ModelForm):
         ]
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4}),
+            "sale_price": forms.NumberInput(attrs={"step": "0.01", "min": "0.01"}),
+        }
+        help_texts = {
+            "sku": "Unique stock-keeping unit identifier.",
+            "barcode": "Scannable barcode value (optional).",
+            "sale_price": "Required when the product is a catalogue item.",
+            "catalogue_item": "Tick to make this product available in the sales catalogue.",
         }
 
     def clean(self):
@@ -139,6 +146,10 @@ class StockTransferForm(forms.ModelForm):
         fields = ["from_location", "to_location", "quantity", "note"]
         widgets = {
             "note": forms.Textarea(attrs={"rows": 2}),
+        }
+        help_texts = {
+            "quantity": "Number of units to move between locations.",
+            "note": "Optional reason or reference for this transfer.",
         }
 
     def __init__(self, *args, inventory=None, **kwargs):

@@ -16,6 +16,7 @@ from .views import (
     SupplierDeleteView,
     SupplierDetailView,
     SupplierListView,
+    SupplierProductCheckView,
     SupplierProductCreateView,
     SupplierProductDeleteView,
     SupplierProductIDsView,
@@ -86,6 +87,11 @@ urlpatterns = [
         "supplier/<int:pk>/product-ids/",
         SupplierProductIDsView.as_view(),
         name="supplier-product-ids",
+    ),
+    path(
+        "supplier-products/check/",
+        SupplierProductCheckView.as_view(),
+        name="supplier-product-check",
     ),
     path(
         "purchase-orders/", PurchaseOrderListView.as_view(), name="purchase-order-list"

@@ -334,6 +334,26 @@ class SupplierProductIDsView(LoginRequiredMixin, DetailView):
         return JsonResponse({"product_ids": ids})
 
 
+class SupplierProductCheckView(LoginRequiredMixin, View):
+    """Return JSON indicating whether a supplier+product combo already exists."""
+
+    def get(self, request, *args, **kwargs):
+        supplier_id = request.GET.get("supplier")
+        product_id = request.GET.get("product")
+        exclude_pk = request.GET.get("exclude")
+
+        if not supplier_id or not product_id:
+            return JsonResponse({"exists": False})
+
+        qs = SupplierProduct.objects.filter(
+            supplier_id=supplier_id, product_id=product_id
+        )
+        if exclude_pk:
+            qs = qs.exclude(pk=exclude_pk)
+
+        return JsonResponse({"exists": qs.exists()})
+
+
 class PurchaseOrderDeleteView(LoginRequiredMixin, DeleteView):
     model = PurchaseOrder
     template_name = "procurement/purchase_order_confirm_delete.html"

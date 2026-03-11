@@ -18,9 +18,44 @@
     </ul>
 </div>
 {% endif %}
+<div id="duplicate-warning" class="alert alert-warning d-none">
+    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+    This supplier already carries the selected product.
+</div>
 <form method="post">
     {% csrf_token %}
     {{ form|crispy }}
     <button type="submit" class="btn btn-success">Save</button>
 </form>
+<script>
+(function () {
+    const checkUrl = "{% url 'procurement:supplier-product-check' %}";
+    const excludePk = "{{ form.instance.pk|default:'' }}";
+    const supplierField = document.querySelector('[name="supplier"]');
+    const productField = document.querySelector('[name="product"]');
+    const warning = document.getElementById('duplicate-warning');
+
+    if (!supplierField || !productField) return;
+
+    function checkDuplicate() {
+        const supplierId = supplierField.value;
+        const productId = productField.value;
+        if (!supplierId || !productId) {
+            warning.classList.add('d-none');
+            return;
+        }
+        const params = new URLSearchParams({supplier: supplierId, product: productId});
+        if (excludePk) params.set('exclude', excludePk);
+
+        fetch(checkUrl + '?' + params.toString(), {credentials: 'same-origin'})
+            .then(r => r.json())
+            .then(data => {
+                warning.classList.toggle('d-none', !data.exists);
+            });
+    }
+
+    supplierField.addEventListener('change', checkDuplicate);
+    productField.addEventListener('change', checkDuplicate);
+})();
+</script>
 {% endblock %}

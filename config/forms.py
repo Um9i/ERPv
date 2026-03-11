@@ -39,6 +39,11 @@ class CompanyConfigForm(forms.ModelForm):
                 "country",
             ]
         }
+        help_texts = {
+            "website": "Full URL including https://",
+            "vat_number": "VAT / tax registration number (optional).",
+            "company_number": "Company registration number (optional).",
+        }
 
 
 class PairedInstanceForm(forms.ModelForm):
@@ -53,6 +58,10 @@ class PairedInstanceForm(forms.ModelForm):
             "name": forms.TextInput(attrs={"class": "form-control"}),
             "url": forms.URLInput(attrs={"class": "form-control"}),
             "notes": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+        }
+        help_texts = {
+            "url": "Full URL of the remote instance, e.g. https://erp.example.com",
+            "notes": "Optional notes about this paired instance.",
         }
 
 
