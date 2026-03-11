@@ -198,14 +198,22 @@ class Production(AuditMixin, models.Model):
             raise ValidationError(_("Product has no Bill of Materials."))
         # when attempting to receive anything ensure components are available
         if self.quantity_received > 0 and self.bom() is not None:
-            for item in self.bom():
-                product = Inventory.objects.select_for_update().get(
-                    product=item.product
-                )
-                if product.quantity - item.quantity * self.quantity_received < 0:
-                    raise ValidationError(
-                        _("Not enough Inventory to complete production.")
+            prev_received = 0
+            if self.pk:
+                try:
+                    prev_received = Production.objects.get(pk=self.pk).quantity_received
+                except Production.DoesNotExist:
+                    prev_received = 0
+            delta = self.quantity_received - prev_received
+            if delta > 0:
+                for item in self.bom():
+                    product = Inventory.objects.select_for_update().get(
+                        product=item.product
                     )
+                    if product.quantity - item.quantity * delta < 0:
+                        raise ValidationError(
+                            _("Not enough Inventory to complete production.")
+                        )
 
     @transaction.atomic
     def save(self, *args, skip_allocation=False, **kwargs):

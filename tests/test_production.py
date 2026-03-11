@@ -687,6 +687,21 @@ class TestProduction:
         assert "bi-exclamation-triangle-fill" in content
         assert "Insufficient components" in content
 
+    def test_list_materials_ok_uses_remaining(self, client, product, bom, bom_item):
+        """List view checks materials against remaining qty, not total."""
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="shortage_rem")
+        client.force_login(user)
+        # quantity=1000 exceeds stock but 990 already received, remaining=10
+        job = Production.objects.create(product=product, quantity=1000)
+        Production.objects.filter(pk=job.pk).update(quantity_received=990)
+        url = reverse("production:production-list")
+        resp = client.get(url)
+        content = resp.content.decode()
+        assert "bi-check-circle-fill" in content
+
     # --- BOM tree visualiser tests ---
 
     def test_bom_tree_root_node(self, product, bom, bom_item):

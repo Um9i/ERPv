@@ -370,7 +370,7 @@ class ProductionListView(LoginRequiredMixin, ListView):
                 job.materials_ok = False
             else:
                 job.materials_ok = all(
-                    inv_map.get(comp_id, 0) >= comp_qty * job.quantity
+                    inv_map.get(comp_id, 0) >= comp_qty * job.remaining
                     for comp_id, comp_qty in components
                 )
 
