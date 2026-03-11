@@ -23,6 +23,15 @@
 <p><strong>Total Order Value:</strong> {{ purchase_order.total_amount|currency }}</p>
 <p><strong>Open Order Value:</strong> {{ purchase_order.remaining_total|currency }}</p>
 
+<div class="d-flex gap-2 mb-3 d-print-none">
+    <a href="{% url 'procurement:store-confirm' purchase_order.pk %}" class="btn btn-primary">
+        <i class="bi bi-upc-scan me-1"></i>Scan to Store
+    </a>
+    <a href="{% url 'procurement:purchase-order-receive' purchase_order.pk %}" class="btn btn-success">
+        <i class="bi bi-box-seam me-1"></i>Receive
+    </a>
+</div>
+
 <h3>Order Lines</h3>
 <div class="table-responsive">
 <table class="table">

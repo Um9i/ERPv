@@ -745,6 +745,118 @@ class PurchaseOrderReceiveView(LoginRequiredMixin, DetailView):
         return reverse_lazy("procurement:purchase-order-list")
 
 
+class StoreConfirmView(LoginRequiredMixin, DetailView):
+    """Scan-to-store confirmation workflow for warehouse staff receiving POs."""
+
+    model = PurchaseOrder
+    template_name = "procurement/store_confirm.html"
+    context_object_name = "purchase_order"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        lines = list(
+            self.object.purchase_order_lines.select_related(
+                "product__product",
+            ).all()
+        )
+        context["lines"] = lines
+        total = len(lines)
+        confirmed = sum(1 for ln in lines if ln.store_confirmed)
+        context["total_lines"] = total
+        context["confirmed_lines"] = confirmed
+        context["all_confirmed"] = self.object.all_store_confirmed
+        return context
+
+    def post(self, request, *args, **kwargs):
+        from django.utils import timezone
+
+        from inventory.models import Product
+
+        self.object = self.get_object()
+        scan_value = request.POST.get("scan_value", "").strip()
+        line_id = request.POST.get("line_id", "").strip()
+
+        # Manual confirm by line ID
+        if line_id:
+            try:
+                line = self.object.purchase_order_lines.get(
+                    pk=int(line_id), store_confirmed=False
+                )
+            except (PurchaseOrderLine.DoesNotExist, ValueError):
+                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return JsonResponse({"ok": False, "error": "Line not found."})
+                return redirect(request.path)
+            line.store_confirmed = True
+            line.store_confirmed_at = timezone.now()
+            line.save(update_fields=["store_confirmed", "store_confirmed_at"])
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse(
+                    {
+                        "ok": True,
+                        "line_id": line.pk,
+                        "all_confirmed": self.object.all_store_confirmed,
+                    }
+                )
+            return redirect(request.path)
+
+        # Barcode / QR scan
+        if scan_value:
+            product = (
+                Product.objects.filter(barcode=scan_value).first()
+                or Product.objects.filter(sku=scan_value).first()
+            )
+            if not product:
+                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return JsonResponse(
+                        {"ok": False, "error": f"No product matches scan: {scan_value}"}
+                    )
+                return redirect(request.path)
+
+            # Find the first unconfirmed line for this product on this PO
+            line = (
+                self.object.purchase_order_lines.filter(
+                    product__product=product,
+                    store_confirmed=False,
+                )
+                .select_related("product__product")
+                .first()
+            )
+            if not line:
+                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return JsonResponse(
+                        {
+                            "ok": False,
+                            "error": f"{product.name} has no unconfirmed lines on this order.",
+                        }
+                    )
+                return redirect(request.path)
+
+            line.store_confirmed = True
+            line.store_confirmed_at = timezone.now()
+            line.save(update_fields=["store_confirmed", "store_confirmed_at"])
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse(
+                    {
+                        "ok": True,
+                        "line_id": line.pk,
+                        "product_name": product.name,
+                        "all_confirmed": self.object.all_store_confirmed,
+                    }
+                )
+            return redirect(request.path)
+
+        return redirect(request.path)
+
+
+class StoreConfirmResetView(LoginRequiredMixin, View):
+    """Reset all store confirmations on a purchase order."""
+
+    def post(self, request, pk):
+        po = PurchaseOrder.objects.get(pk=pk)
+        po.purchase_order_lines.update(store_confirmed=False, store_confirmed_at=None)
+        return redirect("procurement:store-confirm", pk=po.pk)
+
+
 @method_decorator(csrf_exempt, name="dispatch")
 class NotifySupplierProductView(View):
     """Inbound: remote tells us to update the cost of a SupplierProduct."""

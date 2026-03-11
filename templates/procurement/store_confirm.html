@@ -1,0 +1,302 @@
+{% extends "includes/card.html" %}
+{% load currency_tags %}
+{% block card_icon %}bi-upc-scan{% endblock %}
+{% block card_icon_color %}page-header-icon--blue{% endblock %}
+{% block card_title %}Store Confirmation — {{ purchase_order.order_number }}{% endblock %}
+{% block card_body %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <p class="mb-1"><strong>Supplier:</strong> {{ purchase_order.supplier.name }}</p>
+        <p class="mb-1"><strong>Created:</strong> {{ purchase_order.created_at|date:"d M Y, H:i" }}</p>
+        {% if purchase_order.due_date %}
+        <p class="mb-0"><strong>Due Date:</strong> {{ purchase_order.due_date|date:"d M Y" }}</p>
+        {% endif %}
+    </div>
+    <div class="d-print-none d-flex gap-2 align-items-center">
+        <span class="badge bg-{% if all_confirmed %}success{% else %}secondary{% endif %} fs-6">
+            {{ confirmed_lines }} / {{ total_lines }} confirmed
+        </span>
+        {% if all_confirmed %}
+        <a href="{% url 'procurement:purchase-order-receive' purchase_order.pk %}" class="btn btn-success">
+            <i class="bi bi-box-seam me-1"></i>Proceed to Receive
+        </a>
+        {% endif %}
+        <form method="post" action="{% url 'procurement:store-confirm-reset' purchase_order.pk %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-warning btn-sm" onclick="return confirm('Reset all confirmations?')">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+            </button>
+        </form>
+        <a href="{% url 'procurement:purchase-order-detail' purchase_order.pk %}" class="btn btn-app-secondary btn-sm">
+            Back to Order
+        </a>
+    </div>
+</div>
+
+<!-- Scanner input -->
+<div class="card mb-3 border-primary d-print-none">
+    <div class="card-body">
+        <h5 class="card-title mb-3"><i class="bi bi-qr-code-scan me-2"></i>Scan Barcode / QR Code</h5>
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-8">
+                <label for="scan-input" class="form-label">Scan or type a barcode / SKU</label>
+                <input type="text" id="scan-input" class="form-control form-control-lg" placeholder="Scan barcode or enter SKU…" autofocus autocomplete="off">
+            </div>
+            <div class="col-12 col-md-4 d-flex gap-2">
+                <button type="button" id="scan-submit" class="btn btn-primary btn-lg flex-grow-1">
+                    <i class="bi bi-check2 me-1"></i>Confirm Scan
+                </button>
+                <button type="button" id="camera-toggle" class="btn btn-outline-primary btn-lg" title="Use camera to scan">
+                    <i class="bi bi-camera"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Camera scanner area -->
+        <div id="camera-area" class="mt-3 d-none">
+            <div class="position-relative" style="max-width: 400px;">
+                <video id="camera-video" class="w-100 rounded border" autoplay playsinline></video>
+                <canvas id="camera-canvas" class="d-none"></canvas>
+                <button type="button" id="camera-stop" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <p class="text-muted small mt-1">Point your camera at a barcode or QR code.</p>
+        </div>
+        <!-- Feedback area -->
+        <div id="scan-feedback" class="mt-2"></div>
+    </div>
+</div>
+
+<!-- Order lines table -->
+<div class="table-responsive">
+    <table class="table table-striped align-middle" id="store-table">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th class="text-end">Ordered</th>
+                <th class="text-end">Received</th>
+                <th class="text-end">Remaining</th>
+                <th class="text-center">Status</th>
+                <th class="text-center d-print-none">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for line in lines %}
+            <tr id="line-{{ line.pk }}" class="{% if line.store_confirmed %}table-success{% endif %}">
+                <td>
+                    {{ line.product.product.name }}
+                    {% if line.product.product.sku %}
+                    <br><small class="text-muted">SKU: {{ line.product.product.sku }}</small>
+                    {% endif %}
+                    {% if line.product.product.barcode %}
+                    <br><small class="text-muted">Barcode: {{ line.product.product.barcode }}</small>
+                    {% endif %}
+                </td>
+                <td class="text-end">{{ line.quantity }}</td>
+                <td class="text-end">{{ line.quantity_received }}</td>
+                <td class="text-end">{{ line.remaining }}</td>
+                <td class="text-center">
+                    {% if line.store_confirmed %}
+                    <span class="badge bg-success" data-status="confirmed"><i class="bi bi-check-circle me-1"></i>Confirmed</span>
+                    {% else %}
+                    <span class="badge bg-secondary" data-status="pending">Pending</span>
+                    {% endif %}
+                </td>
+                <td class="text-center d-print-none">
+                    {% if not line.store_confirmed %}
+                    <button type="button" class="btn btn-sm btn-outline-success confirm-btn" data-line-id="{{ line.pk }}">
+                        <i class="bi bi-check-lg me-1"></i>Confirm
+                    </button>
+                    {% else %}
+                    <i class="bi bi-check-circle-fill text-success"></i>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-muted text-center">No items on this order.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- QR codes for printing -->
+<div class="d-none d-print-block mt-4">
+    <h5>Product QR Codes</h5>
+    <div class="d-flex flex-wrap gap-3">
+        {% for line in lines %}
+        <div class="text-center p-2 border rounded">
+            <img src="{% url 'sales:product-qrcode' line.product.product.pk %}" alt="QR code for {{ line.product.product.name }}" width="120" height="120">
+            <br><small>{{ line.product.product.name }}</small>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+    #scan-input:focus { box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.25); border-color: #6366f1; }
+    .table-success { --bs-table-bg: #d1fae5 !important; }
+</style>
+{% endblock %}
+
+{% load static %}
+{% block card_header %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const scanInput = document.getElementById('scan-input');
+    const scanSubmit = document.getElementById('scan-submit');
+    const feedback = document.getElementById('scan-feedback');
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value
+        || '{{ csrf_token }}';
+
+    function showFeedback(message, type) {
+        feedback.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show py-2" role="alert">'
+            + message
+            + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
+    }
+
+    function markLineConfirmed(lineId, productName) {
+        const row = document.getElementById('line-' + lineId);
+        if (!row) return;
+        row.classList.add('table-success');
+        const statusCell = row.querySelector('[data-status]');
+        if (statusCell) {
+            statusCell.outerHTML = '<span class="badge bg-success" data-status="confirmed"><i class="bi bi-check-circle me-1"></i>Confirmed</span>';
+        }
+        const actionCell = row.querySelector('.confirm-btn');
+        if (actionCell) {
+            actionCell.outerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+        }
+        // Update counters
+        const badge = document.querySelector('.badge.fs-6');
+        if (badge) {
+            const match = badge.textContent.match(/(\d+)\s*\/\s*(\d+)/);
+            if (match) {
+                const newConfirmed = parseInt(match[1]) + 1;
+                const total = parseInt(match[2]);
+                badge.textContent = newConfirmed + ' / ' + total + ' confirmed';
+                if (newConfirmed >= total) {
+                    badge.classList.remove('bg-secondary');
+                    badge.classList.add('bg-success');
+                }
+            }
+        }
+    }
+
+    function submitScan(value) {
+        if (!value.trim()) return;
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrfToken,
+            },
+            body: 'scan_value=' + encodeURIComponent(value.trim()),
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.ok) {
+                showFeedback('<i class="bi bi-check-circle me-1"></i><strong>' + (data.product_name || 'Item') + '</strong> confirmed into store!', 'success');
+                markLineConfirmed(data.line_id, data.product_name);
+                if (data.all_confirmed) {
+                    showFeedback('<i class="bi bi-check-circle me-1"></i>All items confirmed! Ready to receive.', 'success');
+                    setTimeout(function() { location.reload(); }, 1000);
+                }
+            } else {
+                showFeedback('<i class="bi bi-exclamation-triangle me-1"></i>' + data.error, 'warning');
+            }
+            scanInput.value = '';
+            scanInput.focus();
+        })
+        .catch(function() {
+            showFeedback('Network error. Please try again.', 'danger');
+            scanInput.focus();
+        });
+    }
+
+    function confirmLine(lineId) {
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrfToken,
+            },
+            body: 'line_id=' + encodeURIComponent(lineId),
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.ok) {
+                showFeedback('<i class="bi bi-check-circle me-1"></i>Line confirmed into store!', 'success');
+                markLineConfirmed(data.line_id);
+                if (data.all_confirmed) {
+                    setTimeout(function() { location.reload(); }, 1000);
+                }
+            } else {
+                showFeedback('<i class="bi bi-exclamation-triangle me-1"></i>' + data.error, 'warning');
+            }
+        });
+    }
+
+    // Submit on Enter or button click
+    scanInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); submitScan(scanInput.value); }
+    });
+    scanSubmit.addEventListener('click', function() { submitScan(scanInput.value); });
+
+    // Manual confirm buttons
+    document.querySelectorAll('.confirm-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() { confirmLine(this.dataset.lineId); });
+    });
+
+    // Camera scanning via BarcodeDetector API (where supported)
+    const cameraToggle = document.getElementById('camera-toggle');
+    const cameraArea = document.getElementById('camera-area');
+    const video = document.getElementById('camera-video');
+    const cameraStop = document.getElementById('camera-stop');
+    let cameraStream = null;
+    let scanInterval = null;
+
+    function stopCamera() {
+        if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+        if (cameraStream) { cameraStream.getTracks().forEach(function(t) { t.stop(); }); cameraStream = null; }
+        cameraArea.classList.add('d-none');
+        scanInput.focus();
+    }
+
+    cameraStop.addEventListener('click', stopCamera);
+
+    cameraToggle.addEventListener('click', function() {
+        if (cameraStream) { stopCamera(); return; }
+        if (!('BarcodeDetector' in window)) {
+            showFeedback('<i class="bi bi-info-circle me-1"></i>Camera barcode scanning is not supported in this browser. Please type the barcode manually.', 'info');
+            return;
+        }
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(function(stream) {
+            cameraStream = stream;
+            video.srcObject = stream;
+            cameraArea.classList.remove('d-none');
+            var detector = new BarcodeDetector();
+            scanInterval = setInterval(function() {
+                if (video.readyState < 2) return;
+                detector.detect(video).then(function(barcodes) {
+                    if (barcodes.length > 0) {
+                        var val = barcodes[0].rawValue;
+                        stopCamera();
+                        scanInput.value = val;
+                        submitScan(val);
+                    }
+                }).catch(function() {});
+            }, 500);
+        })
+        .catch(function() {
+            showFeedback('<i class="bi bi-exclamation-triangle me-1"></i>Could not access camera. Check permissions.', 'danger');
+        });
+    });
+});
+</script>
+{% endblock %}

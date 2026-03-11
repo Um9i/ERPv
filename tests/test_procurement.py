@@ -935,3 +935,223 @@ class TestPurchaseOrderLine:
         purchase_order_line.refresh_from_db()
         assert purchase_order_line.complete is True
         assert purchase_order_line.closed is True
+
+
+@pytest.mark.django_db
+class TestStoreConfirmation:
+    """Tests for the scan-to-store confirmation workflow."""
+
+    def test_store_confirm_get(self, client, purchase_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        po = purchase_order_line.purchase_order
+        url = reverse("procurement:store-confirm", args=[po.pk])
+        resp = client.get(url)
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert "Store Confirmation" in content
+        assert "0 / 1 confirmed" in content
+
+    def test_store_confirm_manual_line(self, client, purchase_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        po = purchase_order_line.purchase_order
+        url = reverse("procurement:store-confirm", args=[po.pk])
+        resp = client.post(
+            url,
+            {"line_id": str(purchase_order_line.pk)},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is True
+        assert data["line_id"] == purchase_order_line.pk
+        assert data["all_confirmed"] is True
+
+        purchase_order_line.refresh_from_db()
+        assert purchase_order_line.store_confirmed is True
+        assert purchase_order_line.store_confirmed_at is not None
+
+    def test_store_confirm_scan_barcode(self, client, purchase_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        product = purchase_order_line.product.product
+        product.barcode = "STORE-BC-123"
+        product.save(update_fields=["barcode"])
+
+        po = purchase_order_line.purchase_order
+        url = reverse("procurement:store-confirm", args=[po.pk])
+        resp = client.post(
+            url,
+            {"scan_value": "STORE-BC-123"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is True
+        assert data["product_name"] == product.name
+
+        purchase_order_line.refresh_from_db()
+        assert purchase_order_line.store_confirmed is True
+
+    def test_store_confirm_scan_sku(self, client, purchase_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        product = purchase_order_line.product.product
+        product.sku = "STORE-SKU-999"
+        product.save(update_fields=["sku"])
+
+        po = purchase_order_line.purchase_order
+        url = reverse("procurement:store-confirm", args=[po.pk])
+        resp = client.post(
+            url,
+            {"scan_value": "STORE-SKU-999"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is True
+
+        purchase_order_line.refresh_from_db()
+        assert purchase_order_line.store_confirmed is True
+
+    def test_store_confirm_scan_no_match(self, client, purchase_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        po = purchase_order_line.purchase_order
+        url = reverse("procurement:store-confirm", args=[po.pk])
+        resp = client.post(
+            url,
+            {"scan_value": "UNKNOWN-CODE"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["ok"] is False
+        assert "No product matches" in data["error"]
+
+    def test_store_confirm_scan_already_confirmed(self, client, purchase_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        product = purchase_order_line.product.product
+        product.barcode = "STORE-BC-DONE"
+        product.save(update_fields=["barcode"])
+
+        purchase_order_line.store_confirmed = True
+        purchase_order_line.save(update_fields=["store_confirmed"])
+
+        po = purchase_order_line.purchase_order
+        url = reverse("procurement:store-confirm", args=[po.pk])
+        resp = client.post(
+            url,
+            {"scan_value": "STORE-BC-DONE"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        data = resp.json()
+        assert data["ok"] is False
+        assert "no unconfirmed lines" in data["error"].lower()
+
+    def test_store_confirm_invalid_line_id(self, client, purchase_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        po = purchase_order_line.purchase_order
+        url = reverse("procurement:store-confirm", args=[po.pk])
+        resp = client.post(
+            url,
+            {"line_id": "99999"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        data = resp.json()
+        assert data["ok"] is False
+        assert "not found" in data["error"].lower()
+
+    def test_store_confirm_reset(self, client, purchase_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        purchase_order_line.store_confirmed = True
+        purchase_order_line.save(update_fields=["store_confirmed"])
+
+        po = purchase_order_line.purchase_order
+        url = reverse("procurement:store-confirm-reset", args=[po.pk])
+        resp = client.post(url)
+        assert resp.status_code == 302
+
+        purchase_order_line.refresh_from_db()
+        assert purchase_order_line.store_confirmed is False
+
+    def test_all_store_confirmed_property(self, purchase_order_line):
+        po = purchase_order_line.purchase_order
+        assert po.all_store_confirmed is False
+
+        purchase_order_line.store_confirmed = True
+        purchase_order_line.save(update_fields=["store_confirmed"])
+        assert po.all_store_confirmed is True
+
+    def test_store_confirm_non_ajax_redirect(self, client, purchase_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        po = purchase_order_line.purchase_order
+        url = reverse("procurement:store-confirm", args=[po.pk])
+        # POST without AJAX header should redirect
+        resp = client.post(url, {"line_id": str(purchase_order_line.pk)})
+        assert resp.status_code == 302
+
+    def test_store_confirm_requires_login(self, client, purchase_order_line):
+        from django.urls import reverse
+
+        po = purchase_order_line.purchase_order
+        url = reverse("procurement:store-confirm", args=[po.pk])
+        resp = client.get(url)
+        assert resp.status_code == 302
+        assert "/login/" in resp.url or "/accounts/login/" in resp.url
+
+    def test_po_detail_has_scan_to_store_link(self, client, purchase_order_line):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        po = purchase_order_line.purchase_order
+        url = reverse("procurement:purchase-order-detail", args=[po.pk])
+        resp = client.get(url)
+        content = resp.content.decode()
+        confirm_url = reverse("procurement:store-confirm", args=[po.pk])
+        assert confirm_url in content
+        assert "Scan to Store" in content

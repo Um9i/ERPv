@@ -35,6 +35,14 @@ reporting.
 * The receiving view processes post data to mark lines received, update
   inventory and create ledger entries.  A "receive all" button expedites
   full receipt.  Partial receipts update quantities without closing a line.
+* **Store Confirmation (Scan-to-Store)** – a barcode/QR scanning workflow for
+  warehouse staff receiving goods from a purchase order into the store.
+  `StoreConfirmView` presents a scanner UI (manual input + camera via the
+  `BarcodeDetector` API) and confirms lines via AJAX.  Lines are matched by
+  product barcode or SKU.  `StoreConfirmResetView` resets all confirmations.
+  `PurchaseOrderLine` tracks `store_confirmed` and `store_confirmed_at`;
+  `PurchaseOrder.all_store_confirmed` indicates when every line has been
+  scanned in.  The PO detail page links directly to the scan-to-store page.
 * Detail view allows manual closing of an order (bypassing inventory changes)
   and shows received/remaining totals.
 * **ProcurementDashboardView** exposes simple metrics: total orders, lines

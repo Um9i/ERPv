@@ -145,6 +145,11 @@ class PurchaseOrder(AuditMixin, models.Model):
             return Decimal("0.00")
         return Decimal(total).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
+    @property
+    def all_store_confirmed(self):
+        """Return True when every line has been scanned into the store."""
+        return not self.purchase_order_lines.filter(store_confirmed=False).exists()
+
     def update_cached_total(self):
         """Recompute and store the aggregate amount for this order."""
         total = self.purchase_order_lines.aggregate(
@@ -196,6 +201,8 @@ class PurchaseOrderLine(models.Model):
     complete = models.BooleanField(default=False)
     closed = models.BooleanField(default=False)
     value = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    store_confirmed = models.BooleanField(default=False)
+    store_confirmed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["product"]

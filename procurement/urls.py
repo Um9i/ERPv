@@ -9,6 +9,8 @@ from .views import (
     PurchaseOrderExportView,
     PurchaseOrderListView,
     PurchaseOrderReceiveView,
+    StoreConfirmResetView,
+    StoreConfirmView,
     SupplierContactCreateView,
     SupplierContactDeleteView,
     SupplierContactUpdateView,
@@ -115,6 +117,16 @@ urlpatterns = [
         "purchase-orders/<int:pk>/receive/",
         PurchaseOrderReceiveView.as_view(),
         name="purchase-order-receive",
+    ),
+    path(
+        "purchase-orders/<int:pk>/store-confirm/",
+        StoreConfirmView.as_view(),
+        name="store-confirm",
+    ),
+    path(
+        "purchase-orders/<int:pk>/store-confirm/reset/",
+        StoreConfirmResetView.as_view(),
+        name="store-confirm-reset",
     ),
     path(
         "purchase-orders/<int:pk>/delete/",
