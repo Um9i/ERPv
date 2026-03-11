@@ -20,6 +20,7 @@ from .forms import (
     CustomerContactForm,
     CustomerForm,
     CustomerProductForm,
+    RequiredSOLineFormSet,
     SalesOrderForm,
     SalesOrderLineForm,
 )
@@ -316,8 +317,11 @@ class SalesOrderCreateView(LoginRequiredMixin, CreateView):
             SalesOrder,
             SalesOrderLine,
             form=SalesOrderLineForm,
+            formset=RequiredSOLineFormSet,
             extra=1,
             can_delete=True,
+            min_num=1,
+            validate_min=True,
         )
         if self.request.POST:
             context["lines_formset"] = LineFormset(self.request.POST)

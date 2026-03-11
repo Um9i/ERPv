@@ -880,6 +880,33 @@ class TestPurchaseOrder:
         # no purchase order should have been created
         assert not PurchaseOrder.objects.filter(supplier=supplier).exists()
 
+    def test_create_view_rejects_empty_order(self, client, supplier):
+        """Submitting a purchase order with no line items should fail validation."""
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        url = reverse("procurement:purchase-order-create") + f"?supplier={supplier.pk}"
+        prefix = "purchase_order_lines"
+        data = {
+            "supplier": supplier.pk,
+            f"{prefix}-TOTAL_FORMS": "1",
+            f"{prefix}-INITIAL_FORMS": "0",
+            f"{prefix}-MIN_NUM_FORMS": "0",
+            f"{prefix}-MAX_NUM_FORMS": "1000",
+            # leave the single extra form completely blank
+        }
+        response = client.post(url, data)
+        assert response.status_code == 200
+        fs = response.context["lines_formset"]
+        assert not fs.is_valid()
+        assert (
+            "A purchase order must have at least one line item." in fs.non_form_errors()
+        )
+        assert not PurchaseOrder.objects.filter(supplier=supplier).exists()
+
 
 @pytest.mark.django_db
 class TestPurchaseOrderLine:

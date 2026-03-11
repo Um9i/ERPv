@@ -23,6 +23,7 @@ from django.views.generic import (
 from .forms import (
     PurchaseOrderForm,
     PurchaseOrderLineForm,
+    RequiredPOLineFormSet,
     SupplierContactForm,
     SupplierForm,
     SupplierProductForm,
@@ -501,8 +502,11 @@ class PurchaseOrderCreateView(LoginRequiredMixin, CreateView):
                 PurchaseOrder,
                 PurchaseOrderLine,
                 form=PurchaseOrderLineForm,
+                formset=RequiredPOLineFormSet,
                 extra=extra,
                 can_delete=True,
+                min_num=1,
+                validate_min=True,
             )
 
         # handle inline formset initialisation

@@ -460,6 +460,33 @@ class TestSalesOrder:
         assert not fs.is_valid()
         assert not SalesOrder.objects.filter(customer=customer).exists()
 
+    def test_create_view_rejects_empty_order(self, client, customer):
+        """Submitting a sales order with no line items should fail validation."""
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+
+        from sales.models import SalesOrder
+
+        user = User.objects.create_user(username="tester")
+        client.force_login(user)
+
+        url = reverse("sales:sales-order-create") + f"?customer={customer.pk}"
+        prefix = "sales_order_lines"
+        data = {
+            "customer": customer.pk,
+            f"{prefix}-TOTAL_FORMS": "1",
+            f"{prefix}-INITIAL_FORMS": "0",
+            f"{prefix}-MIN_NUM_FORMS": "0",
+            f"{prefix}-MAX_NUM_FORMS": "1000",
+            # leave the single extra form completely blank
+        }
+        response = client.post(url, data)
+        assert response.status_code == 200
+        fs = response.context["lines_formset"]
+        assert not fs.is_valid()
+        assert "A sales order must have at least one line item." in fs.non_form_errors()
+        assert not SalesOrder.objects.filter(customer=customer).exists()
+
     def test_sales_order_form_js_syntax(self, client, customer):
         """Validate the order_form.js static file is referenced and compiles."""
         import subprocess

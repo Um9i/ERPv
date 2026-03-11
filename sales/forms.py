@@ -111,6 +111,14 @@ class CustomerProductForm(forms.ModelForm):
 # ── Sales Order ────────────────────────────────────────────────────────
 
 
+class RequiredSOLineFormSet(forms.BaseInlineFormSet):
+    """Inline formset that requires at least one line item."""
+
+    default_error_messages = {
+        "too_few_forms": "A sales order must have at least one line item.",
+    }
+
+
 class SalesOrderForm(forms.ModelForm):
     class Meta:
         model = SalesOrder

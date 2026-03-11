@@ -120,6 +120,14 @@ class SupplierProductForm(forms.ModelForm):
 # ── Purchase Order ────────────────────────────────────────────────────
 
 
+class RequiredPOLineFormSet(forms.BaseInlineFormSet):
+    """Inline formset that requires at least one line item."""
+
+    default_error_messages = {
+        "too_few_forms": "A purchase order must have at least one line item.",
+    }
+
+
 class PurchaseOrderForm(forms.ModelForm):
     class Meta:
         model = PurchaseOrder
