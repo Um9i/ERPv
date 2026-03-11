@@ -453,18 +453,21 @@ class ProductionDetailView(LoginRequiredMixin, DetailView):
 
         context = super().get_context_data(**kwargs)
         job = self.object
-        context["bom"] = job.bom()
+        bom_items = job.bom()
+        context["bom"] = bom_items
         context["today"] = timezone.now().date()
         context["today_plus_7"] = timezone.now().date() + timedelta(days=7)
 
         components = []
-        if job.bom():
-            for item in job.bom():
-                try:
-                    inv = Inventory.objects.get(product=item.product)
-                    stock = inv.quantity
-                except Inventory.DoesNotExist:
-                    stock = 0
+        if bom_items:
+            # bulk-fetch inventory for all components to avoid N+1 queries
+            component_products = [item.product for item in bom_items]
+            inv_map = {
+                inv.product_id: inv.quantity
+                for inv in Inventory.objects.filter(product__in=component_products)
+            }
+            for item in bom_items:
+                stock = inv_map.get(item.product_id, 0)
                 required = item.quantity * job.quantity
                 required_remaining = item.quantity * job.remaining
                 shortfall = max(required_remaining - stock, 0)

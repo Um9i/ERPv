@@ -1,7 +1,7 @@
-<aside class="app-sidebar" data-bs-theme="dark">
+<aside class="app-sidebar" data-bs-theme="dark" aria-label="Main navigation">
     <div class="app-sidebar-inner">
-        <div class="sidebar-section-label">Modules</div>
-        <ul class="nav flex-column app-sidebar-nav" id="sidemenuLinks">
+        <div class="sidebar-section-label" id="sidebar-modules-label">Modules</div>
+        <ul class="nav flex-column app-sidebar-nav" id="sidemenuLinks" aria-labelledby="sidebar-modules-label">
             {% include "includes/sidebar_links.html" %}
         </ul>
     </div>

@@ -1238,4 +1238,42 @@ h1, h2, h3, h4, h5, h6 {
     color: #fff;
 }
 
+/* =============================================
+   ACCESSIBILITY
+   ============================================= */
+.skip-to-main {
+    position: absolute;
+    left: -9999px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    z-index: 9999;
+    padding: 0.75rem 1.5rem;
+    background: var(--color-primary);
+    color: #fff;
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+}
+.skip-to-main:focus {
+    position: fixed;
+    top: 0.5rem;
+    left: 0.5rem;
+    width: auto;
+    height: auto;
+    overflow: visible;
+}
+
+:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.sidebar-link.active {
+    background: rgba(255, 255, 255, 0.1);
+    font-weight: 600;
+}
+
 

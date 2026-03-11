@@ -1,7 +1,7 @@
 PYTHON = .venv/bin/python
 PYTEST = .venv/bin/pytest
 
-.PHONY: dev prod test lint format check mypy audit migrate shell clean lint-migrations
+.PHONY: dev prod test test-coverage lint format check mypy audit migrate shell clean lint-migrations seed build
 
 dev:
 	podman compose up --build
@@ -11,6 +11,15 @@ prod:
 
 test:
 	DEBUG=True SECRETKEY=test-secret $(PYTEST) -o "addopts=" --tb=short -q
+
+test-coverage:
+	DEBUG=True SECRETKEY=test-secret $(PYTEST) -o "addopts=" --tb=short --cov=. --cov-report=html --cov-report=term-missing
+
+seed:
+	DEBUG=True SECRETKEY=test-secret $(PYTHON) manage.py seeddata
+
+build:
+	podman build -t erpv .
 
 lint:
 	$(PYTHON) -m ruff check .

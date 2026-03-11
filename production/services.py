@@ -201,7 +201,7 @@ def pending_jobs_by_product(product_ids: Iterable[int]) -> dict[int, int]:
     return {row["product_id"]: int(row["total"] or 0) for row in job_vals}
 
 
-def build_bom_tree(product, quantity=1, visited=None):
+def build_bom_tree(product, quantity=1, visited=None, _inv_cache=None):
     """Recursively build a serialisable BOM tree with stock state."""
     if visited is None:
         visited = set()
@@ -209,11 +209,11 @@ def build_bom_tree(product, quantity=1, visited=None):
         return None  # circular reference guard
     visited = visited | {product.pk}
 
-    try:
-        inv = Inventory.objects.get(product=product)
-        stock = inv.quantity
-    except Inventory.DoesNotExist:
-        stock = 0
+    # on first call, pre-fetch all inventory into a cache
+    if _inv_cache is None:
+        _inv_cache = dict(Inventory.objects.values_list("product_id", "quantity"))
+
+    stock = _inv_cache.get(product.pk, 0)
 
     node = {
         "id": product.pk,
@@ -231,6 +231,7 @@ def build_bom_tree(product, quantity=1, visited=None):
                 item.product,
                 quantity=item.quantity * quantity,
                 visited=visited,
+                _inv_cache=_inv_cache,
             )
             if child:
                 node["children"].append(child)

@@ -1,6 +1,6 @@
 import pytest
 
-from inventory.models import Inventory, Product
+from inventory.models import Inventory, Product, ProductionAllocated
 from procurement.models import (
     PurchaseOrder,
     PurchaseOrderLine,
@@ -17,31 +17,54 @@ from sales.models import (
     SalesOrderLine,
 )
 
+_FAST_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
+
+@pytest.fixture(autouse=True)
+def _fast_password_hasher(settings):
+    """Use MD5 instead of PBKDF2 so create_user() is near-instant."""
+    settings.PASSWORD_HASHERS = _FAST_HASHERS
+
+
+def _create_product_with_deps(name, quantity=0):
+    """Create a Product + its Inventory & ProductionAllocated via bulk_create
+    (bypasses post_save signals for speed)."""
+    p = Product.objects.bulk_create([Product(name=name)])[0]
+    Inventory.objects.bulk_create([Inventory(product=p, quantity=quantity)])
+    ProductionAllocated.objects.bulk_create([ProductionAllocated(product=p)])
+    return p
+
 
 @pytest.fixture
 def product(db):
-    return Product.objects.create(name="product")
+    return _create_product_with_deps("product")
 
 
 @pytest.fixture
 def bom(db, product):
-    product_2 = Product.objects.create(name="product 2")
-    product_3 = Product.objects.create(name="product 3")
+    # bulk-create component products bypassing signals
+    comps = Product.objects.bulk_create(
+        [Product(name="product 2"), Product(name="product 3")]
+    )
+    Inventory.objects.bulk_create([Inventory(product=p, quantity=100) for p in comps])
+    ProductionAllocated.objects.bulk_create(
+        [ProductionAllocated(product=p) for p in comps]
+    )
+    # set the main product's inventory to 100 too
+    Inventory.objects.filter(product=product).update(quantity=100)
     bom = BillOfMaterials.objects.create(product=product)
-    BOMItem.objects.create(bom=bom, product=product_2, quantity=10)
-    BOMItem.objects.create(bom=bom, product=product_3, quantity=5)
-    Inventory.objects.update_or_create(product=product, defaults={"quantity": 100})
-    Inventory.objects.update_or_create(product=product_2, defaults={"quantity": 100})
-    Inventory.objects.update_or_create(product=product_3, defaults={"quantity": 100})
+    BOMItem.objects.bulk_create(
+        [
+            BOMItem(bom=bom, product=comps[0], quantity=10),
+            BOMItem(bom=bom, product=comps[1], quantity=5),
+        ]
+    )
     return bom
 
 
 @pytest.fixture
 def bom_item(db, product, bom):
-    # create a separate component product so the BOM is not self-referential
-    comp = Product.objects.create(name=f"component for {product.name}")
-    # ensure inventory exists for the component as well
-    Inventory.objects.update_or_create(product=comp, defaults={"quantity": 100})
+    comp = _create_product_with_deps(f"component for {product.name}", quantity=100)
     return BOMItem.objects.create(bom=bom, product=comp, quantity=10)
 
 

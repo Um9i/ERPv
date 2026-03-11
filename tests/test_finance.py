@@ -7,6 +7,7 @@ from django.test.utils import CaptureQueriesContext
 
 from finance.models import FinanceDashboardSnapshot
 from finance.services import refresh_finance_dashboard_cache
+from inventory.models import Product
 from main.factories import CustomerFactory, ProductFactory, SupplierFactory
 from procurement.models import PurchaseLedger
 from sales.models import SalesLedger
@@ -188,18 +189,33 @@ def test_finance_dashboard_uses_cached_values(client):
 @pytest.mark.django_db
 def test_product_pl_query_count(client):
     """Guard against N+1 regressions on the Product P&L report."""
+    from inventory.models import Inventory, ProductionAllocated
+    from sales.models import Customer
+
     user = User.objects.create_user(username="plcount")
     client.force_login(user)
-    for i in range(5):
-        p = ProductFactory()
-        c = CustomerFactory()
-        SalesLedger.objects.create(
-            product=p,
-            customer=c,
-            quantity=1,
-            value=Decimal("10.00"),
-            transaction_id=100 + i,
-        )
+    products = Product.objects.bulk_create(
+        [Product(name=f"pl_prod_{i}") for i in range(5)]
+    )
+    Inventory.objects.bulk_create([Inventory(product=p) for p in products])
+    ProductionAllocated.objects.bulk_create(
+        [ProductionAllocated(product=p) for p in products]
+    )
+    customers = Customer.objects.bulk_create(
+        [Customer(name=f"pl_cust_{i}") for i in range(5)]
+    )
+    SalesLedger.objects.bulk_create(
+        [
+            SalesLedger(
+                product=products[i],
+                customer=customers[i],
+                quantity=1,
+                value=Decimal("10.00"),
+                transaction_id=100 + i,
+            )
+            for i in range(5)
+        ]
+    )
 
     # Warm caches
     client.get("/finance/reports/product-pl/")

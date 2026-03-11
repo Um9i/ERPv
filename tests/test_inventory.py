@@ -63,15 +63,21 @@ class TestInventory:
         from django.contrib.auth.models import User
         from django.urls import reverse
 
-        from inventory.models import Inventory, Product
+        from inventory.models import Inventory, Product, ProductionAllocated
 
         user = User.objects.create_user(username="tester")
         client.force_login(user)
 
-        # insert many products
-        for i in range(25):
-            p = Product.objects.create(name=f"X{i}")
-            Inventory.objects.update_or_create(product=p, defaults={"quantity": i})
+        # insert many products using bulk_create to avoid per-row signal overhead
+        products = Product.objects.bulk_create(
+            [Product(name=f"X{i}") for i in range(25)]
+        )
+        Inventory.objects.bulk_create(
+            [Inventory(product=p, quantity=i) for i, p in enumerate(products)]
+        )
+        ProductionAllocated.objects.bulk_create(
+            [ProductionAllocated(product=p) for p in products]
+        )
         url = reverse("inventory:inventory-list")
         resp = client.get(url, {"q": "X1"})
         assert resp.status_code == 200
@@ -218,28 +224,13 @@ class TestInventory:
             or 0
         )
         # when the required filter is applied we expect a list in context
+        # ensure a shortage exists by setting required_cached directly
+        inv = Inventory.objects.first()
+        inv.quantity = 0
+        inv.required_cached = 5
+        inv.save(update_fields=["quantity", "required_cached"])
         resp2 = client.get(url + "?required=1")
         assert "required_items" in resp2.context
-        # ensure the low-stock view renders entries when shortages exist
-        # create a shortage if none already
-        if not resp2.context["required_items"]:
-            inv = Inventory.objects.first()
-            inv.quantity = 0
-            inv.save()
-            from sales.models import (
-                Customer,
-                CustomerProduct,
-                SalesOrder,
-                SalesOrderLine,
-            )
-
-            cust = Customer.objects.create(name="C4")
-            cp = CustomerProduct.objects.create(
-                customer=cust, product=inv.product, price=1
-            )
-            so = SalesOrder.objects.create(customer=cust)
-            SalesOrderLine.objects.create(sales_order=so, product=cp, quantity=5)
-            resp2 = client.get(url + "?required=1")
         assert resp2.context["required_items"]
         content_l = client.get(
             reverse("inventory:inventory-low-stock")
@@ -254,27 +245,21 @@ class TestInventory:
         from django.contrib.auth.models import User
         from django.urls import reverse
 
-        from inventory.models import Inventory
+        from inventory.models import Inventory, Product, ProductionAllocated
 
         # create many inventory rows with required shortage
         Inventory.objects.all().delete()
-        Product = product.__class__
-        # clear out existing products so new ones get fresh ids
         Product.objects.all().delete()
-        # make 25 brand‑new products to avoid collisions
-        [Product.objects.create(name=f"prod{i}") for i in range(25)]
-        # inventories are automatically created via post-save signal when
-        # we make each product, so no need to add them ourselves
-        # force at least one sales order per item to make required>0
-        from sales.models import Customer, CustomerProduct, SalesOrder, SalesOrderLine
-
-        cust = Customer.objects.create(name="Cpage")
-        for inv in Inventory.objects.all():
-            cp = CustomerProduct.objects.create(
-                customer=cust, product=inv.product, price=1
-            )
-            so = SalesOrder.objects.create(customer=cust)
-            SalesOrderLine.objects.create(sales_order=so, product=cp, quantity=1)
+        # bulk-create 25 products and their inventory/allocation rows
+        products = Product.objects.bulk_create(
+            [Product(name=f"prod{i}") for i in range(25)]
+        )
+        Inventory.objects.bulk_create(
+            [Inventory(product=p, quantity=0, required_cached=1) for p in products]
+        )
+        ProductionAllocated.objects.bulk_create(
+            [ProductionAllocated(product=p) for p in products]
+        )
         user = User.objects.create_user(username="dashpage")
         client.force_login(user)
         resp = client.get(reverse("inventory:inventory-low-stock"))

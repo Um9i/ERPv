@@ -1,8 +1,6 @@
 import pytest
 from django.test import override_settings
 
-_FAST_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
-
 
 @pytest.mark.django_db
 class TestMainPages:
@@ -32,7 +30,7 @@ class TestMainPages:
             assert resp.status_code in (302, 301)
             assert reverse("login") in resp.url
 
-    @override_settings(PASSWORD_HASHERS=_FAST_HASHERS, REGISTRATION_OPEN=True)
+    @override_settings(REGISTRATION_OPEN=True)
     def test_registration_pages(self, client):
         """Registration form and completion pages render correctly."""
         from django.urls import reverse

@@ -18,18 +18,18 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
-
-# from django.views.generic import TemplateView
 from django.views.generic import TemplateView
+
+from main.views import HealthCheckView
 
 admin.site.site_title = "ERPv 0.0.1"
 admin.site.site_header = "ERPv"
-# admin.site.site_url = None
 admin.site.index_title = ""
 
 urlpatterns = (
     ([path("admin/", admin.site.urls)] if settings.DEBUG else [])
     + [
+        path("healthz/", HealthCheckView.as_view(), name="healthz"),
         path("accounts/", include("django_registration.backends.one_step.urls")),
         path("accounts/", include("django.contrib.auth.urls")),
         path("", TemplateView.as_view(template_name="home.html"), name="home"),
@@ -43,6 +43,9 @@ urlpatterns = (
     ]
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 )
+
+handler404 = "main.error_views.custom_404"
+handler500 = "main.error_views.custom_500"
 
 if settings.DEBUG:
     from debug_toolbar.toolbar import debug_toolbar_urls

@@ -19,6 +19,7 @@ class LoginRequiredMiddleware:
         self.exempt_prefixes = [
             "/accounts/",
             "/config/api/",
+            "/healthz/",
             "/inventory/api/",
             "/procurement/api/",
         ]

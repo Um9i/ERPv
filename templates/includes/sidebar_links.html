@@ -1,43 +1,50 @@
 <li class="nav-item">
-    <a href="{% url 'inventory:inventory-dashboard' %}" class="nav-link sidebar-link">
-        <span class="sidebar-icon sidebar-icon--green"><i class="bi bi-box-seam"></i></span>
+    <a href="{% url 'inventory:inventory-dashboard' %}" class="nav-link sidebar-link{% if request.resolver_match.app_name == 'inventory' %} active{% endif %}"
+       {% if request.resolver_match.app_name == 'inventory' %}aria-current="page"{% endif %}>
+        <span class="sidebar-icon sidebar-icon--green"><i class="bi bi-box-seam" aria-hidden="true"></i></span>
         <span class="sidebar-label">Inventory</span>
     </a>
 </li>
 <li class="nav-item">
-    <a href="{% url 'procurement:procurement-dashboard' %}" class="nav-link sidebar-link">
-        <span class="sidebar-icon sidebar-icon--blue"><i class="bi bi-cart-plus"></i></span>
+    <a href="{% url 'procurement:procurement-dashboard' %}" class="nav-link sidebar-link{% if request.resolver_match.app_name == 'procurement' %} active{% endif %}"
+       {% if request.resolver_match.app_name == 'procurement' %}aria-current="page"{% endif %}>
+        <span class="sidebar-icon sidebar-icon--blue"><i class="bi bi-cart-plus" aria-hidden="true"></i></span>
         <span class="sidebar-label">Procurement</span>
     </a>
 </li>
 <li class="nav-item">
-    <a href="{% url 'sales:sales-dashboard' %}" class="nav-link sidebar-link">
-        <span class="sidebar-icon sidebar-icon--indigo"><i class="bi bi-cart4"></i></span>
+    <a href="{% url 'sales:sales-dashboard' %}" class="nav-link sidebar-link{% if request.resolver_match.app_name == 'sales' %} active{% endif %}"
+       {% if request.resolver_match.app_name == 'sales' %}aria-current="page"{% endif %}>
+        <span class="sidebar-icon sidebar-icon--indigo"><i class="bi bi-cart4" aria-hidden="true"></i></span>
         <span class="sidebar-label">Sales</span>
     </a>
 </li>
 <li class="nav-item">
-    <a href="{% url 'production:production-dashboard' %}" class="nav-link sidebar-link">
-        <span class="sidebar-icon sidebar-icon--amber"><i class="bi bi-gear-fill"></i></span>
+    <a href="{% url 'production:production-dashboard' %}" class="nav-link sidebar-link{% if request.resolver_match.app_name == 'production' %} active{% endif %}"
+       {% if request.resolver_match.app_name == 'production' %}aria-current="page"{% endif %}>
+        <span class="sidebar-icon sidebar-icon--amber"><i class="bi bi-gear-fill" aria-hidden="true"></i></span>
         <span class="sidebar-label">Production</span>
     </a>
 </li>
 <li class="nav-item">
-    <a href="{% url 'finance:finance-dashboard' %}" class="nav-link sidebar-link">
-        <span class="sidebar-icon sidebar-icon--teal"><i class="bi bi-cash-coin"></i></span>
+    <a href="{% url 'finance:finance-dashboard' %}" class="nav-link sidebar-link{% if request.resolver_match.app_name == 'finance' %} active{% endif %}"
+       {% if request.resolver_match.app_name == 'finance' %}aria-current="page"{% endif %}>
+        <span class="sidebar-icon sidebar-icon--teal"><i class="bi bi-cash-coin" aria-hidden="true"></i></span>
         <span class="sidebar-label">Finance</span>
     </a>
 </li>
 <li class="nav-item">
-    <a href="{% url 'dashboards:dashboard-home' %}" class="nav-link sidebar-link">
-        <span class="sidebar-icon sidebar-icon--purple"><i class="bi bi-speedometer2"></i></span>
+    <a href="{% url 'dashboards:dashboard-home' %}" class="nav-link sidebar-link{% if request.resolver_match.app_name == 'dashboards' %} active{% endif %}"
+       {% if request.resolver_match.app_name == 'dashboards' %}aria-current="page"{% endif %}>
+        <span class="sidebar-icon sidebar-icon--purple"><i class="bi bi-speedometer2" aria-hidden="true"></i></span>
         <span class="sidebar-label">Dashboards</span>
     </a>
 </li>
 {% if request.user.is_staff %}
 <li class="nav-item">
-    <a href="{% url 'config:company-config' %}" class="nav-link sidebar-link">
-        <span class="sidebar-icon sidebar-icon--rose"><i class="bi bi-sliders"></i></span>
+    <a href="{% url 'config:company-config' %}" class="nav-link sidebar-link{% if request.resolver_match.app_name == 'config' %} active{% endif %}"
+       {% if request.resolver_match.app_name == 'config' %}aria-current="page"{% endif %}>
+        <span class="sidebar-icon sidebar-icon--rose"><i class="bi bi-sliders" aria-hidden="true"></i></span>
         <span class="sidebar-label">Settings</span>
     </a>
 </li>

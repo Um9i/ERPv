@@ -154,17 +154,19 @@ class Production(models.Model):
         need a job‑level predicate that scales the component requirements by
         ``self.quantity``.
         """
-        if self.bom() is None:
+        bom_items = self.bom()
+        if bom_items is None:
             return False
-        # lazy import Inventory to avoid cycle at module import time
         from inventory.models import Inventory
 
-        for item in self.bom():
-            try:
-                inv = Inventory.objects.get(product=item.product)
-            except Inventory.DoesNotExist:
-                return False
-            if inv.quantity < item.quantity * self.quantity:
+        inv_map = {
+            inv.product_id: inv.quantity
+            for inv in Inventory.objects.filter(
+                product__in=[item.product for item in bom_items]
+            )
+        }
+        for item in bom_items:
+            if inv_map.get(item.product_id, 0) < item.quantity * self.quantity:
                 return False
         return True
 
