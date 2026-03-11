@@ -54,6 +54,8 @@
             <th class="text-end">Quantity</th>
             <th class="text-end">Value</th>
             <th class="text-end">Transaction</th>
+            <th>Created by</th>
+            <th>Updated by</th>
         </tr>
     </thead>
     <tbody>
@@ -65,10 +67,12 @@
             <td class="text-end">{{ row.quantity }}</td>
             <td class="text-end">{{ row.value|currency }}</td>
             <td class="text-end"><a href="{% url 'sales:sales-order-detail' row.transaction_id %}" class="text-decoration-none"><code>SO{{ row.transaction_id|stringformat:"05d" }}</code></a></td>
+            <td>{{ row.created_by_username|default_if_none:"—" }}</td>
+            <td>{{ row.updated_by_username|default_if_none:"—" }}</td>
         </tr>
         {% empty %}
         <tr>
-            <td colspan="6" class="text-center text-muted">No entries for this month.</td>
+            <td colspan="8" class="text-center text-muted">No entries for this month.</td>
         </tr>
         {% endfor %}
     </tbody>
@@ -76,7 +80,7 @@
         <tr>
             <td colspan="4" class="text-end text-muted">Page total</td>
             <td class="text-end fw-semibold">{{ page_total|currency }}</td>
-            <td></td>
+            <td colspan="3"></td>
         </tr>
     </tfoot>
 </table>

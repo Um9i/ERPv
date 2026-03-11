@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Any, Dict
 
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Sum
+from django.db.models import OuterRef, Subquery, Sum
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.utils import timezone
@@ -13,8 +13,8 @@ from django.views.generic import TemplateView
 from django.views.generic.dates import ArchiveIndexView, MonthArchiveView
 
 from inventory.models import Product
-from procurement.models import PurchaseLedger, Supplier
-from sales.models import Customer, SalesLedger
+from procurement.models import PurchaseLedger, PurchaseOrder, Supplier
+from sales.models import Customer, SalesLedger, SalesOrder
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +96,18 @@ class SalesLedgerFilterMixin:
 
     def get_queryset(self):
         qs = super().get_queryset().select_related("customer", "product")
+        qs = qs.annotate(
+            created_by_username=Subquery(
+                SalesOrder.objects.filter(pk=OuterRef("transaction_id")).values(
+                    "created_by__username"
+                )[:1]
+            ),
+            updated_by_username=Subquery(
+                SalesOrder.objects.filter(pk=OuterRef("transaction_id")).values(
+                    "updated_by__username"
+                )[:1]
+            ),
+        )
         customer_id = self.request.GET.get("customer")
         if customer_id:
             qs = qs.filter(customer_id=customer_id)
@@ -166,6 +178,18 @@ class PurchaseLedgerFilterMixin:
 
     def get_queryset(self):
         qs = super().get_queryset().select_related("supplier", "product")
+        qs = qs.annotate(
+            created_by_username=Subquery(
+                PurchaseOrder.objects.filter(pk=OuterRef("transaction_id")).values(
+                    "created_by__username"
+                )[:1]
+            ),
+            updated_by_username=Subquery(
+                PurchaseOrder.objects.filter(pk=OuterRef("transaction_id")).values(
+                    "updated_by__username"
+                )[:1]
+            ),
+        )
         supplier_id = self.request.GET.get("supplier")
         if supplier_id:
             qs = qs.filter(supplier_id=supplier_id)
@@ -425,6 +449,18 @@ class ProductPLView(LoginRequiredMixin, TemplateView):
 class SalesLedgerExportView(LoginRequiredMixin, View):
     def get(self, request):
         qs = SalesLedger.objects.select_related("customer", "product").order_by("-date")
+        qs = qs.annotate(
+            created_by_username=Subquery(
+                SalesOrder.objects.filter(pk=OuterRef("transaction_id")).values(
+                    "created_by__username"
+                )[:1]
+            ),
+            updated_by_username=Subquery(
+                SalesOrder.objects.filter(pk=OuterRef("transaction_id")).values(
+                    "updated_by__username"
+                )[:1]
+            ),
+        )
         customer_id = request.GET.get("customer")
         if customer_id:
             qs = qs.filter(customer_id=customer_id)
@@ -439,7 +475,16 @@ class SalesLedgerExportView(LoginRequiredMixin, View):
         response["Content-Disposition"] = 'attachment; filename="sales_ledger.csv"'
         writer = csv.writer(response)
         writer.writerow(
-            ["Date", "Customer", "Product", "Quantity", "Value", "Transaction"]
+            [
+                "Date",
+                "Customer",
+                "Product",
+                "Quantity",
+                "Value",
+                "Transaction",
+                "Created By",
+                "Updated By",
+            ]
         )
         for entry in qs:
             writer.writerow(
@@ -450,6 +495,8 @@ class SalesLedgerExportView(LoginRequiredMixin, View):
                     entry.quantity,
                     entry.value,
                     f"SO{entry.transaction_id:05d}",
+                    entry.created_by_username or "",
+                    entry.updated_by_username or "",
                 ]
             )
         return response
@@ -459,6 +506,18 @@ class PurchaseLedgerExportView(LoginRequiredMixin, View):
     def get(self, request):
         qs = PurchaseLedger.objects.select_related("supplier", "product").order_by(
             "-date"
+        )
+        qs = qs.annotate(
+            created_by_username=Subquery(
+                PurchaseOrder.objects.filter(pk=OuterRef("transaction_id")).values(
+                    "created_by__username"
+                )[:1]
+            ),
+            updated_by_username=Subquery(
+                PurchaseOrder.objects.filter(pk=OuterRef("transaction_id")).values(
+                    "updated_by__username"
+                )[:1]
+            ),
         )
         supplier_id = request.GET.get("supplier")
         if supplier_id:
@@ -471,7 +530,16 @@ class PurchaseLedgerExportView(LoginRequiredMixin, View):
         response["Content-Disposition"] = 'attachment; filename="purchase_ledger.csv"'
         writer = csv.writer(response)
         writer.writerow(
-            ["Date", "Supplier", "Product", "Quantity", "Value", "Transaction"]
+            [
+                "Date",
+                "Supplier",
+                "Product",
+                "Quantity",
+                "Value",
+                "Transaction",
+                "Created By",
+                "Updated By",
+            ]
         )
         for entry in qs:
             writer.writerow(
@@ -482,6 +550,8 @@ class PurchaseLedgerExportView(LoginRequiredMixin, View):
                     entry.quantity,
                     entry.value,
                     f"PO{entry.transaction_id:05d}",
+                    entry.created_by_username or "",
+                    entry.updated_by_username or "",
                 ]
             )
         return response

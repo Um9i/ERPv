@@ -804,6 +804,8 @@ def test_sales_ledger_csv_export(staff_client):
         "Quantity",
         "Value",
         "Transaction",
+        "Created By",
+        "Updated By",
     ]
     assert len(rows) == 2
     assert rows[1][1] == customer.name
@@ -840,6 +842,8 @@ def test_purchase_ledger_csv_export(staff_client):
         "Quantity",
         "Value",
         "Transaction",
+        "Created By",
+        "Updated By",
     ]
     assert len(rows) == 2
     assert rows[1][1] == supplier.name
