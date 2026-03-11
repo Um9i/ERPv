@@ -129,6 +129,9 @@ def _compute_stock_value() -> Decimal:
                 bom_costs[parent_id] = bom_costs.get(parent_id, 0) + bom_qty * comp_cost
 
     return sum(
-        qty * (cost if cost is not None else bom_costs.get(pid, 0))
-        for pid, qty, cost in inventories
+        (
+            qty * (cost if cost is not None else bom_costs.get(pid, 0))
+            for pid, qty, cost in inventories
+        ),
+        Decimal(0),
     )
