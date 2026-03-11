@@ -5,6 +5,7 @@ from .views import (
     InventoryAdjustCreateView,
     InventoryDashboardView,
     InventoryDetailView,
+    InventoryExportView,
     InventoryListApiView,
     InventoryListView,
     InventoryLocationCreateView,
@@ -14,6 +15,7 @@ from .views import (
     LocationDeleteView,
     LocationListView,
     LocationUpdateView,
+    LowStockExportView,
     LowStockListView,
     ProductCreateView,
     ProductDeleteView,
@@ -27,6 +29,11 @@ urlpatterns = [
     path("api/catalogue/", CatalogueApiView.as_view(), name="catalogue-api"),
     path("", InventoryDashboardView.as_view(), name="inventory-dashboard"),
     path("low-stock/", LowStockListView.as_view(), name="inventory-low-stock"),
+    path(
+        "low-stock/export/",
+        LowStockExportView.as_view(),
+        name="low-stock-export",
+    ),
     path("products/create/", ProductCreateView.as_view(), name="product-create"),
     path(
         "products/<int:pk>/update/", ProductUpdateView.as_view(), name="product-update"
@@ -35,6 +42,11 @@ urlpatterns = [
         "products/<int:pk>/delete/", ProductDeleteView.as_view(), name="product-delete"
     ),
     path("inventories/", InventoryListView.as_view(), name="inventory-list"),
+    path(
+        "inventories/export/",
+        InventoryExportView.as_view(),
+        name="inventory-export",
+    ),
     path("inventories/api/", InventoryListApiView.as_view(), name="inventory-list-api"),
     path(
         "inventories/<int:pk>/", InventoryDetailView.as_view(), name="inventory-detail"

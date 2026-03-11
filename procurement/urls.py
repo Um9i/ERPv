@@ -6,6 +6,7 @@ from .views import (
     PurchaseOrderCreateView,
     PurchaseOrderDeleteView,
     PurchaseOrderDetailView,
+    PurchaseOrderExportView,
     PurchaseOrderListView,
     PurchaseOrderReceiveView,
     SupplierContactCreateView,
@@ -88,6 +89,11 @@ urlpatterns = [
     ),
     path(
         "purchase-orders/", PurchaseOrderListView.as_view(), name="purchase-order-list"
+    ),
+    path(
+        "purchase-orders/export/",
+        PurchaseOrderExportView.as_view(),
+        name="purchase-order-export",
     ),
     path(
         "purchase-orders/create/",

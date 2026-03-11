@@ -9,22 +9,22 @@
     --color-bg-white: #ffffff;
     --color-text: #1e293b;
     --color-text-muted: #64748b;
-    --color-text-light: #94a3b8;
+    --color-text-light: #637085;
     --color-border: #e2e8f0;
     --color-border-light: #f1f5f9;
 
     /* Accent */
-    --color-primary: #6366f1;
-    --color-primary-dark: #4f46e5;
+    --color-primary: #4f46e5;
+    --color-primary-dark: #4338ca;
     --color-primary-light: #e0e7ff;
-    --color-primary-glow: rgba(99,102,241,0.35);
+    --color-primary-glow: rgba(79,70,229,0.35);
 
     /* Semantic */
-    --color-success: #059669;
+    --color-success: #047857;
     --color-success-bg: #d1fae5;
-    --color-warning: #d97706;
+    --color-warning: #b45309;
     --color-warning-bg: #fef3c7;
-    --color-danger: #dc2626;
+    --color-danger: #b91c1c;
     --color-danger-bg: #fee2e2;
     --color-info: #2563eb;
     --color-info-bg: #dbeafe;

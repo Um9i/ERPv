@@ -1,8 +1,9 @@
+import csv
 import hmac
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
@@ -873,3 +874,94 @@ class CatalogueApiView(View):
             for p in products
         ]
         return JsonResponse(data, safe=False)
+
+
+class InventoryExportView(LoginRequiredMixin, View):
+    """Export inventory list as CSV."""
+
+    def get(self, request):
+        qs = (
+            Inventory.objects.select_related("product")
+            .prefetch_related("stock_locations__location")
+            .order_by("product__name")
+        )
+        q = request.GET.get("q", "").strip()
+        if q:
+            qs = qs.filter(product__name__icontains=q)
+        catalogue = request.GET.get("catalogue", "").strip()
+        if catalogue == "1":
+            qs = qs.filter(product__catalogue_item=True)
+        elif catalogue == "0":
+            qs = qs.filter(product__catalogue_item=False)
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="inventory.csv"'
+        writer = csv.writer(response)
+        writer.writerow(["Product", "Quantity", "Required", "Catalogue", "Sale Price"])
+        for inv in qs:
+            writer.writerow(
+                [
+                    inv.product.name,
+                    inv.quantity,
+                    inv.required_cached,
+                    "Yes" if inv.product.catalogue_item else "No",
+                    inv.product.sale_price or "",
+                ]
+            )
+        return response
+
+
+class LowStockExportView(LoginRequiredMixin, View):
+    """Export low-stock items as CSV."""
+
+    def get(self, request):
+        from procurement.services import best_supplier_products, pending_po_by_product
+        from production.services import pending_jobs_by_product
+
+        inv_list = list(
+            Inventory.objects.select_related("product").filter(required_cached__gt=0)
+        )
+        product_ids = [inv.product_id for inv in inv_list]
+        po_map = pending_po_by_product(product_ids)
+        job_map = pending_jobs_by_product(product_ids)
+        supplier_map = best_supplier_products(product_ids)
+
+        items = []
+        for inv in inv_list:
+            required_qty = inv.required_cached
+            if required_qty <= 0:
+                continue
+            prod_amount = job_map.get(inv.product_id, 0)
+            po_amount = po_map.get(inv.product_id, 0)
+            supplier = supplier_map.get(inv.product_id)
+            items.append(
+                {
+                    "product": inv.product.name,
+                    "quantity": inv.quantity,
+                    "required": required_qty,
+                    "production_amount": prod_amount,
+                    "po_amount": po_amount,
+                    "supplier": supplier.supplier.name if supplier else "",
+                }
+            )
+
+        items.sort(key=lambda e: e["required"], reverse=True)
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="low_stock.csv"'
+        writer = csv.writer(response)
+        writer.writerow(
+            ["Product", "In Stock", "Required", "In Production", "On PO", "Supplier"]
+        )
+        for item in items:
+            writer.writerow(
+                [
+                    item["product"],
+                    item["quantity"],
+                    item["required"],
+                    item["production_amount"],
+                    item["po_amount"],
+                    item["supplier"],
+                ]
+            )
+        return response

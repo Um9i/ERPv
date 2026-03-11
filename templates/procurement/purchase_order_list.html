@@ -12,6 +12,7 @@
                 <option value="closed" {% if status == 'closed' %}selected{% endif %}>Closed</option>
             </select>
             <button class="btn btn-outline-secondary" type="submit">Apply</button>
+            <a href="{% url 'procurement:purchase-order-export' %}?{{ request.GET.urlencode }}" class="btn btn-outline-secondary"><i class="bi bi-download me-1"></i>Export CSV</a>
         </div>
         <div class="col-md-6 col-lg-5 ms-auto">
             <div class="input-group">
