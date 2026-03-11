@@ -1,4 +1,5 @@
 {% extends "dashboard_base.html" %}
+{% load static %}
 
 {% block dashboard_icon %}bi-gear-fill{% endblock %}
 {% block dashboard_icon_color %}page-header-icon--amber{% endblock %}
@@ -205,41 +206,9 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-(function () {
-  var ctx = document.getElementById('productionStatusChart');
-  if (!ctx) return;
-  var completed = {{ completed_jobs }};
-  var active    = {{ active_jobs }};
-  new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: ['Completed', 'Active'],
-      datasets: [{
-        data: [completed, active],
-        backgroundColor: ['#198754', '#ffc107'],
-        borderWidth: 2,
-        borderColor: '#fff',
-        hoverOffset: 6
-      }]
-    },
-    options: {
-      cutout: '68%',
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: function(ctx) {
-              var t = ctx.dataset.data.reduce(function(a,b){return a+b;},0);
-              var pct = t > 0 ? Math.round(ctx.parsed / t * 100) : 0;
-              return ' ' + ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
-            }
-          }
-        }
-      }
-    }
-  });
-}());
+<script id="doughnut-chart-data" type="application/json">
+{"canvasId": "productionStatusChart", "labels": ["Completed", "Active"], "data": [{{ completed_jobs }}, {{ active_jobs }}], "colors": ["#198754", "#ffc107"]}
 </script>
+<script src="{% static 'js/doughnut_chart.js' %}"></script>
 {% endblock %}
 

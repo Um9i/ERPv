@@ -1,5 +1,5 @@
 {% extends "includes/card.html" %}
-{% load crispy_forms_tags %}
+{% load crispy_forms_tags static %}
 {% block card_icon %}bi-box-seam{% endblock %}
 {% block card_icon_color %}page-header-icon--green{% endblock %}
 {% block card_title %}{% if form.instance.pk %}Update Product{% else %}New Product{% endif %}{% endblock %}
@@ -193,81 +193,10 @@
 }
 </style>
 
-<script>
-(function () {
-    'use strict';
-
-    // Character counter for description
-    const ta = document.getElementById('{{ form.description.id_for_label }}');
-    const counter = document.getElementById('desc-counter');
-    if (ta && counter) {
-        function syncCounter() {
-            counter.textContent = ta.value.length + ' chars';
-        }
-        ta.addEventListener('input', syncCounter);
-        syncCounter();
-    }
-
-    // Image drag-and-drop zone
-    const zone        = document.getElementById('image-drop-zone');
-    const fileInput   = document.getElementById('{{ form.image.id_for_label }}');
-    const placeholder = document.getElementById('image-placeholder');
-    const previewWrap = document.getElementById('image-preview-wrap');
-    const previewImg  = document.getElementById('image-preview');
-    const removeBtn   = document.getElementById('remove-image');
-
-    if (!zone || !fileInput) return;
-
-    {% if form.instance.image %}
-    previewImg.src = '{{ form.instance.image.url }}';
-    placeholder.classList.add('d-none');
-    previewWrap.classList.remove('d-none');
-    previewWrap.style.display = 'flex';
-    {% endif %}
-
-    function showPreview(file) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            previewImg.src = e.target.result;
-            placeholder.classList.add('d-none');
-            previewWrap.classList.remove('d-none');
-            previewWrap.style.display = 'flex';
-        };
-        reader.readAsDataURL(file);
-    }
-
-    fileInput.addEventListener('change', function () {
-        if (this.files && this.files[0]) showPreview(this.files[0]);
-    });
-
-    zone.addEventListener('dragover', function (e) {
-        e.preventDefault();
-        zone.classList.add('drag-over');
-    });
-    zone.addEventListener('dragleave', function () {
-        zone.classList.remove('drag-over');
-    });
-    zone.addEventListener('drop', function (e) {
-        e.preventDefault();
-        zone.classList.remove('drag-over');
-        const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith('image/')) {
-            const dt = new DataTransfer();
-            dt.items.add(file);
-            fileInput.files = dt.files;
-            showPreview(file);
-        }
-    });
-
-    removeBtn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        fileInput.value = '';
-        previewImg.src = '';
-        previewWrap.classList.add('d-none');
-        previewWrap.style.display = '';
-        placeholder.classList.remove('d-none');
-    });
-}());
-</script>
+<div id="product-form-config"
+     data-textarea-id="{{ form.description.id_for_label }}"
+     data-file-input-id="{{ form.image.id_for_label }}"
+     {% if form.instance.image %}data-preview-url="{{ form.instance.image.url }}"{% endif %}></div>
+<script src="{% static 'js/product_form.js' %}"></script>
 
 {% endblock %}

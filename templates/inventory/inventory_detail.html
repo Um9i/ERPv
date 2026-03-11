@@ -386,10 +386,4 @@
 {% if user.is_authenticated %}
 <script src="{% static 'js/inventory_detail.js' %}"></script>
 {% endif %}
-<script>
-(function () {
-    var tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-    tooltips.forEach(function (el) { new bootstrap.Tooltip(el); });
-}());
-</script>
 {% endblock %}

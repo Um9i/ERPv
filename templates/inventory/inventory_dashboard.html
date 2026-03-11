@@ -1,5 +1,5 @@
 {% extends "dashboard_base.html" %}
-{% load currency_tags %}
+{% load currency_tags static %}
 
 {% block dashboard_icon %}bi-box-seam{% endblock %}
 {% block dashboard_icon_color %}page-header-icon--green{% endblock %}
@@ -231,43 +231,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-(function () {
-  var ctx = document.getElementById('stockHealthChart');
-  if (!ctx) return;
-  new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: ['Healthy', 'Low Stock', 'Dead Stock', 'Zero Stock'],
-      datasets: [{
-        data: [
-          {{ chart_healthy }},
-          {{ chart_low_stock }},
-          {{ chart_dead_stock }},
-          {{ chart_zero_stock }}
-        ],
-        backgroundColor: ['#198754', '#dc3545', '#6c757d', '#dee2e6'],
-        borderWidth: 2,
-        borderColor: '#fff',
-        hoverOffset: 6
-      }]
-    },
-    options: {
-      cutout: '68%',
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: function(ctx) {
-              var total = ctx.dataset.data.reduce(function(a, b){ return a + b; }, 0);
-              var pct = total > 0 ? Math.round(ctx.parsed / total * 100) : 0;
-              return ' ' + ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
-            }
-          }
-        }
-      }
-    }
-  });
-}());
+<script id="doughnut-chart-data" type="application/json">
+{"canvasId": "stockHealthChart", "labels": ["Healthy", "Low Stock", "Dead Stock", "Zero Stock"], "data": [{{ chart_healthy }}, {{ chart_low_stock }}, {{ chart_dead_stock }}, {{ chart_zero_stock }}], "colors": ["#198754", "#dc3545", "#6c757d", "#dee2e6"]}
 </script>
+<script src="{% static 'js/doughnut_chart.js' %}"></script>
 {% endblock %}

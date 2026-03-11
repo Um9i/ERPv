@@ -174,3 +174,10 @@
         });
     }
 })();
+
+/* ── Bootstrap tooltips ── */
+(function () {
+    'use strict';
+    var tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltips.forEach(function (el) { new bootstrap.Tooltip(el); });
+}());

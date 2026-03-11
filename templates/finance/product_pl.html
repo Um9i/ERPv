@@ -1,5 +1,5 @@
 {% extends "includes/card.html" %}
-{% load currency_tags %}
+{% load currency_tags static %}
 {% block card_icon %}bi-graph-up{% endblock %}
 {% block card_icon_color %}page-header-icon--teal{% endblock %}
 {% block card_title %}Product P&amp;L Report{% endblock %}
@@ -137,43 +137,6 @@
 
 {% block extra_js %}
 {% if chart_data.labels %}
-<script>
-(function () {
-    const raw = JSON.parse(document.getElementById('chart-data').textContent);
-    const ctx = document.getElementById('pl-chart').getContext('2d');
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: raw.labels,
-            datasets: [{
-                label: 'Gross Profit',
-                data: raw.values,
-                backgroundColor: raw.colors,
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function(ctx) {
-                            return '£' + ctx.parsed.x.toFixed(2);
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    ticks: {
-                        callback: function(val) { return '£' + val.toFixed(0); }
-                    }
-                }
-            }
-        }
-    });
-})();
-</script>
+<script src="{% static 'js/product_pl.js' %}"></script>
 {% endif %}
 {% endblock %}

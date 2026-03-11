@@ -1,5 +1,5 @@
 {% extends "dashboard_base.html" %}
-{% load currency_tags %}
+{% load currency_tags static %}
 
 {% block dashboard_icon %}bi-cart4{% endblock %}
 {% block dashboard_icon_color %}page-header-icon--indigo{% endblock %}
@@ -177,42 +177,9 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-(function () {
-  var ctx = document.getElementById('salesStatusChart');
-  if (!ctx) return;
-  var fulfilled = {{ fulfilled_orders }};
-  var pending = {{ pending_shipping }};
-  var total   = {{ total_orders }};
-  new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: ['Fulfilled', 'Pending Shipment'],
-      datasets: [{
-        data: [fulfilled, pending],
-        backgroundColor: ['#198754', '#ffc107'],
-        borderWidth: 2,
-        borderColor: '#fff',
-        hoverOffset: 6
-      }]
-    },
-    options: {
-      cutout: '68%',
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: function(ctx) {
-              var t = ctx.dataset.data.reduce(function(a,b){return a+b;},0);
-              var pct = t > 0 ? Math.round(ctx.parsed / t * 100) : 0;
-              return ' ' + ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
-            }
-          }
-        }
-      }
-    }
-  });
-}());
+<script id="doughnut-chart-data" type="application/json">
+{"canvasId": "salesStatusChart", "labels": ["Fulfilled", "Pending Shipment"], "data": [{{ fulfilled_orders }}, {{ pending_shipping }}], "colors": ["#198754", "#ffc107"]}
 </script>
+<script src="{% static 'js/doughnut_chart.js' %}"></script>
 {% endblock %}
 

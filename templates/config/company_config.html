@@ -1,4 +1,5 @@
 {% extends "includes/card.html" %}
+{% load static %}
 {% block card_icon %}bi-sliders{% endblock %}
 {% block card_icon_color %}page-header-icon--rose{% endblock %}
 {% block card_title %}Settings{% endblock %}
@@ -301,51 +302,6 @@
 
 </div>{# /tab-content #}
 
-<script>
-(function () {
-  // Logo file input
-  var logoInput = document.getElementById('id_logo');
-  if (logoInput) {
-    logoInput.classList.add('d-none');
-    logoInput.addEventListener('change', function () {
-      var label = document.getElementById('logo-file-name');
-      if (label) label.textContent = this.files[0] ? this.files[0].name : 'No file selected';
-    });
-  }
-
-  // Hash-based tab routing
-  var TABS = ['company', 'address', 'branding', 'integrations'];
-  var DEFAULT_TAB = 'company';
-
-  function activateTab(hash) {
-    var name = (hash || '').replace(/^#/, '');
-    if (!TABS.includes(name)) name = DEFAULT_TAB;
-    var btn = document.querySelector('[data-tab-hash="' + name + '"]');
-    if (btn) {
-      var tab = new bootstrap.Tab(btn);
-      tab.show();
-    }
-  }
-
-  // Set hash when tab changes
-  document.querySelectorAll('[data-tab-hash]').forEach(function (btn) {
-    btn.addEventListener('shown.bs.tab', function () {
-      history.replaceState(null, '', '#' + btn.dataset.tabHash);
-    });
-  });
-
-  // Restore tab from hash on load
-  activateTab(window.location.hash || '#' + DEFAULT_TAB);
-
-  // Handle back/forward navigation
-  window.addEventListener('hashchange', function () {
-    activateTab(window.location.hash);
-  });
-
-  // If new_our_key is present, jump to integrations tab
-  {% if new_our_key %}
-  activateTab('#integrations');
-  {% endif %}
-}());
-</script>
+<div id="config-page-data" {% if new_our_key %}data-initial-tab="integrations"{% endif %}></div>
+<script src="{% static 'js/company_config.js' %}"></script>
 {% endblock %}

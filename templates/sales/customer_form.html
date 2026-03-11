@@ -1,5 +1,5 @@
 {% extends "includes/card.html" %}
-{% load crispy_forms_tags %}
+{% load crispy_forms_tags static %}
 {% block card_icon %}bi-people-fill{% endblock %}
 {% block card_icon_color %}page-header-icon--indigo{% endblock %}
 {% block card_title %}{% if customer %}Edit Customer{% else %}New Customer{% endif %}{% endblock %}
@@ -88,18 +88,6 @@
     </div>
 </form>
 
-<script>
-(function () {
-    'use strict';
-    var btn = document.getElementById('show-addr2');
-    if (!btn) return;
-    btn.addEventListener('click', function () {
-        document.getElementById('show-addr2-btn').classList.add('d-none');
-        document.getElementById('addr2-wrap').classList.remove('d-none');
-        var inp = document.getElementById('addr2-wrap').querySelector('input');
-        if (inp) inp.focus();
-    });
-}());
-</script>
+<script src="{% static 'js/address_toggle.js' %}"></script>
 
 {% endblock %}
