@@ -782,7 +782,7 @@ class StoreConfirmView(LoginRequiredMixin, DetailView):
                 line = self.object.purchase_order_lines.get(
                     pk=int(line_id), store_confirmed=False
                 )
-            except (PurchaseOrderLine.DoesNotExist, ValueError):
+            except PurchaseOrderLine.DoesNotExist, ValueError:
                 if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                     return JsonResponse({"ok": False, "error": "Line not found."})
                 return redirect(request.path)
