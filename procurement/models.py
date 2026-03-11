@@ -8,7 +8,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from inventory.models import Product
-from main.mixins import AddressMixin
+from main.mixins import AddressMixin, AuditMixin
 
 
 class Supplier(AddressMixin, models.Model):
@@ -78,7 +78,7 @@ class SupplierProduct(models.Model):
         return total or 0
 
 
-class PurchaseOrder(models.Model):
+class PurchaseOrder(AuditMixin, models.Model):
     supplier = models.ForeignKey(
         Supplier, on_delete=models.CASCADE, related_name="supplier_purchase_orders"
     )

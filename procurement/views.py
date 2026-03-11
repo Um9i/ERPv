@@ -268,6 +268,12 @@ class SupplierProductUpdateView(LoginRequiredMixin, UpdateView):
     form_class = SupplierProductForm
     success_url = reverse_lazy("procurement:supplier-list")
 
+    def form_valid(self, form):
+        from main.audit import log_field_changes
+
+        log_field_changes(form.instance, ["cost"], user=self.request.user)
+        return super().form_valid(form)
+
     def get_success_url(self):
         # after updating a supplier product return to that supplier's detail
         return reverse_lazy(
@@ -565,6 +571,8 @@ class PurchaseOrderCreateView(LoginRequiredMixin, CreateView):
         lines_formset = context.get("lines_formset")
         if lines_formset.is_valid():
             # save the purchase order first so we can attach lines to it
+            form.instance.created_by = self.request.user
+            form.instance.updated_by = self.request.user
             self.object = form.save()
             lines_formset.instance = self.object
             lines_formset.save()

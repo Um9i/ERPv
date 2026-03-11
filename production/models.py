@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from inventory.models import Inventory, Product, ProductionAllocated
+from main.mixins import AuditMixin
 
 
 class BillOfMaterials(models.Model):
@@ -81,7 +82,7 @@ class BOMItem(models.Model):
             )
 
 
-class Production(models.Model):
+class Production(AuditMixin, models.Model):
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name="product_jobs"
     )

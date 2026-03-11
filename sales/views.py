@@ -237,6 +237,12 @@ class CustomerProductUpdateView(LoginRequiredMixin, UpdateView):
     form_class = CustomerProductForm
     success_url = reverse_lazy("sales:customer-list")
 
+    def form_valid(self, form):
+        from main.audit import log_field_changes
+
+        log_field_changes(form.instance, ["price"], user=self.request.user)
+        return super().form_valid(form)
+
     def get_success_url(self):
         return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
 
@@ -356,6 +362,8 @@ class SalesOrderCreateView(LoginRequiredMixin, CreateView):
         context = self.get_context_data(form=form)
         lines_formset = context.get("lines_formset")
         if lines_formset.is_valid():
+            form.instance.created_by = self.request.user
+            form.instance.updated_by = self.request.user
             self.object = form.save()
             lines_formset.instance = self.object
             lines_formset.save()

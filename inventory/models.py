@@ -6,6 +6,8 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 
+from main.mixins import AuditMixin
+
 
 class Product(models.Model):
     name = models.CharField(max_length=256, unique=True)
@@ -318,7 +320,7 @@ class InventoryLedger(models.Model):
         ]
 
 
-class InventoryAdjust(models.Model):
+class InventoryAdjust(AuditMixin, models.Model):
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name="inventory_adjustment"
     )
@@ -374,7 +376,7 @@ def _update_required_from_sales(sender, instance, **kwargs):
         pass
 
 
-class StockTransfer(models.Model):
+class StockTransfer(AuditMixin, models.Model):
     inventory = models.ForeignKey(
         Inventory, on_delete=models.CASCADE, related_name="transfers"
     )

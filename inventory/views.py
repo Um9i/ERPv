@@ -359,6 +359,8 @@ class InventoryAdjustCreateView(LoginRequiredMixin, CreateView):
         inventory = self.get_inventory()
         form.instance.product = inventory.product
         form.instance.complete = True
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
         location = form.cleaned_data.get("location")
 
         apply_inventory_adjustment(form.instance, location=location)
@@ -839,6 +841,8 @@ class StockTransferCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.inventory = self.get_inventory()
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
         return super().form_valid(form)
 
     def get_success_url(self):

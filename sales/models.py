@@ -15,7 +15,7 @@ from inventory.models import (
     Location,
     Product,
 )
-from main.mixins import AddressMixin
+from main.mixins import AddressMixin, AuditMixin
 
 
 class Customer(AddressMixin, models.Model):
@@ -79,7 +79,7 @@ class CustomerProduct(models.Model):
         return total or 0
 
 
-class SalesOrder(models.Model):
+class SalesOrder(AuditMixin, models.Model):
     customer = models.ForeignKey(
         Customer, on_delete=models.CASCADE, related_name="customer_sales_orders"
     )

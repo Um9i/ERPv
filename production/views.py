@@ -271,7 +271,8 @@ class ProductionCreateView(LoginRequiredMixin, CreateView):
         return form
 
     def form_valid(self, form):
-        # ensure bom allocated happens in model save
+        form.instance.created_by = self.request.user
+        form.instance.updated_by = self.request.user
         return super().form_valid(form)
 
 
