@@ -20,6 +20,7 @@ from .views import (
     SalesDashboardView,
     SalesOrderCreateView,
     SalesOrderDetailView,
+    SalesOrderExportView,
     SalesOrderInvoiceView,
     SalesOrderListView,
     SalesOrderShipView,
@@ -88,6 +89,11 @@ urlpatterns = [
         name="customer-product-ids",
     ),
     path("sales-orders/", SalesOrderListView.as_view(), name="sales-order-list"),
+    path(
+        "sales-orders/export/",
+        SalesOrderExportView.as_view(),
+        name="sales-order-export",
+    ),
     path(
         "sales-orders/create/",
         SalesOrderCreateView.as_view(),

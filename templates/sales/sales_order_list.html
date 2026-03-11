@@ -13,6 +13,9 @@
             </select>
             <button class="btn btn-outline-secondary" type="submit">Apply</button>
         </div>
+        <div class="col-auto">
+            <a href="{% url 'sales:sales-order-export' %}?{{ request.GET.urlencode }}" class="btn btn-outline-secondary"><i class="bi bi-download me-1"></i>Export CSV</a>
+        </div>
         <div class="col-md-6 col-lg-5 ms-auto">
             <div class="input-group">
                 <input type="text" name="q" class="form-control" placeholder="Search orders" value="{{ request.GET.q }}">

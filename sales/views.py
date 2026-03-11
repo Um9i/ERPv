@@ -1,8 +1,12 @@
+import csv
+
 from django import forms
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.forms.models import inlineformset_factory
+from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
+from django.views import View
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -741,3 +745,59 @@ class PickListDetailView(DetailView):
             "location",
         ).all()
         return context
+
+
+class SalesOrderExportView(LoginRequiredMixin, View):
+    """Export sales orders as CSV."""
+
+    def get(self, request):
+        from django.db.models import Exists, OuterRef, Q
+
+        qs = (
+            SalesOrder.objects.select_related("customer")
+            .annotate(
+                has_open_lines=Exists(
+                    SalesOrderLine.objects.filter(
+                        sales_order=OuterRef("pk"),
+                        complete=False,
+                    )
+                ),
+            )
+            .order_by("-created_at")
+        )
+
+        status_value = request.GET.get("status", "").strip().lower()
+        if status_value == "open":
+            qs = qs.filter(has_open_lines=True)
+        elif status_value == "closed":
+            qs = qs.filter(has_open_lines=False)
+
+        q = request.GET.get("q", "").strip()
+        if q:
+            qs = qs.filter(Q(customer__name__icontains=q) | Q(pk__icontains=q))
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="sales_orders.csv"'
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                "Order Number",
+                "Customer",
+                "Status",
+                "Ship By",
+                "Created At",
+                "Total Amount",
+            ]
+        )
+        for order in qs:
+            writer.writerow(
+                [
+                    order.order_number,
+                    order.customer.name,
+                    "Open" if order.has_open_lines else "Closed",
+                    order.ship_by_date or "",
+                    order.created_at.strftime("%Y-%m-%d %H:%M"),
+                    order.total_amount,
+                ]
+            )
+        return response
