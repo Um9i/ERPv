@@ -31,6 +31,7 @@ class ProductionAdmin(admin.ModelAdmin):
     autocomplete_fields = ["product"]
     list_display = ["id", "product", "quantity", "complete"]
     list_filter = ["complete"]
+    list_select_related = ["product"]
     list_per_page = 15
     search_fields = ["product"]
     readonly_fields = ["closed", "bom_allocated", "bom_allocated_amount"]

@@ -8,6 +8,7 @@ import pytest
 from django.contrib.auth.models import User
 from django.test import Client
 
+from finance.models import FinanceDashboardSnapshot
 from inventory.models import (
     Inventory,
     InventoryLedger,
@@ -18,6 +19,7 @@ from inventory.models import (
 from procurement.models import (
     PurchaseLedger,
     PurchaseOrder,
+    PurchaseOrderLine,
     Supplier,
     SupplierContact,
     SupplierProduct,
@@ -29,6 +31,7 @@ from sales.models import (
     CustomerProduct,
     SalesLedger,
     SalesOrder,
+    SalesOrderLine,
 )
 
 pytestmark = pytest.mark.urls("main.test_urls")
@@ -396,6 +399,216 @@ class TestProductionAdmin:
         Production.objects.create(product=product, quantity=5)
         response = admin_client.get("/admin/production/production/?complete__exact=0")
         assert response.status_code == 200
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Ledger filters — product, supplier, customer
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class TestInventoryLedgerFilterByProduct:
+    @pytest.mark.django_db
+    def test_filter_by_product(self, admin_client):
+        product = _product_with_deps("inv_filt_prod")
+        InventoryLedger.objects.create(
+            product=product, quantity=1, action="ADD", transaction_id=1
+        )
+        response = admin_client.get(
+            f"/admin/inventory/inventoryledger/?product__id__exact={product.pk}"
+        )
+        assert response.status_code == 200
+
+
+class TestPurchaseLedgerFilters:
+    @pytest.mark.django_db
+    def test_filter_by_supplier(self, admin_client):
+        product = _product_with_deps("pl_filt_prod")
+        supplier = Supplier.objects.create(name="pl_filt_sup")
+        PurchaseLedger.objects.create(
+            product=product,
+            supplier=supplier,
+            quantity=1,
+            value=Decimal("10.00"),
+            transaction_id=1,
+        )
+        response = admin_client.get(
+            f"/admin/procurement/purchaseledger/?supplier__id__exact={supplier.pk}"
+        )
+        assert response.status_code == 200
+
+    @pytest.mark.django_db
+    def test_filter_by_product(self, admin_client):
+        product = _product_with_deps("pl_filt_prod2")
+        supplier = Supplier.objects.create(name="pl_filt_sup2")
+        PurchaseLedger.objects.create(
+            product=product,
+            supplier=supplier,
+            quantity=1,
+            value=Decimal("10.00"),
+            transaction_id=2,
+        )
+        response = admin_client.get(
+            f"/admin/procurement/purchaseledger/?product__id__exact={product.pk}"
+        )
+        assert response.status_code == 200
+
+
+class TestSalesLedgerFilters:
+    @pytest.mark.django_db
+    def test_filter_by_customer(self, admin_client):
+        product = _product_with_deps("sl_filt_prod")
+        customer = Customer.objects.create(name="sl_filt_cust")
+        SalesLedger.objects.create(
+            product=product,
+            customer=customer,
+            quantity=1,
+            value=Decimal("20.00"),
+            transaction_id=1,
+        )
+        response = admin_client.get(
+            f"/admin/sales/salesledger/?customer__id__exact={customer.pk}"
+        )
+        assert response.status_code == 200
+
+    @pytest.mark.django_db
+    def test_filter_by_product(self, admin_client):
+        product = _product_with_deps("sl_filt_prod2")
+        customer = Customer.objects.create(name="sl_filt_cust2")
+        SalesLedger.objects.create(
+            product=product,
+            customer=customer,
+            quantity=1,
+            value=Decimal("20.00"),
+            transaction_id=2,
+        )
+        response = admin_client.get(
+            f"/admin/sales/salesledger/?product__id__exact={product.pk}"
+        )
+        assert response.status_code == 200
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Bulk admin actions — PurchaseOrder / SalesOrder
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class TestPurchaseOrderBulkActions:
+    @pytest.mark.django_db
+    def test_mark_lines_complete(self, admin_client):
+        supplier = Supplier.objects.create(name="bulk_sup")
+        product = _product_with_deps("bulk_prod", sale_price=Decimal("5.00"))
+        sp = SupplierProduct.objects.create(
+            supplier=supplier, product=product, cost=Decimal("3.00")
+        )
+        po = PurchaseOrder.objects.create(supplier=supplier)
+        line = PurchaseOrderLine.objects.create(
+            purchase_order=po, product=sp, quantity=10
+        )
+        response = admin_client.post(
+            "/admin/procurement/purchaseorder/",
+            {"action": "mark_lines_complete", "_selected_action": [po.pk]},
+        )
+        assert response.status_code == 302
+        line.refresh_from_db()
+        assert line.complete is True
+        assert line.closed is True
+
+    @pytest.mark.django_db
+    def test_close_selected_orders(self, admin_client):
+        supplier = Supplier.objects.create(name="close_sup")
+        product = _product_with_deps("close_prod", sale_price=Decimal("5.00"))
+        sp = SupplierProduct.objects.create(
+            supplier=supplier, product=product, cost=Decimal("3.00")
+        )
+        po = PurchaseOrder.objects.create(supplier=supplier)
+        line = PurchaseOrderLine.objects.create(
+            purchase_order=po, product=sp, quantity=5
+        )
+        response = admin_client.post(
+            "/admin/procurement/purchaseorder/",
+            {"action": "close_selected_orders", "_selected_action": [po.pk]},
+        )
+        assert response.status_code == 302
+        line.refresh_from_db()
+        assert line.closed is True
+        assert line.complete is True
+
+
+class TestSalesOrderBulkActions:
+    @pytest.mark.django_db
+    def test_mark_lines_complete(self, admin_client):
+        customer = Customer.objects.create(name="bulk_cust")
+        product = _product_with_deps(
+            "bulk_so_prod", quantity=100, sale_price=Decimal("10.00")
+        )
+        cp = CustomerProduct.objects.create(
+            customer=customer, product=product, price=Decimal("12.00")
+        )
+        so = SalesOrder.objects.create(customer=customer)
+        line = SalesOrderLine.objects.create(sales_order=so, product=cp, quantity=5)
+        response = admin_client.post(
+            "/admin/sales/salesorder/",
+            {"action": "mark_lines_complete", "_selected_action": [so.pk]},
+        )
+        assert response.status_code == 302
+        line.refresh_from_db()
+        assert line.complete is True
+        assert line.closed is True
+
+    @pytest.mark.django_db
+    def test_close_selected_orders(self, admin_client):
+        customer = Customer.objects.create(name="close_cust")
+        product = _product_with_deps(
+            "close_so_prod", quantity=100, sale_price=Decimal("10.00")
+        )
+        cp = CustomerProduct.objects.create(
+            customer=customer, product=product, price=Decimal("12.00")
+        )
+        so = SalesOrder.objects.create(customer=customer)
+        line = SalesOrderLine.objects.create(sales_order=so, product=cp, quantity=5)
+        response = admin_client.post(
+            "/admin/sales/salesorder/",
+            {"action": "close_selected_orders", "_selected_action": [so.pk]},
+        )
+        assert response.status_code == 302
+        line.refresh_from_db()
+        assert line.closed is True
+        assert line.complete is True
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# FinanceDashboardSnapshot admin — read-only
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class TestFinanceDashboardSnapshotAdmin:
+    @pytest.mark.django_db
+    def test_changelist_loads(self, admin_client):
+        response = admin_client.get("/admin/finance/financedashboardsnapshot/")
+        assert response.status_code == 200
+
+    @pytest.mark.django_db
+    def test_add_disallowed(self, admin_client):
+        response = admin_client.get("/admin/finance/financedashboardsnapshot/add/")
+        assert response.status_code == 403
+
+    @pytest.mark.django_db
+    def test_change_disallowed(self, admin_client):
+        snapshot = FinanceDashboardSnapshot.load()
+        response = admin_client.post(
+            f"/admin/finance/financedashboardsnapshot/{snapshot.pk}/change/",
+            {"sales_total": "999"},
+        )
+        assert response.status_code == 403
+
+    @pytest.mark.django_db
+    def test_delete_disallowed(self, admin_client):
+        snapshot = FinanceDashboardSnapshot.load()
+        response = admin_client.post(
+            f"/admin/finance/financedashboardsnapshot/{snapshot.pk}/delete/",
+            {"post": "yes"},
+        )
+        assert response.status_code == 403
 
 
 # ──────────────────────────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 from django import forms
 from django.core.validators import EmailValidator, RegexValidator
+from django.utils import timezone
 
 from .models import (
     Customer,
@@ -129,6 +130,12 @@ class SalesOrderForm(forms.ModelForm):
         help_texts = {
             "ship_by_date": "Target date to ship this order by.",
         }
+
+    def clean_ship_by_date(self):
+        ship_by_date = self.cleaned_data.get("ship_by_date")
+        if ship_by_date and ship_by_date < timezone.now().date():
+            raise forms.ValidationError("Ship-by date cannot be in the past.")
+        return ship_by_date
 
 
 class SalesOrderLineForm(forms.ModelForm):

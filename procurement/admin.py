@@ -37,9 +37,10 @@ class PurchaseLedgerAdmin(admin.ModelAdmin, ExportCsvMixin):
         "value",
         "date",
     ]
-    list_filter = ["date"]
+    list_filter = ["date", "supplier", "product"]
+    list_select_related = ["product", "supplier"]
     list_per_page = 50
-    search_fields = ["product__name", "supplier"]
+    search_fields = ["product__name", "supplier__name"]
     actions = ["export_as_csv"]
     readonly_fields = [
         "product",
@@ -62,6 +63,7 @@ class SupplierProductAdmin(admin.ModelAdmin):
     autocomplete_fields = ["supplier", "product"]
     list_display = ["product", "supplier", "cost"]
     list_filter = ["supplier"]
+    list_select_related = ["product", "supplier"]
     search_fields = ["product"]
 
     def get_actions(self, request):
@@ -122,7 +124,29 @@ class PurchaseOrderAdmin(admin.ModelAdmin):
     ]
     list_display = ["id", "supplier"]
     list_filter = ["supplier"]
+    list_select_related = ["supplier"]
     search_fields = ["id"]
+    actions = ["mark_lines_complete", "close_selected_orders"]
+
+    @admin.action(description="Mark all lines as complete")
+    def mark_lines_complete(self, request, queryset):
+        count = 0
+        for po in queryset:
+            updated = po.purchase_order_lines.filter(complete=False).update(
+                complete=True, closed=True
+            )
+            count += updated
+        self.message_user(request, f"{count} line(s) marked complete.")
+
+    @admin.action(description="Close selected orders")
+    def close_selected_orders(self, request, queryset):
+        count = 0
+        for po in queryset:
+            po.purchase_order_lines.filter(closed=False).update(
+                closed=True, complete=True
+            )
+            count += 1
+        self.message_user(request, f"{count} order(s) closed.")
 
     def get_actions(self, request):
         actions = super().get_actions(request)

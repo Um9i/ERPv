@@ -1,5 +1,6 @@
 """Form validation unit tests — email, phone regex, date, cross-field rules."""
 
+import datetime
 from decimal import Decimal
 
 import pytest
@@ -8,6 +9,7 @@ from config.forms import CompanyConfigForm, CompletePairingForm
 from inventory.forms import InventoryAdjustForm, ProductForm
 from inventory.models import Inventory, Product, ProductionAllocated
 from procurement.forms import (
+    PurchaseOrderForm,
     PurchaseOrderLineForm,
     SupplierContactForm,
     SupplierForm,
@@ -19,6 +21,7 @@ from sales.forms import (
     CustomerContactForm,
     CustomerForm,
     CustomerProductForm,
+    SalesOrderForm,
     SalesOrderLineForm,
 )
 from sales.models import Customer
@@ -386,3 +389,68 @@ class TestCompletePairingForm:
         form = CompletePairingForm(data={"api_key": "   "})
         assert not form.is_valid()
         assert "api_key" in form.errors
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Date validation — PurchaseOrderForm / SalesOrderForm
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class TestPurchaseOrderFormDateValidation:
+    @pytest.mark.django_db
+    def test_past_due_date_rejected(self):
+        supplier = Supplier.objects.create(name="date_sup")
+        yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+        form = PurchaseOrderForm(data={"supplier": supplier.pk, "due_date": yesterday})
+        assert not form.is_valid()
+        assert "due_date" in form.errors
+
+    @pytest.mark.django_db
+    def test_today_due_date_accepted(self):
+        supplier = Supplier.objects.create(name="date_sup2")
+        today = datetime.date.today().isoformat()
+        form = PurchaseOrderForm(data={"supplier": supplier.pk, "due_date": today})
+        assert form.is_valid()
+
+    @pytest.mark.django_db
+    def test_future_due_date_accepted(self):
+        supplier = Supplier.objects.create(name="date_sup3")
+        future = (datetime.date.today() + datetime.timedelta(days=30)).isoformat()
+        form = PurchaseOrderForm(data={"supplier": supplier.pk, "due_date": future})
+        assert form.is_valid()
+
+    @pytest.mark.django_db
+    def test_blank_due_date_accepted(self):
+        supplier = Supplier.objects.create(name="date_sup4")
+        form = PurchaseOrderForm(data={"supplier": supplier.pk, "due_date": ""})
+        assert form.is_valid()
+
+
+class TestSalesOrderFormDateValidation:
+    @pytest.mark.django_db
+    def test_past_ship_by_date_rejected(self):
+        customer = Customer.objects.create(name="date_cust")
+        yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+        form = SalesOrderForm(data={"customer": customer.pk, "ship_by_date": yesterday})
+        assert not form.is_valid()
+        assert "ship_by_date" in form.errors
+
+    @pytest.mark.django_db
+    def test_today_ship_by_date_accepted(self):
+        customer = Customer.objects.create(name="date_cust2")
+        today = datetime.date.today().isoformat()
+        form = SalesOrderForm(data={"customer": customer.pk, "ship_by_date": today})
+        assert form.is_valid()
+
+    @pytest.mark.django_db
+    def test_future_ship_by_date_accepted(self):
+        customer = Customer.objects.create(name="date_cust3")
+        future = (datetime.date.today() + datetime.timedelta(days=30)).isoformat()
+        form = SalesOrderForm(data={"customer": customer.pk, "ship_by_date": future})
+        assert form.is_valid()
+
+    @pytest.mark.django_db
+    def test_blank_ship_by_date_accepted(self):
+        customer = Customer.objects.create(name="date_cust4")
+        form = SalesOrderForm(data={"customer": customer.pk, "ship_by_date": ""})
+        assert form.is_valid()

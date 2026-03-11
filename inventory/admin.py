@@ -37,7 +37,8 @@ class ExportCsvMixin:
 @admin.register(InventoryLedger)
 class InventoryLedgerAdmin(admin.ModelAdmin, ExportCsvMixin):
     list_display = ["product", "quantity", "action", "transaction_id", "date"]
-    list_filter = ["action", "date"]
+    list_filter = ["action", "date", "product"]
+    list_select_related = ["product"]
     list_per_page = 50
     search_fields = ["product__name", "transaction_id"]
     actions = ["export_as_csv"]
@@ -87,6 +88,7 @@ class LocationAdmin(admin.ModelAdmin):
 class InventoryLocationAdmin(admin.ModelAdmin):
     list_display = ["inventory", "location", "quantity", "last_updated"]
     list_filter = ["location"]
+    list_select_related = ["inventory__product", "location"]
     search_fields = ["inventory__product__name", "location__name"]
 
 
@@ -100,6 +102,7 @@ class StockTransferAdmin(admin.ModelAdmin):
         "transferred_at",
     ]
     list_filter = ["transferred_at"]
+    list_select_related = ["inventory__product", "from_location", "to_location"]
     search_fields = ["inventory__product__name"]
     readonly_fields = [
         "inventory",
