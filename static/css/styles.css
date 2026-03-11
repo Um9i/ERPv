@@ -815,6 +815,30 @@ h1, h2, h3, h4, h5, h6 {
 
 
 /* =============================================
+   TOASTS – App notification toasts
+   ============================================= */
+.app-toast {
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    border: none;
+    min-width: 300px;
+    font-size: 0.9rem;
+}
+.app-toast .toast-header {
+    border-bottom: 1px solid var(--color-border-light);
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+.app-toast .toast-body {
+    font-weight: 500;
+}
+.app-toast-success { border-left: 4px solid var(--color-success); }
+.app-toast-error   { border-left: 4px solid var(--color-danger); }
+.app-toast-warning { border-left: 4px solid var(--color-warning); }
+.app-toast-info    { border-left: 4px solid var(--color-info); }
+
+
+/* =============================================
    FINANCE DASHBOARD – Card refinements
    ============================================= */
 .dashboard-metrics-area .card {
