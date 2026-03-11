@@ -47,6 +47,14 @@ if not DEBUG:
 
 CURRENCY_SYMBOL = os.getenv("CURRENCY_SYMBOL", "£")
 
+# CORS — only allow cross-origin requests to API endpoints
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+CORS_URLS_REGEX = r"^/(?:config|inventory|procurement)/api/.*$"
+
 INTERNAL_IPS = [
     "127.0.0.1",
 ]
@@ -63,6 +71,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django_admin_inline_paginator",
     # crispy forms support
+    "corsheaders",
     "crispy_forms",
     "crispy_bootstrap5",
     "main",
@@ -83,6 +92,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
