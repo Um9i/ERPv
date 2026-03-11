@@ -746,10 +746,21 @@ class PickListCreateView(DetailView):
         return redirect("sales:pick-list-detail", pk=pick_list.pk)
 
 
-class PickListDetailView(DetailView):
+class PickListDetailView(LoginRequiredMixin, DetailView):
     model = PickList
     template_name = "sales/pick_list_detail.html"
     context_object_name = "pick_list"
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        # Auto-refresh stale pick list when shortages exist and order is open
+        if (
+            self.object.sales_order.status == "Open"
+            and self.object.lines.filter(is_shortage=True).exists()
+        ):
+            self.object.refresh()
+        context = self.get_context_data(object=self.object)
+        return self.render_to_response(context)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -757,6 +768,7 @@ class PickListDetailView(DetailView):
             "sales_order_line__product__product",
             "location",
         ).all()
+        context["has_shortage"] = self.object.lines.filter(is_shortage=True).exists()
         return context
 
 

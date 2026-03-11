@@ -291,11 +291,21 @@ class PickList(models.Model):
         """Return True if every non-shortage line has been confirmed."""
         return not self.lines.filter(is_shortage=False, confirmed=False).exists()
 
+    def refresh(self):
+        """Delete existing lines and regenerate from current stock levels."""
+        self.lines.all().delete()
+        self._populate_lines()
+
     @classmethod
     def generate_for_order(cls, sales_order):
         """Create a pick list with lines showing where to pick each product."""
         pick_list = cls.objects.create(sales_order=sales_order)
-        for line in sales_order.sales_order_lines.filter(complete=False):
+        pick_list._populate_lines()
+        return pick_list
+
+    def _populate_lines(self):
+        """Create pick lines based on current stock levels."""
+        for line in self.sales_order.sales_order_lines.filter(complete=False):
             remaining = line.remaining
             if remaining <= 0:
                 continue
@@ -304,7 +314,7 @@ class PickList(models.Model):
                 inv = Inventory.objects.get(product=product)
             except Inventory.DoesNotExist:
                 PickListLine.objects.create(
-                    pick_list=pick_list,
+                    pick_list=self,
                     sales_order_line=line,
                     location=None,
                     quantity=remaining,
@@ -323,7 +333,7 @@ class PickList(models.Model):
                     break
                 pick_qty = min(sl.quantity, remaining - allocated)
                 PickListLine.objects.create(
-                    pick_list=pick_list,
+                    pick_list=self,
                     sales_order_line=line,
                     location=sl.location,
                     quantity=pick_qty,
@@ -342,7 +352,7 @@ class PickList(models.Model):
                 if unallocated_qty > 0:
                     pick_qty = min(unallocated_qty, remaining - allocated)
                     PickListLine.objects.create(
-                        pick_list=pick_list,
+                        pick_list=self,
                         sales_order_line=line,
                         location=None,
                         quantity=pick_qty,
@@ -352,14 +362,12 @@ class PickList(models.Model):
             # true shortage — not enough stock anywhere
             if allocated < remaining:
                 PickListLine.objects.create(
-                    pick_list=pick_list,
+                    pick_list=self,
                     sales_order_line=line,
                     location=None,
                     quantity=remaining - allocated,
                     is_shortage=True,
                 )
-
-        return pick_list
 
 
 class PickListLine(models.Model):
