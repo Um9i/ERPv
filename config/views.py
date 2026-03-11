@@ -14,7 +14,7 @@ from django.views.generic import CreateView, DeleteView, ListView
 from django.views.generic.edit import UpdateView
 
 from .forms import CompanyConfigForm, CompletePairingForm, PairedInstanceForm
-from .models import CompanyConfig, PairedInstance
+from .models import CompanyConfig, Notification, PairedInstance
 from .notifications import _notify_remote_customer, _notify_remote_customer_product
 
 _IMPORT_FIELDS = [
@@ -505,3 +505,32 @@ class BrowseCatalogueView(LoginRequiredMixin, UserPassesTestMixin, View):
                 "supplier": instance.supplier,
             },
         )
+
+
+# ── Notification views ──────────────────────────────────────────────
+
+
+class NotificationListView(LoginRequiredMixin, ListView):
+    model = Notification
+    template_name = "config/notification_list.html"
+    context_object_name = "notifications"
+    paginate_by = 25
+
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user)
+
+
+class NotificationMarkReadView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        notification = get_object_or_404(Notification, pk=pk, user=request.user)
+        notification.is_read = True
+        notification.save(update_fields=["is_read"])
+        return redirect(notification.link or "config:notification-list")
+
+
+class NotificationMarkAllReadView(LoginRequiredMixin, View):
+    def post(self, request):
+        Notification.objects.filter(user=request.user, is_read=False).update(
+            is_read=True
+        )
+        return redirect("config:notification-list")

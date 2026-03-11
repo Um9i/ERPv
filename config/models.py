@@ -1,6 +1,8 @@
 import secrets
 
+from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 from main.mixins import AddressMixin
 
@@ -100,3 +102,40 @@ class PairedInstance(models.Model):
     @property
     def status(self):
         return "active" if self.api_key else "pending"
+
+
+class Notification(models.Model):
+    """In-app notification for a user."""
+
+    class Level(models.TextChoices):
+        INFO = "info", "Info"
+        WARNING = "warning", "Warning"
+        DANGER = "danger", "Danger"
+
+    class Category(models.TextChoices):
+        LOW_STOCK = "low_stock", "Low Stock"
+        ORDER_OVERDUE = "order_overdue", "Order Overdue"
+        ORDER_STATUS = "order_status", "Order Status Change"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+    )
+    category = models.CharField(max_length=32, choices=Category.choices)
+    level = models.CharField(max_length=16, choices=Level.choices, default=Level.INFO)
+    title = models.CharField(max_length=256)
+    message = models.TextField(blank=True)
+    link = models.CharField(max_length=512, blank=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "is_read"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self):
+        return self.title

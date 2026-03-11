@@ -17,6 +17,23 @@ urlpatterns = [
         views.NotifyCustomerProductView.as_view(),
         name="notify-customer-product",
     ),
+    # ── Notifications ────────────────────────────────────────────────
+    path(
+        "notifications/",
+        views.NotificationListView.as_view(),
+        name="notification-list",
+    ),
+    path(
+        "notifications/<int:pk>/read/",
+        views.NotificationMarkReadView.as_view(),
+        name="notification-mark-read",
+    ),
+    path(
+        "notifications/mark-all-read/",
+        views.NotificationMarkAllReadView.as_view(),
+        name="notification-mark-all-read",
+    ),
+    # ── Paired instances ─────────────────────────────────────────────
     path(
         "paired/", views.PairedInstanceListView.as_view(), name="paired-instance-list"
     ),

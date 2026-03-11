@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 
-from .models import CompanyConfig
+from .models import CompanyConfig, Notification
 
 
 @admin.register(CompanyConfig)
@@ -20,3 +20,11 @@ class CompanyConfigAdmin(admin.ModelAdmin):
                 reverse("admin:config_companyconfig_change", args=[instance.pk])
             )
         return super().changelist_view(request, extra_context)
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ["title", "user", "category", "level", "is_read", "created_at"]
+    list_filter = ["category", "level", "is_read"]
+    search_fields = ["title", "message"]
+    readonly_fields = ["created_at"]

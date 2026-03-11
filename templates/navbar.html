@@ -16,6 +16,18 @@
                 {% include "includes/sidebar_links.html" %}
             </ul>
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-center">
+                {% if user.is_authenticated %}
+                <li class="nav-item me-2">
+                    <a href="{% url 'config:notification-list' %}" class="nav-link position-relative" title="Notifications">
+                        <i class="bi bi-bell fs-5"></i>
+                        {% if unread_notification_count %}
+                            <span class="position-absolute top-1 start-105 translate-middle badge rounded-pill bg-danger">
+                                {{ unread_notification_count }}
+                            </span>
+                        {% endif %}
+                    </a>
+                </li>
+                {% endif %}
                 <li class="nav-item">
                     <span class="nav-user-badge">
                         <i class="bi bi-person-circle me-1"></i>{{ user.username }}
