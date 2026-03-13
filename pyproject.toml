@@ -1,10 +1,62 @@
 [project]
 name = "erpv"
 version = "0.1.0"
-description = "Add your description here"
+description = "A full-featured ERP system built with Django"
 readme = "README.md"
-requires-python = ">=3.14"
-dependencies = []
+requires-python = ">=3.12"
+dependencies = [
+    "asgiref>=3.11",
+    "brotli>=1.2",
+    "cffi>=2.0",
+    "confusable-homoglyphs>=3.3",
+    "crispy-bootstrap5>=2026.3",
+    "cssselect2>=0.9",
+    "dj-database-url>=3.1",
+    "Django>=6.0",
+    "django-cors-headers>=4.9",
+    "django-admin-inline-paginator>=0.4",
+    "django-crispy-forms>=2.5",
+    "django-registration>=5.2",
+    "fonttools>=4.61",
+    "gunicorn>=25.1",
+    "httpx>=0.28",
+    "pillow>=12.1",
+    "psycopg2-binary>=2.9",
+    "pycparser>=3.0",
+    "pydyf>=0.12",
+    "pyphen>=0.17",
+    "python-dotenv>=1.2",
+    "qrcode[pil]>=8.2",
+    "sqlparse>=0.5",
+    "tinycss2>=1.5",
+    "tinyhtml5>=2.1",
+    "weasyprint>=68.1",
+    "webencodings>=0.5",
+    "whitenoise>=6.12",
+    "zopfli>=0.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "bandit>=1.9",
+    "black>=26.3",
+    "coverage>=7.13",
+    "django-debug-toolbar>=6.2",
+    "django-migration-linter>=6.0",
+    "django-silk>=5.4",
+    "django-stubs>=5.2",
+    "factory_boy>=3.3",
+    "Faker>=40.8",
+    "gprof2dot>=2025.4",
+    "mypy>=1.19",
+    "pip-audit>=2.10",
+    "pytest>=9.0",
+    "pytest-cov>=7.0",
+    "pytest-django>=4.11",
+    "pytest-env",
+    "pytest-xdist>=3.8",
+    "ruff>=0.15",
+]
 
 [tool.ruff]
 exclude = ["migrations", "htmlcov", "staticfiles"]

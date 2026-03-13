@@ -74,7 +74,7 @@ The entrypoint script handles migrations, static file collection, and starts Gun
 # 1. Clone and set up a virtual environment
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # includes production deps + dev tooling
 
 # 2. Configure your environment
 export DEBUG=True
