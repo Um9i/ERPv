@@ -13,8 +13,8 @@ class HealthCheckView(View):
     """Unauthenticated health-check endpoint for container orchestration."""
 
     def get(self, request):
-        status = {"status": "ok"}
-        checks = {}
+        status: dict[str, object] = {"status": "ok"}
+        checks: dict[str, str] = {}
 
         try:
             with connection.cursor() as cursor:

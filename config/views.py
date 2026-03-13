@@ -129,6 +129,7 @@ class PairedInstanceCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateVi
     def form_valid(self, form):
         response = super().form_valid(form)
         # Store the key in the session so it can be displayed once on the list page.
+        assert self.object is not None
         self.request.session["new_paired_key"] = self.object.our_key
         messages.success(
             self.request, f'Paired instance "{self.object.name}" created successfully.'
@@ -528,7 +529,7 @@ class NotificationListView(LoginRequiredMixin, ListView):
     paginate_by = 25
 
     def get_queryset(self):
-        return Notification.objects.filter(user=self.request.user)
+        return Notification.objects.filter(user=self.request.user)  # type: ignore[misc]
 
 
 class NotificationMarkReadView(LoginRequiredMixin, View):
@@ -575,6 +576,7 @@ class WebhookEndpointCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateV
 
     def form_valid(self, form):
         response = super().form_valid(form)
+        assert self.object is not None
         self.request.session["new_webhook_secret"] = self.object.secret
         messages.success(
             self.request,

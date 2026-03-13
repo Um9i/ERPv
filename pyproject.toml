@@ -79,6 +79,14 @@ module = "finance.views"
 disable_error_code = ["misc", "attr-defined", "arg-type", "return-value", "override", "assignment", "union-attr", "operator", "type-var", "var-annotated"]
 
 [[tool.mypy.overrides]]
+module = "inventory.forms"
+disable_error_code = ["union-attr", "attr-defined"]
+
+[[tool.mypy.overrides]]
+module = "inventory.admin"
+disable_error_code = ["attr-defined", "return"]
+
+[[tool.mypy.overrides]]
 module = ["config.models", "inventory.models", "production.models"]
 disable_error_code = ["assignment", "no-redef"]
 

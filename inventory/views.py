@@ -1,5 +1,6 @@
 import csv
 import hmac
+from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -51,6 +52,7 @@ class ProductCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy("inventory:inventory-list")
 
     def get_success_url(self):
+        assert self.object is not None
         return reverse_lazy("inventory:inventory-detail", args=[self.object.pk])
 
 
@@ -256,7 +258,7 @@ class InventoryDashboardView(LoginRequiredMixin, TemplateView):
 
         # for products without a supplier cost, fall back to BOM component costs
         no_cost_ids = [pid for pid, qty, cost in inventories if cost is None and qty]
-        bom_costs = {}
+        bom_costs: dict[int, Decimal] = {}
         if no_cost_ids:
             bom_items = (
                 BOMItem.objects.filter(bom__product_id__in=no_cost_ids)
@@ -471,7 +473,7 @@ class LowStockListView(LoginRequiredMixin, TemplateView):
             supplierproduct_id = supplierproduct.pk if supplierproduct else None
             if supplier_id and needed_po > 0:
                 supplier_items.setdefault(supplier_id, []).append(
-                    (supplierproduct_id, needed_po)
+                    (supplierproduct.pk, needed_po)  # type: ignore[union-attr]
                 )
 
             has_bom = inv.product_id in bom_ids
@@ -504,23 +506,23 @@ class LowStockListView(LoginRequiredMixin, TemplateView):
             items = [
                 e
                 for e in items
-                if e["supplier_id"] is not None and e["po_amount"] < e["required"]
+                if e["supplier_id"] is not None and e["po_amount"] < e["required"]  # type: ignore[operator]
             ]
         elif filter_by == "producible":
             items = [
                 e
                 for e in items
-                if e["has_bom"] and e["production_amount"] < e["required"]
+                if e["has_bom"] and e["production_amount"] < e["required"]  # type: ignore[operator]
             ]
         context["filter_by"] = filter_by
 
         # sort items by requirement descending so highest shortages appear first
-        items.sort(key=lambda ent: ent["required"], reverse=True)
+        items.sort(key=lambda ent: int(ent["required"]), reverse=True)  # type: ignore[call-overload]
         # generate purchase-order URLs for each entry that has a supplier
         for entry in items:
             sid = entry.get("supplier_id")
             if sid is not None and entry.get("can_order", False):
-                pairs = supplier_items.get(sid, [])
+                pairs = supplier_items.get(sid, [])  # type: ignore[call-overload]
                 qs = "&".join(f"item={pid}:{qty}" for pid, qty in pairs)
                 entry["po_url"] = (
                     f"{reverse('procurement:purchase-order-create')}?supplier={sid}&{qs}"
@@ -533,14 +535,6 @@ class LowStockListView(LoginRequiredMixin, TemplateView):
         paginator = Paginator(items, 20)
         context["required_items"] = paginator.get_page(page)
         return context
-
-    def form_valid(self, form):
-        inventory = Inventory.objects.select_related("product").get(
-            pk=self.kwargs.get("pk")
-        )
-        form.instance.product = inventory.product
-        form.instance.complete = True
-        return super().form_valid(form)
 
 
 class InventoryListApiView(TemplateView):
@@ -790,7 +784,7 @@ class LowStockExportView(LoginRequiredMixin, View):
                 }
             )
 
-        items.sort(key=lambda e: e["required"], reverse=True)
+        items.sort(key=lambda e: int(e["required"]), reverse=True)  # type: ignore[call-overload]
 
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = 'attachment; filename="low_stock.csv"'

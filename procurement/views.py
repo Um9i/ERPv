@@ -5,7 +5,7 @@ from django import forms
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import F
 from django.forms.models import inlineformset_factory
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
@@ -85,6 +85,7 @@ class SupplierCreateView(LoginRequiredMixin, CreateView):
 
     def get_success_url(self):
         # after creating a supplier return to that supplier's detail
+        assert self.object is not None
         return reverse_lazy("procurement:supplier-detail", args=[self.object.pk])
 
 
@@ -209,6 +210,7 @@ class SupplierContactCreateView(LoginRequiredMixin, CreateView):
         return form
 
     def get_success_url(self):
+        assert self.object is not None
         return reverse_lazy(
             "procurement:supplier-detail", args=[self.object.supplier.pk]
         )
@@ -257,6 +259,7 @@ class SupplierProductCreateView(LoginRequiredMixin, CreateView):
 
     def get_success_url(self):
         # after creating a supplier product return to that supplier's detail
+        assert self.object is not None
         return reverse_lazy(
             "procurement:supplier-detail", args=[self.object.supplier.pk]
         )
@@ -459,7 +462,7 @@ class ProcurementDashboardView(LoginRequiredMixin, TemplateView):
             else:
                 entry["po_url"] = None
 
-        purchasable_items.sort(key=lambda e: e["required_cached"], reverse=True)
+        purchasable_items.sort(key=lambda e: int(e["required_cached"]), reverse=True)  # type: ignore[call-overload]
         context["purchasable_items"] = purchasable_items
         context["purchasable_low_stock"] = len(purchasable_items)
         due_total = context["orders_received"] + context["pending_receiving"]
@@ -583,6 +586,7 @@ class PurchaseOrderCreateView(LoginRequiredMixin, CreateView):
     def get_success_url(self):
         # once saved redirect to the supplier's detail view so the user can
         # immediately see the new order in context
+        assert self.object is not None
         return reverse_lazy(
             "procurement:supplier-detail", args=[self.object.supplier.pk]
         )
@@ -689,7 +693,7 @@ class PurchaseOrderDetailView(LoginRequiredMixin, DetailView):
             self.object.save(update_fields=["due_date", "updated_at"])
             return redirect(request.path)
         # delegate other POSTs if we ever need them (none today)
-        return super().post(request, *args, **kwargs)
+        return HttpResponseNotAllowed(["GET"])
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

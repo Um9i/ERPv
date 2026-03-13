@@ -65,9 +65,9 @@ class Command(BaseCommand):
             purchase_order_lines__complete=True,
         )
         # Filter to truly open POs (at least one incomplete line)
-        pos = [po for po in pos if po.status == "Open"]
+        open_pos = [po for po in pos if po.status == "Open"]
         count = 0
-        for po in pos:
+        for po in open_pos:
             title = f"Overdue PO: {po.order_number}"
             link = reverse("procurement:purchase-order-detail", args=[po.pk])
             count += self._create_for_users(
@@ -84,9 +84,9 @@ class Command(BaseCommand):
         sos = SalesOrder.objects.filter(
             ship_by_date__lt=today,
         )
-        sos = [so for so in sos if so.status == "Open"]
+        open_sos = [so for so in sos if so.status == "Open"]
         count = 0
-        for so in sos:
+        for so in open_sos:
             title = f"Overdue SO: {so.order_number}"
             link = reverse("sales:sales-order-detail", args=[so.pk])
             count += self._create_for_users(

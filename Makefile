@@ -32,12 +32,7 @@ check:
 	$(PYTHON) -m black --check .
 	$(PYTHON) -m ruff check .
 
-MYPY_TARGETS = finance/ \
-	config/models.py dashboards/models.py \
-	inventory/models.py inventory/services.py \
-	sales/models.py sales/services.py \
-	procurement/models.py procurement/services.py \
-	production/models.py production/services.py
+MYPY_TARGETS = config/ dashboards/ finance/ inventory/ main/ procurement/ production/ sales/
 
 mypy:
 	$(PYTHON) -m mypy $(MYPY_TARGETS)

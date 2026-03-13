@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import F, Q
 from django.forms.models import inlineformset_factory
-from django.http import JsonResponse
+from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.views.generic import (
@@ -37,6 +37,7 @@ class BOMCreateView(LoginRequiredMixin, CreateView):
     # we'll redirect to the detail once created
 
     def get_success_url(self):
+        assert self.object is not None
         return reverse_lazy("production:bom-detail", args=[self.object.pk])
 
     def get_initial(self):
@@ -222,6 +223,7 @@ class BOMItemCreateView(LoginRequiredMixin, CreateView):
         return form
 
     def get_success_url(self):
+        assert self.object is not None
         return reverse_lazy("production:bom-detail", args=[self.object.bom.pk])
 
 
@@ -448,7 +450,7 @@ class ProductionDetailView(LoginRequiredMixin, DetailView):
             else:
                 context = self.get_context_data(receive_form=form)
                 return self.render_to_response(context)
-        return super().post(request, *args, **kwargs)
+        return HttpResponseNotAllowed(["GET"])
 
     def get_context_data(self, **kwargs):
         from datetime import timedelta

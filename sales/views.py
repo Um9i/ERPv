@@ -3,7 +3,7 @@ import csv
 from django import forms
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.forms.models import inlineformset_factory
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.views import View
@@ -73,6 +73,7 @@ class CustomerCreateView(LoginRequiredMixin, CreateView):
         return response
 
     def get_success_url(self):
+        assert self.object is not None
         return reverse_lazy("sales:customer-detail", args=[self.object.pk])
 
 
@@ -187,6 +188,7 @@ class CustomerContactCreateView(LoginRequiredMixin, CreateView):
         return form
 
     def get_success_url(self):
+        assert self.object is not None
         return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
 
 
@@ -228,6 +230,7 @@ class CustomerProductCreateView(LoginRequiredMixin, CreateView):
         return form
 
     def get_success_url(self):
+        assert self.object is not None
         return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
 
 
@@ -374,6 +377,7 @@ class SalesOrderCreateView(LoginRequiredMixin, CreateView):
             return self.form_invalid(form)
 
     def get_success_url(self):
+        assert self.object is not None
         return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
 
 
@@ -509,7 +513,7 @@ class SalesOrderDetailView(LoginRequiredMixin, DetailView):
                 self.object.ship_by_date = None
             self.object.save(update_fields=["ship_by_date", "updated_at"])
             return redirect(request.path)
-        return super().post(request, *args, **kwargs)
+        return HttpResponseNotAllowed(["GET"])
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

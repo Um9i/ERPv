@@ -3,7 +3,7 @@ import sys
 from decimal import Decimal, InvalidOperation
 
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from django.db import models, transaction
 
 from inventory.models import Product
 from procurement.models import Supplier
@@ -63,6 +63,7 @@ class Command(BaseCommand):
                 raise CommandError(f"File not found: {csv_path}")
             reader = csv.DictReader(fh)
 
+        model_cls: type[models.Model]
         model_cls, allowed_fields = {
             "product": (Product, _PRODUCT_FIELDS),
             "supplier": (Supplier, _CONTACT_FIELDS),
@@ -116,7 +117,7 @@ class Command(BaseCommand):
                                 value = value.lower() in ("1", "true", "yes")
                         defaults[field] = value
 
-                existing = model_cls.objects.filter(name__iexact=name).first()
+                existing = model_cls.objects.filter(name__iexact=name).first()  # type: ignore[attr-defined]
                 if existing:
                     if update:
                         for k, v in defaults.items():

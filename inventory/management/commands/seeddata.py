@@ -260,7 +260,7 @@ class Command(BaseCommand):
                 sp_list = supp_prod_map.get(supp.pk, [])
                 if not sp_list:
                     continue
-                lines = []
+                po_lines: list[tuple[object, int, bool, int]] = []
                 for _ in range(random.randint(1, 3)):
                     sp = random.choice(sp_list)
                     qty = random.randint(1, 50)
@@ -270,8 +270,8 @@ class Command(BaseCommand):
                         # Track the inventory addition from completed purchases
                         pid = sp.product_id
                         inv_quantities[pid] = inv_quantities.get(pid, 0) + qty
-                    lines.append((sp, qty, complete, received))
-                po_descriptors.append((supp, current, lines))
+                    po_lines.append((sp, qty, complete, received))
+                po_descriptors.append((supp, current, po_lines))
 
             # Production jobs (only products with BOMs)
             for _ in range(random.randint(0, 2)):
@@ -314,10 +314,10 @@ class Command(BaseCommand):
             for field in model._meta.get_fields():
                 if getattr(field, "auto_now_add", False):
                     auto_date_fields.append((field, "auto_now_add", True))
-                    field.auto_now_add = False
+                    field.auto_now_add = False  # type: ignore[union-attr]
                 if getattr(field, "auto_now", False):
                     auto_date_fields.append((field, "auto_now", True))
-                    field.auto_now = False
+                    field.auto_now = False  # type: ignore[union-attr]
 
         try:
             self._bulk_insert_all(
