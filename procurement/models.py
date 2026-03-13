@@ -198,6 +198,7 @@ class PurchaseLedger(models.Model):
         indexes = [
             models.Index(fields=["product", "supplier"]),
             models.Index(fields=["date"]),
+            models.Index(fields=["transaction_id"]),
         ]
 
 

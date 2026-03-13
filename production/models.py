@@ -311,4 +311,5 @@ class ProductionLedger(models.Model):
         indexes = [
             models.Index(fields=["product"]),
             models.Index(fields=["date"]),
+            models.Index(fields=["transaction_id"]),
         ]
