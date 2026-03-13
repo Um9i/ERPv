@@ -25,7 +25,6 @@ services:
     ports:
       - "${PORT:-8000}:8000"
     volumes:
-      - staticfiles:/app/staticfiles:z
       - media:/app/media:z
     deploy:
       resources:

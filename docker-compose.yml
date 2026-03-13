@@ -20,7 +20,6 @@ services:
              gunicorn main.wsgi:application --bind 0.0.0.0:8000 --workers 3"
     volumes:
       - .:/app:Z
-      - staticfiles:/app/staticfiles:z
       - media:/app/media:z
     ports:
       - "8000:8000"
@@ -34,5 +33,4 @@ services:
 
 volumes:
   postgres_data:
-  staticfiles:
   media:
