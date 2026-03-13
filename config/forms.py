@@ -14,6 +14,7 @@ class CompanyConfigForm(forms.ModelForm):
             "logo",
             "vat_number",
             "company_number",
+            "email_notifications",
             # AddressMixin fields
             "address_line_1",
             "address_line_2",

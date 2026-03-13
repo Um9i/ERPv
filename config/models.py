@@ -17,6 +17,10 @@ class CompanyConfig(AddressMixin, models.Model):
     logo = models.ImageField(upload_to="company/", blank=True, null=True)
     vat_number = models.CharField(max_length=64, blank=True)
     company_number = models.CharField(max_length=64, blank=True)
+    email_notifications = models.BooleanField(
+        default=False,
+        help_text="Send email copies of low-stock alerts and overdue order warnings.",
+    )
 
     class Meta:
         verbose_name = "Company Configuration"

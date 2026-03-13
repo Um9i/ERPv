@@ -33,6 +33,8 @@ from .models import (
     PurchaseLedger,
     PurchaseOrder,
     PurchaseOrderLine,
+    PurchaseOrderTemplate,
+    PurchaseOrderTemplateLine,
     Supplier,
     SupplierContact,
     SupplierProduct,
@@ -657,6 +659,28 @@ class PurchaseOrderListView(LoginRequiredMixin, ListView):
         context["status"] = self.request.GET.get("status", "open").strip().lower()
         return context
 
+    def post(self, request, *args, **kwargs):
+        action = request.POST.get("bulk_action", "")
+        selected = request.POST.getlist("selected")
+        if not selected or action not in ("close", "cancel"):
+            return redirect(request.get_full_path())
+        orders = PurchaseOrder.objects.filter(pk__in=selected)
+        count = 0
+        for po in orders:
+            open_lines = po.purchase_order_lines.filter(complete=False)
+            if not open_lines.exists():
+                continue
+            for line in open_lines:
+                line.complete = True
+                line.closed = True
+                line.save(update_fields=["complete", "closed"])
+            po.save(update_fields=["updated_at"])
+            count += 1
+        from django.contrib import messages
+
+        messages.success(request, f"{count} order(s) closed.")
+        return redirect(request.get_full_path())
+
 
 class PurchaseOrderDetailView(LoginRequiredMixin, DetailView):
     model = PurchaseOrder
@@ -991,3 +1015,75 @@ class PurchaseOrderExportView(LoginRequiredMixin, View):
                 ]
             )
         return response
+
+
+class PurchaseOrderTemplateListView(LoginRequiredMixin, ListView):
+    model = PurchaseOrderTemplate
+    template_name = "procurement/po_template_list.html"
+    context_object_name = "templates"
+
+    def get_queryset(self):
+        return PurchaseOrderTemplate.objects.select_related("supplier").all()
+
+
+class PurchaseOrderTemplateSaveView(LoginRequiredMixin, View):
+    """Save an existing PO as a named template (POST from the detail page)."""
+
+    def post(self, request, pk):
+        po = PurchaseOrder.objects.get(pk=pk)
+        name = request.POST.get("template_name", "").strip()
+        if not name:
+            from django.contrib import messages
+
+            messages.error(request, "Template name is required.")
+            return redirect("procurement:purchase-order-detail", pk=pk)
+
+        if PurchaseOrderTemplate.objects.filter(name__iexact=name).exists():
+            from django.contrib import messages
+
+            messages.error(request, f'A template named "{name}" already exists.')
+            return redirect("procurement:purchase-order-detail", pk=pk)
+
+        template = PurchaseOrderTemplate.objects.create(
+            name=name,
+            supplier=po.supplier,
+            created_by=request.user,
+        )
+        lines = po.purchase_order_lines.select_related("product").all()
+        PurchaseOrderTemplateLine.objects.bulk_create(
+            [
+                PurchaseOrderTemplateLine(
+                    template=template,
+                    product=line.product,
+                    quantity=line.quantity,
+                )
+                for line in lines
+            ]
+        )
+        from django.contrib import messages
+
+        messages.success(request, f'Template "{name}" saved successfully.')
+        return redirect("procurement:purchase-order-detail", pk=pk)
+
+
+class PurchaseOrderFromTemplateView(LoginRequiredMixin, View):
+    """Create a new PO pre-populated from a template."""
+
+    def get(self, request, pk):
+        template = PurchaseOrderTemplate.objects.get(pk=pk)
+        lines = template.lines.select_related("product").all()
+        # build GET params for PurchaseOrderCreateView
+        params = [f"supplier={template.supplier.pk}"]
+        for line in lines:
+            params.append(f"item={line.product.pk}:{line.quantity}")
+        url = reverse_lazy("procurement:purchase-order-create")
+        return redirect(f"{url}?{'&'.join(params)}")
+
+
+class PurchaseOrderTemplateDeleteView(LoginRequiredMixin, DeleteView):
+    model = PurchaseOrderTemplate
+    success_url = reverse_lazy("procurement:po-template-list")
+
+    def get(self, request, *args, **kwargs):
+        # skip confirmation page, just delete on GET redirect
+        return self.post(request, *args, **kwargs)

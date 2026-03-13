@@ -8,6 +8,7 @@
 {% block dashboard_links %}
 <a href="{% url 'procurement:purchase-order-create' %}"><i class="bi bi-plus-circle"></i>Create Purchase Order</a>
 <a href="{% url 'procurement:purchase-order-list' %}"><i class="bi bi-bag"></i>View Purchase Orders</a>
+<a href="{% url 'procurement:po-template-list' %}"><i class="bi bi-bookmark-star"></i>PO Templates</a>
 <a href="{% url 'procurement:supplier-create' %}"><i class="bi bi-person-plus"></i>Create Supplier</a>
 <a href="{% url 'procurement:supplier-list' %}"><i class="bi bi-people"></i>View Suppliers</a>
 {% endblock %}

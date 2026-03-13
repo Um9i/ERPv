@@ -1,0 +1,42 @@
+{% extends "includes/card.html" %}
+{% block card_icon %}bi-bookmark-star{% endblock %}
+{% block card_icon_color %}page-header-icon--blue{% endblock %}
+{% block card_title %}Purchase Order Templates{% endblock %}
+{% block card_body %}
+{% if templates %}
+<div class="table-responsive">
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Supplier</th>
+            <th>Lines</th>
+            <th>Created</th>
+            <th class="text-end">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for tpl in templates %}
+        <tr>
+            <td>{{ tpl.name }}</td>
+            <td><a href="{% url 'procurement:supplier-detail' tpl.supplier.pk %}">{{ tpl.supplier.name }}</a></td>
+            <td>{{ tpl.lines.count }}</td>
+            <td>{{ tpl.created_at|date:"Y-m-d" }}</td>
+            <td class="text-end">
+                <a href="{% url 'procurement:po-template-use' tpl.pk %}" class="btn btn-sm btn-success">
+                    <i class="bi bi-plus-circle me-1"></i>Create PO
+                </a>
+                <a href="{% url 'procurement:po-template-delete' tpl.pk %}" class="btn btn-sm btn-danger"
+                   onclick="return confirm('Delete template &quot;{{ tpl.name }}&quot;?');">
+                    <i class="bi bi-trash me-1"></i>Delete
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<p class="text-muted">No templates yet. Open a purchase order and click <strong>Save as Template</strong> to create one.</p>
+{% endif %}
+{% endblock %}

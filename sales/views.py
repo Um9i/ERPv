@@ -493,6 +493,28 @@ class SalesOrderListView(LoginRequiredMixin, ListView):
         context["status"] = self.request.GET.get("status", "open").lower()
         return context
 
+    def post(self, request, *args, **kwargs):
+        action = request.POST.get("bulk_action", "")
+        selected = request.POST.getlist("selected")
+        if not selected or action not in ("close", "cancel"):
+            return redirect(request.get_full_path())
+        orders = SalesOrder.objects.filter(pk__in=selected)
+        count = 0
+        for so in orders:
+            open_lines = so.sales_order_lines.filter(complete=False)
+            if not open_lines.exists():
+                continue
+            for line in open_lines:
+                line.complete = True
+                line.closed = True
+                line.save(update_fields=["complete", "closed"])
+            so.save(update_fields=["updated_at"])
+            count += 1
+        from django.contrib import messages
+
+        messages.success(request, f"{count} order(s) closed.")
+        return redirect(request.get_full_path())
+
 
 class SalesOrderDetailView(LoginRequiredMixin, DetailView):
     model = SalesOrder

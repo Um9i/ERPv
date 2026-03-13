@@ -86,6 +86,11 @@ Indexes on product and customer fields assist with searching and reporting.
   customer count, fulfilment rate, and due-date awareness (orders due today
   or earlier).
 
+### Bulk Close
+
+* The SO list page supports multi-select checkboxes and a "Close Selected"
+  bulk action to close multiple open orders at once.
+
 ## Workflows
 
 1. Create customer and define what products they may buy along with prices.

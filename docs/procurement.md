@@ -48,6 +48,30 @@ reporting.
 * **ProcurementDashboardView** exposes simple metrics: total orders, lines
   received/pending, and supplier count, shown as cards with links.
 
+### Reusable PO Templates
+
+* **PurchaseOrderTemplate** and **PurchaseOrderTemplateLine** models allow
+  users to save an existing PO as a named template.
+* From the PO detail page, the "Save as Template" button opens a modal to
+  name and store the template (supplier + lines).
+* The template list page (`/procurement/po-templates/`) shows all saved
+  templates with a "Create PO" button that redirects to the PO create form
+  pre-populated with the template's supplier and line items.
+* Templates can be deleted from the list page.
+
+### Automated Receipt Matching
+
+* The PO receiving page (`/procurement/purchase-orders/<id>/receive/`)
+  includes a "Scan to Receive" barcode/SKU scanner.
+* Scanning a product barcode or SKU automatically increments the receive
+  quantity for the matching PO line, client-side.
+* The user still submits the form to finalize the receipt.
+
+### Bulk Close
+
+* The PO list page supports multi-select checkboxes and a "Close Selected"
+  bulk action to close multiple open orders at once.
+
 ## API Endpoints
 
 * `SupplierProductIDsView` (JSON) – used by front‑end forms to restrict line

@@ -20,11 +20,11 @@ ERPv is a full-featured ERP web application designed for small-to-medium manufac
 
 🏭 **Inventory** — Product catalogue with images, hierarchical warehouse locations (Warehouse → Zone → Bin), stock transfers, demand analysis, health dashboards, and a full audit ledger.
 
-🛒 **Procurement** — Manage suppliers and contacts, raise purchase orders, track receiving workflows, and monitor supplier product costs through the purchase ledger.
+🛒 **Procurement** — Manage suppliers and contacts, raise purchase orders, track receiving workflows with scan-to-receive barcode matching, reusable PO templates, and monitor supplier product costs through the purchase ledger.
 
 ⚙️ **Production** — Recursive Bill of Materials with an interactive tree visualiser, manufacturing jobs with due-date tracking, component shortage analysis, cost roll-ups, and margin analysis.
 
-📦 **Sales** — Customer management, sales orders with pick lists, scan-to-pick confirmation with barcode/QR scanning, shipment processing with real-time stock checks, and PDF invoice generation via WeasyPrint.
+📦 **Sales** — Customer management, sales orders with pick lists, scan-to-pick confirmation with barcode/QR scanning, bulk close actions on list pages, shipment processing with real-time stock checks, and PDF invoice generation via WeasyPrint.
 
 💰 **Finance** — Sales and purchase ledgers with filtering and CSV export, monthly breakdowns, outstanding orders reports, product-level P&L, and a 12-month sales vs purchases chart.
 
@@ -32,7 +32,7 @@ ERPv is a full-featured ERP web application designed for small-to-medium manufac
 
 🔗 **Multi-site Pairing** — Connect multiple ERPv instances together with API-key authentication, browse remote catalogues, and automatically import suppliers and customers across sites.
 
-🔔 **Notifications** — In-app notification centre with a navbar bell badge, low stock alerts, overdue order warnings, and order status change notifications. Run `check_notifications` periodically for proactive alerts.
+🔔 **Notifications** — In-app notification centre with a navbar bell badge, low stock alerts, overdue order warnings, and order status change notifications. Optional email delivery of alert digests. Run `check_notifications` periodically for proactive alerts.
 
 ## Tech Stack
 

@@ -7,8 +7,12 @@ from .views import (
     PurchaseOrderDeleteView,
     PurchaseOrderDetailView,
     PurchaseOrderExportView,
+    PurchaseOrderFromTemplateView,
     PurchaseOrderListView,
     PurchaseOrderReceiveView,
+    PurchaseOrderTemplateDeleteView,
+    PurchaseOrderTemplateListView,
+    PurchaseOrderTemplateSaveView,
     StoreConfirmResetView,
     StoreConfirmView,
     SupplierContactCreateView,
@@ -137,5 +141,25 @@ urlpatterns = [
         "api/notify/supplier-product/",
         NotifySupplierProductView.as_view(),
         name="api-notify-supplier-product",
+    ),
+    path(
+        "po-templates/",
+        PurchaseOrderTemplateListView.as_view(),
+        name="po-template-list",
+    ),
+    path(
+        "po-templates/<int:pk>/use/",
+        PurchaseOrderFromTemplateView.as_view(),
+        name="po-template-use",
+    ),
+    path(
+        "po-templates/<int:pk>/delete/",
+        PurchaseOrderTemplateDeleteView.as_view(),
+        name="po-template-delete",
+    ),
+    path(
+        "purchase-orders/<int:pk>/save-template/",
+        PurchaseOrderTemplateSaveView.as_view(),
+        name="po-save-as-template",
     ),
 ]

@@ -167,6 +167,56 @@ class PurchaseOrder(AuditMixin, models.Model):
         self.save(update_fields=["total_amount_cached"])
 
 
+class PurchaseOrderTemplate(models.Model):
+    """A saved template for quickly creating new purchase orders."""
+
+    name = models.CharField(max_length=256, unique=True)
+    supplier = models.ForeignKey(
+        Supplier,
+        on_delete=models.CASCADE,
+        related_name="purchase_order_templates",
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    created_by = models.ForeignKey(
+        "auth.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(Lower("name"), name="po_template_name_ci_unique"),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class PurchaseOrderTemplateLine(models.Model):
+    """A line item in a PO template."""
+
+    template = models.ForeignKey(
+        PurchaseOrderTemplate,
+        on_delete=models.CASCADE,
+        related_name="lines",
+    )
+    product = models.ForeignKey(
+        SupplierProduct,
+        on_delete=models.CASCADE,
+        related_name="+",
+    )
+    quantity = models.PositiveBigIntegerField()
+
+    class Meta:
+        ordering = ["product"]
+
+    def __str__(self) -> str:
+        return f"{self.product.product.name} × {self.quantity}"
+
+
 class PurchaseLedger(models.Model):
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name="purchase_ledger"

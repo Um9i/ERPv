@@ -8,6 +8,21 @@
 <p><strong>Created At:</strong> {{ purchase_order.created_at }}</p>
 <p><strong>Updated At:</strong> {{ purchase_order.updated_at }}</p>
 <p><strong>Status:</strong> {{ purchase_order.status }}</p>
+
+{% if purchase_order.status == "Open" %}
+<div class="card mb-3 border-primary">
+  <div class="card-body">
+    <h5 class="card-title"><i class="bi bi-upc-scan me-2"></i>Scan to Receive</h5>
+    <p class="text-muted small mb-2">Scan a product barcode or SKU to automatically increment the received quantity for the matching line.</p>
+    <div class="input-group">
+      <input type="text" id="scan-input" class="form-control" placeholder="Scan barcode / SKU…" autofocus autocomplete="off">
+      <button type="button" id="scan-btn" class="btn btn-primary"><i class="bi bi-upc-scan"></i></button>
+    </div>
+    <div id="scan-feedback" class="mt-2"></div>
+  </div>
+</div>
+{% endif %}
+
 <h3>Order Lines</h3>
 <form method="post">
     {% csrf_token %}
@@ -15,6 +30,7 @@
         <thead>
             <tr>
                 <th>Product</th>
+                <th>Barcode / SKU</th>
                 <th>Quantity</th>
                 <th>Received</th>
                 <th>Quantity Received</th>
@@ -22,16 +38,24 @@
         </thead>
         <tbody>
             {% for line in purchase_order.purchase_order_lines.all %}
-            <tr>
+            <tr id="line-{{ line.id }}" {% if line.complete %}class="table-success"{% endif %}>
                 <td>{{ line.product.product.name }}</td>
+                <td class="text-muted small">
+                    {% if line.product.product.barcode %}{{ line.product.product.barcode }}{% endif %}
+                    {% if line.product.product.sku %} / {{ line.product.product.sku }}{% endif %}
+                </td>
                 <td>{{ line.quantity }}</td>
-                <td>{{ line.quantity_received }}</td>
-                <td><input type="number" name="received_{{ line.id }}" min="0" max="{{ line.remaining }}" value="0">
+                <td><span class="received-count" data-line="{{ line.id }}">{{ line.quantity_received }}</span></td>
+                <td>
+                  <input type="number" name="received_{{ line.id }}" id="recv-{{ line.id }}"
+                         min="0" max="{{ line.remaining }}" value="0"
+                         class="form-control form-control-sm" style="width:100px;"
+                         {% if line.complete %}disabled{% endif %}>
                 </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="7">No lines.</td>
+                <td colspan="5">No lines.</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -42,4 +66,55 @@
         Receive All
     </button>
 </form>
+
+<script>
+(function(){
+  const scanInput=document.getElementById('scan-input');
+  const scanBtn=document.getElementById('scan-btn');
+  const feedback=document.getElementById('scan-feedback');
+  if(!scanInput) return;
+
+  /* Map barcode/sku → line element for quick lookup */
+  const lineMap={};
+  {% for line in purchase_order.purchase_order_lines.all %}
+  {% if line.product.product.barcode %}
+  lineMap['{{ line.product.product.barcode|escapejs }}']=lineMap['{{ line.product.product.barcode|escapejs }}']||'{{ line.id }}';
+  {% endif %}
+  {% if line.product.product.sku %}
+  lineMap['{{ line.product.product.sku|escapejs }}']=lineMap['{{ line.product.product.sku|escapejs }}']||'{{ line.id }}';
+  {% endif %}
+  {% endfor %}
+
+  function handleScan(){
+    const val=scanInput.value.trim();
+    scanInput.value='';
+    if(!val) return;
+    const lineId=lineMap[val];
+    if(!lineId){
+      feedback.innerHTML='<span class="text-danger"><i class="bi bi-x-circle me-1"></i>No matching line for: '+val+'</span>';
+      return;
+    }
+    const input=document.getElementById('recv-'+lineId);
+    if(!input){
+      feedback.innerHTML='<span class="text-warning"><i class="bi bi-check-circle me-1"></i>Line already complete.</span>';
+      return;
+    }
+    const max=parseInt(input.max)||0;
+    const cur=parseInt(input.value)||0;
+    if(cur<max){
+      input.value=cur+1;
+      const row=document.getElementById('line-'+lineId);
+      row.classList.add('table-info');
+      setTimeout(()=>row.classList.remove('table-info'),600);
+      feedback.innerHTML='<span class="text-success"><i class="bi bi-check-circle me-1"></i>Scanned: '+val+' (qty: '+(cur+1)+')</span>';
+    } else {
+      feedback.innerHTML='<span class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Max quantity reached for this line.</span>';
+    }
+    scanInput.focus();
+  }
+
+  scanInput.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();handleScan();}});
+  scanBtn.addEventListener('click',handleScan);
+})();
+</script>
 {% endblock %}
