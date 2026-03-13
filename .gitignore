@@ -10,5 +10,7 @@ staticfiles
 .venv
 venv
 .vscode
+node_modules
+static/js/*.js
 TODO.md
 zDoc
