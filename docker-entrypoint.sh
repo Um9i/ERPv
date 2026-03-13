@@ -6,7 +6,7 @@ DB_HOST=${DB_HOST:-db}
 DB_PORT=${DB_PORT:-5432}
 
 echo "Waiting for database at $DB_HOST:$DB_PORT..."
-while ! nc -z $DB_HOST $DB_PORT; do
+while ! python -c "import socket; socket.create_connection(('$DB_HOST', $DB_PORT), timeout=2)" 2>/dev/null; do
   sleep 1
 done
 
