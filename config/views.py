@@ -1,4 +1,5 @@
 import hmac
+import logging
 from urllib.parse import urlencode
 
 import httpx
@@ -27,6 +28,8 @@ from .models import (
     WebhookEndpoint,
 )
 from .notifications import _notify_remote_customer, _notify_remote_customer_product
+
+logger = logging.getLogger(__name__)
 
 _IMPORT_FIELDS = [
     "name",
@@ -75,11 +78,15 @@ class CompanyApiView(View):
     def get(self, request, *args, **kwargs):
         auth = request.META.get("HTTP_AUTHORIZATION", "")
         if not auth.startswith("Bearer "):
+            logger.warning(
+                "company_api_auth_failed", extra={"reason": "missing_bearer"}
+            )
             return JsonResponse({"error": "Unauthorized"}, status=401)
         key = auth[len("Bearer ") :]
         if not any(
             hmac.compare_digest(key, pi.our_key) for pi in PairedInstance.objects.all()
         ):
+            logger.warning("company_api_auth_failed", extra={"reason": "invalid_key"})
             return JsonResponse({"error": "Unauthorized"}, status=401)
         company = CompanyConfig.get_or_default()
         return JsonResponse(
@@ -131,6 +138,10 @@ class PairedInstanceCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateVi
         # Store the key in the session so it can be displayed once on the list page.
         assert self.object is not None
         self.request.session["new_paired_key"] = self.object.our_key
+        logger.info(
+            "paired_instance_created",
+            extra={"name": self.object.name, "user": self.request.user.get_username()},
+        )
         messages.success(
             self.request, f'Paired instance "{self.object.name}" created successfully.'
         )
@@ -578,6 +589,10 @@ class WebhookEndpointCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateV
         response = super().form_valid(form)
         assert self.object is not None
         self.request.session["new_webhook_secret"] = self.object.secret
+        logger.info(
+            "webhook_endpoint_created",
+            extra={"name": self.object.name, "user": self.request.user.get_username()},
+        )
         messages.success(
             self.request,
             f'Webhook "{self.object.name}" created.',

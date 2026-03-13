@@ -1,3 +1,5 @@
+import logging
+
 from django import forms
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import F, Q
@@ -26,6 +28,8 @@ from .models import (
     BOMItem,
     Production,
 )
+
+logger = logging.getLogger(__name__)
 
 # ----- BOM views -----
 
@@ -568,6 +572,14 @@ class ProductionReceiveView(LoginRequiredMixin, DetailView):
             else:
                 self.object.quantity_received += quantity
                 self.object.save()
+            logger.info(
+                "production_received_via_view",
+                extra={
+                    "job_id": self.object.pk,
+                    "quantity": quantity,
+                    "user": request.user.get_username(),
+                },
+            )
         except Exception as e:
             messages.error(request, str(e))
             return redirect(request.path)

@@ -1,4 +1,5 @@
 import csv
+import logging
 
 from django import forms
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -34,6 +35,8 @@ from .models import (
     SalesOrder,
     SalesOrderLine,
 )
+
+logger = logging.getLogger(__name__)
 
 _CUSTOMER_PREFILL_FIELDS = [
     "name",
@@ -370,6 +373,15 @@ class SalesOrderCreateView(LoginRequiredMixin, CreateView):
             self.object = form.save()
             lines_formset.instance = self.object
             lines_formset.save()
+            logger.info(
+                "sales_order_created",
+                extra={
+                    "order_id": self.object.pk,
+                    "order_number": self.object.order_number,
+                    "customer": self.object.customer.name,
+                    "user": self.request.user.get_username(),
+                },
+            )
             # auto-generate a pick list for the new order
             PickList.generate_for_order(self.object)
             return super().form_valid(form)
@@ -556,12 +568,25 @@ class SalesOrderShipView(LoginRequiredMixin, DetailView):
         )
 
         if errors:
+            logger.warning(
+                "shipping_errors",
+                extra={"order_id": self.object.pk, "errors": errors},
+            )
             context = self.get_context_data()
             context["errors"] = errors
             from django.shortcuts import render
 
             return render(request, self.template_name, context)
         if touched:
+            logger.info(
+                "sales_order_shipped",
+                extra={
+                    "order_id": self.object.pk,
+                    "order_number": self.object.order_number,
+                    "user": request.user.get_username(),
+                    "ship_all": ship_all,
+                },
+            )
             self.object.save(update_fields=["updated_at"])
         return redirect(self.get_success_url())
 

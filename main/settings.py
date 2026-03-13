@@ -223,24 +223,42 @@ CACHES = {
 }
 
 # Logging
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
         "verbose": {
-            "format": "{levelname} {asctime} {name} {message}",
+            "format": "{levelname} {asctime} {name} {process:d} {message}",
             "style": "{",
+        },
+        "json": {
+            "()": "main.logging_fmt.JsonFormatter",
+        },
+    },
+    "filters": {
+        "require_debug_false": {
+            "()": "django.utils.log.RequireDebugFalse",
+        },
+        "require_debug_true": {
+            "()": "django.utils.log.RequireDebugTrue",
         },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "verbose",
+            "formatter": "verbose" if DEBUG else "json",
+        },
+        "mail_admins": {
+            "level": "ERROR",
+            "filters": ["require_debug_false"],
+            "class": "django.utils.log.AdminEmailHandler",
         },
     },
     "root": {
         "handlers": ["console"],
-        "level": "INFO",
+        "level": LOG_LEVEL,
     },
     "loggers": {
         "django": {
@@ -249,18 +267,53 @@ LOGGING = {
             "propagate": False,
         },
         "django.request": {
-            "handlers": ["console"],
+            "handlers": ["console", "mail_admins"],
             "level": "ERROR",
+            "propagate": False,
+        },
+        "django.security": {
+            "handlers": ["console", "mail_admins"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": os.getenv("DB_LOG_LEVEL", "WARNING"),
+            "propagate": False,
+        },
+        "config": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
             "propagate": False,
         },
         "finance": {
             "handlers": ["console"],
-            "level": "INFO",
+            "level": LOG_LEVEL,
             "propagate": False,
         },
         "inventory": {
             "handlers": ["console"],
-            "level": "INFO",
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "main": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "procurement": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "production": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "sales": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
             "propagate": False,
         },
     },

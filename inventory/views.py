@@ -1,5 +1,6 @@
 import csv
 import hmac
+import logging
 from decimal import Decimal
 
 from django.contrib import messages
@@ -43,6 +44,8 @@ from .models import (
     Product,
     StockTransfer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ProductCreateView(LoginRequiredMixin, CreateView):
@@ -200,6 +203,14 @@ class InventoryAdjustCreateView(LoginRequiredMixin, CreateView):
 
         apply_inventory_adjustment(form.instance, location=location)
 
+        logger.info(
+            "inventory_adjustment_via_view",
+            extra={
+                "product": inventory.product.name,
+                "quantity": form.instance.quantity,
+                "user": self.request.user.get_username(),
+            },
+        )
         self.object = form.instance
         return redirect(self.get_success_url())
 
@@ -696,11 +707,15 @@ class CatalogueApiView(View):
     def get(self, request, *args, **kwargs):
         auth = request.META.get("HTTP_AUTHORIZATION", "")
         if not auth.startswith("Bearer "):
+            logger.warning(
+                "catalogue_api_auth_failed", extra={"reason": "missing_bearer"}
+            )
             return JsonResponse({"error": "Unauthorized"}, status=401)
         key = auth[len("Bearer ") :]
         if not any(
             hmac.compare_digest(key, pi.our_key) for pi in PairedInstance.objects.all()
         ):
+            logger.warning("catalogue_api_auth_failed", extra={"reason": "invalid_key"})
             return JsonResponse({"error": "Unauthorized"}, status=401)
         products = Product.objects.filter(catalogue_item=True, sale_price__isnull=False)
         data = [

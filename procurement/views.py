@@ -1,5 +1,6 @@
 import csv
 import hmac
+import logging
 
 from django import forms
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -36,6 +37,8 @@ from .models import (
     SupplierContact,
     SupplierProduct,
 )
+
+logger = logging.getLogger(__name__)
 
 _SUPPLIER_PREFILL_FIELDS = [
     "name",
@@ -579,6 +582,14 @@ class PurchaseOrderCreateView(LoginRequiredMixin, CreateView):
             self.object = form.save()
             lines_formset.instance = self.object
             lines_formset.save()
+            logger.info(
+                "purchase_order_created",
+                extra={
+                    "order_id": self.object.pk,
+                    "supplier": self.object.supplier.name,
+                    "user": self.request.user.get_username(),
+                },
+            )
             return super().form_valid(form)
         else:
             return self.form_invalid(form)
@@ -674,6 +685,13 @@ class PurchaseOrderDetailView(LoginRequiredMixin, DetailView):
                 line.save(update_fields=["complete", "closed"])
             # update order timestamp to signal change
             self.object.save(update_fields=["updated_at"])
+            logger.info(
+                "purchase_order_closed",
+                extra={
+                    "order_id": self.object.pk,
+                    "user": request.user.get_username(),
+                },
+            )
             # simply reload the detail page
             from django.shortcuts import redirect
 

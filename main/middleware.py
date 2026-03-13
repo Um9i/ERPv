@@ -1,5 +1,9 @@
+import logging
+
 from django.shortcuts import redirect
 from django.urls import reverse
+
+logger = logging.getLogger(__name__)
 
 
 class LoginRequiredMiddleware:

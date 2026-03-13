@@ -1,6 +1,10 @@
+import logging
+
 import httpx
 
 from .models import CompanyConfig
+
+logger = logging.getLogger(__name__)
 
 
 def _notify_remote_customer(paired_instance) -> bool:
@@ -31,6 +35,9 @@ def _notify_remote_customer(paired_instance) -> bool:
         resp.raise_for_status()
         return True
     except Exception:
+        logger.warning(
+            "notify_remote_customer_failed", extra={"url": paired_instance.url}
+        )
         return False
 
 
@@ -49,6 +56,10 @@ def _notify_remote_customer_product(paired_instance, product_name, price) -> boo
         resp.raise_for_status()
         return True
     except Exception:
+        logger.warning(
+            "notify_remote_customer_product_failed",
+            extra={"url": paired_instance.url, "product": product_name},
+        )
         return False
 
 
@@ -67,4 +78,8 @@ def _notify_remote_supplier_product_cost(paired_instance, product_name, cost) ->
         resp.raise_for_status()
         return True
     except Exception:
+        logger.warning(
+            "notify_remote_supplier_product_cost_failed",
+            extra={"url": paired_instance.url, "product": product_name},
+        )
         return False

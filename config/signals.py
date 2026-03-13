@@ -1,5 +1,7 @@
 """Signal handlers that generate in-app notifications on status changes."""
 
+import logging
+
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
@@ -9,6 +11,8 @@ from .models import Notification, WebhookEndpoint
 from .webhooks import dispatch_event
 
 User = get_user_model()
+
+logger = logging.getLogger(__name__)
 
 
 def _notify_all_users(*, category, level, title, message, link):
@@ -46,6 +50,10 @@ def _notify_sales_order_completed(sender, instance, **kwargs):
     if not old.complete and instance.complete:
         so = instance.sales_order
         product_name = instance.product.product.name
+        logger.info(
+            "so_line_completed",
+            extra={"order": so.order_number, "product": product_name},
+        )
         _notify_all_users(
             category=Notification.Category.ORDER_STATUS,
             level=Notification.Level.INFO,
@@ -67,6 +75,10 @@ def _notify_purchase_order_received(sender, instance, **kwargs):
     if not old.complete and instance.complete:
         po = instance.purchase_order
         product_name = instance.product.product.name
+        logger.info(
+            "po_line_received",
+            extra={"order": po.order_number, "product": product_name},
+        )
         _notify_all_users(
             category=Notification.Category.ORDER_STATUS,
             level=Notification.Level.INFO,
