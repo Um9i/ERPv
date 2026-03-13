@@ -107,7 +107,7 @@ class Command(BaseCommand):
                             if field == "sale_price":
                                 try:
                                     value = Decimal(value).quantize(Decimal("0.01"))
-                                except ValueError, InvalidOperation:
+                                except (ValueError, InvalidOperation):
                                     errors.append(
                                         f"Row {i}: invalid sale_price '{row[field]}'."
                                     )

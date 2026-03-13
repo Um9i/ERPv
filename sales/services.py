@@ -28,7 +28,7 @@ def complete_sales_line(line) -> None:
 
     try:
         line.value = line.product.price * line.quantity
-    except TypeError, AttributeError:
+    except (TypeError, AttributeError):
         line.value = None
 
     InventoryLedger.objects.create(

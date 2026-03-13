@@ -810,7 +810,7 @@ class PickConfirmView(LoginRequiredMixin, DetailView):
         if line_id:
             try:
                 line = self.object.lines.get(pk=int(line_id), is_shortage=False)
-            except PickListLine.DoesNotExist, ValueError:
+            except (PickListLine.DoesNotExist, ValueError):
                 if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                     return JsonResponse({"ok": False, "error": "Line not found."})
                 return redirect(request.path)

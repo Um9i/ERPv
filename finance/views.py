@@ -8,7 +8,9 @@ from django.db.models import OuterRef, Subquery, Sum
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.utils import timezone
+from django.utils.decorators import method_decorator
 from django.views import View
+from django.views.decorators.cache import cache_page
 from django.views.generic import TemplateView
 from django.views.generic.dates import ArchiveIndexView, MonthArchiveView
 
@@ -329,6 +331,7 @@ class OutstandingOrdersView(LoginRequiredMixin, TemplateView):
         return context
 
 
+@method_decorator(cache_page(60 * 15), name="dispatch")
 class ProductPLView(LoginRequiredMixin, TemplateView):
     template_name = "finance/product_pl.html"
 

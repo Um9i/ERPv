@@ -782,7 +782,7 @@ class StoreConfirmView(LoginRequiredMixin, DetailView):
                 line = self.object.purchase_order_lines.get(
                     pk=int(line_id), store_confirmed=False
                 )
-            except PurchaseOrderLine.DoesNotExist, ValueError:
+            except (PurchaseOrderLine.DoesNotExist, ValueError):
                 if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                     return JsonResponse({"ok": False, "error": "Line not found."})
                 return redirect(request.path)
@@ -889,7 +889,7 @@ class NotifySupplierProductView(View):
 
         try:
             data = json.loads(request.body)
-        except json.JSONDecodeError, ValueError:
+        except (json.JSONDecodeError, ValueError):
             return JsonResponse({"error": "Invalid JSON"}, status=400)
 
         product_name = (data.get("product_name") or "").strip()

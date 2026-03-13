@@ -8,6 +8,7 @@ from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views import View
+from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import (
     CreateView,
@@ -139,6 +140,7 @@ class InventoryListView(LoginRequiredMixin, ListView):
         return context
 
 
+@method_decorator(cache_page(60 * 5), name="dispatch")
 class InventoryDetailView(LoginRequiredMixin, DetailView):
     model = Inventory
     template_name = "inventory/inventory_detail.html"
@@ -372,6 +374,7 @@ class InventoryAdjustCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy("inventory:inventory-detail", args=[self.kwargs.get("pk")])
 
 
+@method_decorator(cache_page(60 * 10), name="dispatch")
 class InventoryDashboardView(LoginRequiredMixin, TemplateView):
     """Dashboard showing inventory metrics for the inventory app."""
 

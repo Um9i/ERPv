@@ -75,8 +75,8 @@ class CustomerProduct(models.Model):
 
         total = (
             self.product_sales_orders.filter(complete=False)
-            .annotate(remaining=F("quantity") - F("quantity_shipped"))
-            .aggregate(total=Sum("remaining"))
+            .annotate(remaining_qty=F("quantity") - F("quantity_shipped"))
+            .aggregate(total=Sum("remaining_qty"))
             .get("total")
         )
         return max(total or 0, 0)

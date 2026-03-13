@@ -212,6 +212,17 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 REGISTRATION_OPEN = False
 
+# Cache
+CACHES = {
+    "default": {
+        "BACKEND": os.getenv(
+            "CACHE_BACKEND", "django.core.cache.backends.locmem.LocMemCache"
+        ),
+        "LOCATION": os.getenv("CACHE_LOCATION", "erpv-default"),
+        "TIMEOUT": 300,
+    }
+}
+
 # Logging
 LOGGING = {
     "version": 1,
