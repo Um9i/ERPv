@@ -40,7 +40,7 @@ ERPv is a full-featured ERP web application designed for small-to-medium manufac
 |---|---|
 | Backend | Django 6.0.3, Python 3.14 |
 | Database | PostgreSQL (production), SQLite (development) |
-| Frontend | Bootstrap 5 via django-crispy-forms |
+| Frontend | Bootstrap 5 via django-crispy-forms, TypeScript |
 | PDF Generation | WeasyPrint |
 | QR Codes | python-qrcode |
 | Static Files | WhiteNoise |
@@ -128,6 +128,18 @@ mypy .                      # check entire project
 mypy finance/               # check a single module
 ```
 
+## CI/CD
+
+GitHub Actions runs on every push and pull request to `master`:
+
+| Job | What it does |
+|---|---|
+| **lint** | ruff format + lint, TypeScript type check, migration lint |
+| **security** | bandit scan + pip-audit dependency check |
+| **typecheck** | mypy across models, services, and finance |
+| **test** | Unit tests then integration tests (pytest) |
+| **build** | Docker image build (runs after all checks pass) |
+
 ## Project Structure
 
 ```
@@ -139,9 +151,10 @@ sales/         # Customers, sales orders, shipping, and PDF invoices
 finance/       # Ledger views, CSV export, outstanding orders, and product P&L
 config/        # Company configuration and paired instance management
 dashboards/    # Shipping and delivery schedule views
+tests/         # Unit, integration, and end-to-end tests (pytest)
 docs/          # Module-level documentation
 templates/     # HTML templates
-static/        # Static assets
+static/        # Static assets and TypeScript source
 ```
 
 ## Documentation
