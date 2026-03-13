@@ -8,6 +8,12 @@ __pycache__
 venv
 build
 dist
+node_modules
+htmlcov
+.mypy_cache
+.ruff_cache
+.pytest_cache
+.git
 *.egg-info
 __pycache__/
 .pytest_cache/

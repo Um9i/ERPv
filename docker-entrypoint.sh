@@ -10,11 +10,8 @@ while ! nc -z $DB_HOST $DB_PORT; do
   sleep 1
 done
 
-# Apply database migrations and collect static files
+# Apply database migrations
 echo "Running migrations..."
 python manage.py migrate --noinput
-
-echo "Collecting static files..."
-python manage.py collectstatic --noinput
 
 exec "$@"

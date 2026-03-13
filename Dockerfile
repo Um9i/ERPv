@@ -27,10 +27,13 @@ FROM base AS production
 COPY . /app
 COPY --from=ts-build /build/static/js/ /app/static/js/
 
+ENV DJANGO_SETTINGS_MODULE=main.settings
+
+# Collect static files at build time so the manifest is baked into the image
+RUN SECRETKEY=build-placeholder python manage.py collectstatic --noinput
+
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
-
-ENV DJANGO_SETTINGS_MODULE=main.settings
 
 EXPOSE 8000
 
