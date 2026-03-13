@@ -443,7 +443,9 @@ class ProductPLView(LoginRequiredMixin, TemplateView):
                 (
                     "#198754"
                     if (r["margin_pct"] or 0) >= 30
-                    else "#ffc107" if (r["margin_pct"] or 0) >= 10 else "#dc3545"
+                    else "#ffc107"
+                    if (r["margin_pct"] or 0) >= 10
+                    else "#dc3545"
                 )
                 for r in top10
             ],

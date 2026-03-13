@@ -322,9 +322,9 @@ class TestInventory:
         )
         resp3 = client.get(url)
         entry2 = resp3.context["required_items"][0]
-        assert not entry2.get(
-            "po_url"
-        ), "PO link should be hidden when amount on PO meets required"
+        assert not entry2.get("po_url"), (
+            "PO link should be hidden when amount on PO meets required"
+        )
 
         # clear previous orders so we can test a partial amount case
         PurchaseOrderLine.objects.all().delete()

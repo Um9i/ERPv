@@ -25,11 +25,11 @@ lint:
 	$(PYTHON) -m ruff check .
 
 format:
-	$(PYTHON) -m black .
+	$(PYTHON) -m ruff format .
 	$(PYTHON) -m ruff check --fix .
 
 check:
-	$(PYTHON) -m black --check .
+	$(PYTHON) -m ruff format --check .
 	$(PYTHON) -m ruff check .
 
 MYPY_TARGETS = config/ dashboards/ finance/ inventory/ main/ procurement/ production/ sales/

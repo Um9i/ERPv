@@ -7,7 +7,7 @@
 [![Python 3.14](https://img.shields.io/badge/python-3.14-blue.svg)](https://www.python.org/downloads/)
 [![Django 6.0](https://img.shields.io/badge/django-6.0-green.svg)](https://www.djangoproject.com/)
 [![Tests](https://img.shields.io/badge/tests-500%2B%20passing-brightgreen.svg)](#testing)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Linting: ruff](https://img.shields.io/badge/linting-ruff-261230.svg)](https://github.com/astral-sh/ruff)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 </div>
@@ -46,7 +46,7 @@ ERPv is a full-featured ERP web application designed for small-to-medium manufac
 | Static Files | WhiteNoise |
 | Server | Gunicorn |
 | Testing | pytest, pytest-xdist, factory_boy — 500+ tests |
-| Code Quality | ruff, black, mypy, bandit, pip-audit, pre-commit |
+| Code Quality | ruff, mypy, bandit, pip-audit, pre-commit |
 
 ## Quick Start
 
@@ -115,7 +115,7 @@ pre-commit install          # one-time setup
 pre-commit run --all-files  # manual run
 ```
 
-This runs **black** (formatting), **ruff** (linting), and **bandit** (security scanning) automatically.
+This runs **ruff** (formatting & linting) and **bandit** (security scanning) automatically.
 
 Type checking via mypy is available for the finance module:
 

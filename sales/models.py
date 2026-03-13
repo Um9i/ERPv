@@ -133,9 +133,8 @@ class SalesOrder(AuditMixin, models.Model):
 
     @property
     def total_amount(self):
-        if (
-            self.total_amount_cached is not None
-            and self.total_amount_cached != Decimal("0.00")
+        if self.total_amount_cached is not None and self.total_amount_cached != Decimal(
+            "0.00"
         ):
             return self.total_amount_cached
         total = self.sales_order_lines.aggregate(

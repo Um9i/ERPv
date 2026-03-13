@@ -126,9 +126,8 @@ class PurchaseOrder(AuditMixin, models.Model):
     def total_amount(self):
         # return cached value when possible; fall back to recalculation if
         # the cache is zero (e.g., before first save) or missing.
-        if (
-            self.total_amount_cached is not None
-            and self.total_amount_cached != Decimal("0.00")
+        if self.total_amount_cached is not None and self.total_amount_cached != Decimal(
+            "0.00"
         ):
             return self.total_amount_cached
         total = self.purchase_order_lines.aggregate(

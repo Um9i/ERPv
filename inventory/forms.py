@@ -171,9 +171,9 @@ class StockTransferForm(forms.ModelForm):
             )
             unallocated = inventory.quantity - allocated
             if unallocated > 0:
-                self.fields["from_location"].empty_label = (
-                    f"Unallocated ({unallocated})"
-                )
+                self.fields[
+                    "from_location"
+                ].empty_label = f"Unallocated ({unallocated})"
                 self.fields["from_location"].required = False
             else:
                 self.fields["from_location"].empty_label = None
