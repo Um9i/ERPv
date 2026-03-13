@@ -39,11 +39,11 @@ class TestSupplier:
         # see all links present in rendered content
         content = response.content.decode()
         assert (
-            f"href=\"{reverse('procurement:supplier-purchaseorders', args=[supplier.pk])}\""
+            f'href="{reverse("procurement:supplier-purchaseorders", args=[supplier.pk])}"'
             in content
         )
         assert (
-            f"href=\"{reverse('procurement:supplier-products', args=[supplier.pk])}\""
+            f'href="{reverse("procurement:supplier-products", args=[supplier.pk])}"'
             in content
         )
 

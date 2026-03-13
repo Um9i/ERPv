@@ -27,7 +27,6 @@ class ProductCatalogueCleanTest(SimpleTestCase):
 
 
 class CatalogueApiViewTest(TestCase):
-
     @classmethod
     def setUpTestData(cls):
         cls.paired = PairedInstance.objects.create(
@@ -108,7 +107,6 @@ class CatalogueApiViewTest(TestCase):
 
 
 class BrowseCatalogueViewTest(TestCase):
-
     @classmethod
     def setUpTestData(cls):
         cls.staff_user = User.objects.create_user("staffcat", is_staff=True)

@@ -112,7 +112,9 @@ def test_no_notification_for_pending_paired_instance(client, staff_user, product
         supplier=supplier, product=product, cost=Decimal("5.00")
     )
     pi = PairedInstance.objects.create(
-        name="Pending Remote", url="https://pending.example.com", api_key=""  # pending
+        name="Pending Remote",
+        url="https://pending.example.com",
+        api_key="",  # pending
     )
     pi.supplier = supplier
     pi.save()

@@ -4,7 +4,6 @@ from config.models import CompanyConfig
 
 
 class CompanyConfigSingletonTest(TestCase):
-
     def test_can_create_first_instance(self):
         obj = CompanyConfig.objects.create(name="ACME Ltd")
         self.assertEqual(obj.pk, 1)

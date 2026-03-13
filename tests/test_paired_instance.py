@@ -6,7 +6,6 @@ from config.models import CompanyConfig, PairedInstance
 
 
 class PairedInstanceModelTest(TestCase):
-
     def test_our_key_auto_generated_on_save(self):
         instance = PairedInstance.objects.create(
             name="Test Partner",
@@ -45,7 +44,6 @@ class PairedInstanceModelTest(TestCase):
 
 
 class CompanyApiViewTest(TestCase):
-
     @classmethod
     def setUpTestData(cls):
         cls.instance = PairedInstance.objects.create(
@@ -100,7 +98,6 @@ class CompanyApiViewTest(TestCase):
 
 
 class PairedInstanceListViewTest(TestCase):
-
     @classmethod
     def setUpTestData(cls):
         cls.staff_user = User.objects.create_user("staffuser", is_staff=True)
@@ -122,7 +119,6 @@ class PairedInstanceListViewTest(TestCase):
 
 
 class CompletePairingViewTest(TestCase):
-
     @classmethod
     def setUpTestData(cls):
         cls.staff_user = User.objects.create_user("staffuser2", is_staff=True)
@@ -153,7 +149,6 @@ class CompletePairingViewTest(TestCase):
 
 
 class ImportGuardTest(TestCase):
-
     @classmethod
     def setUpTestData(cls):
         cls.staff_user = User.objects.create_user("staffuser3", is_staff=True)

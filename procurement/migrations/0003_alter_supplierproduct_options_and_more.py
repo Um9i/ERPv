@@ -2,7 +2,11 @@
 
 import django.utils.timezone
 from django.db import migrations, models
-from django_migration_linter import IgnoreMigration
+
+try:
+    from django_migration_linter import IgnoreMigration
+except ImportError:
+    from django.db.migrations.operations.base import Operation as IgnoreMigration
 
 
 class Migration(migrations.Migration):

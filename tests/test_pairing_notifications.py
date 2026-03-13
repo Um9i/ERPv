@@ -10,7 +10,6 @@ from sales.models import Customer, CustomerProduct
 
 
 class NotifyCustomerViewTest(TestCase):
-
     def setUp(self):
         self.instance = PairedInstance.objects.create(
             name="Remote Partner",
@@ -78,7 +77,6 @@ class NotifyCustomerViewTest(TestCase):
 
 
 class NotifyCustomerProductViewTest(TestCase):
-
     @classmethod
     def setUpTestData(cls):
         cls.customer = Customer.objects.create(name="Linked Customer")

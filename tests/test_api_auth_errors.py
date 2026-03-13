@@ -82,7 +82,6 @@ COMPANY_URL = "/config/api/company/"
 
 
 class TestCompanyApiErrors:
-
     @pytest.mark.django_db
     def test_empty_bearer_token_returns_401(self, anon, paired):
         resp = anon.get(COMPANY_URL, HTTP_AUTHORIZATION="Bearer ")
@@ -116,7 +115,6 @@ NOTIFY_CUSTOMER_URL = "/config/api/notify/customer/"
 
 
 class TestNotifyCustomerErrors:
-
     @pytest.mark.django_db
     def test_invalid_json_body_returns_400(self, anon, paired):
         resp = anon.post(
@@ -154,7 +152,6 @@ NOTIFY_CP_URL = "/config/api/notify/customer-product/"
 
 
 class TestNotifyCustomerProductErrors:
-
     @pytest.mark.django_db
     def test_no_auth_returns_401(self, anon):
         resp = anon.post(
@@ -223,7 +220,6 @@ CATALOGUE_URL = "/inventory/api/catalogue/"
 
 
 class TestCatalogueApiErrors:
-
     @pytest.mark.django_db
     def test_empty_bearer_token_returns_401(self, anon, paired):
         resp = anon.get(CATALOGUE_URL, HTTP_AUTHORIZATION="Bearer ")
@@ -256,7 +252,6 @@ NOTIFY_SP_URL = "/procurement/api/notify/supplier-product/"
 
 
 class TestNotifySupplierProductErrors:
-
     @pytest.mark.django_db
     def test_supplier_not_linked_returns_400(self, anon, paired, product):
         # paired instance has no supplier linked
@@ -338,7 +333,6 @@ PRODUCTION_API_URL = "/production/jobs/api/"
 
 
 class TestProductionListApi:
-
     @pytest.mark.django_db
     def test_anon_redirected_to_login(self, anon):
         resp = anon.get(PRODUCTION_API_URL)
@@ -387,7 +381,6 @@ INVENTORY_API_URL = "/inventory/inventories/api/"
 
 
 class TestInventoryListApi:
-
     @pytest.mark.django_db
     def test_returns_inventory_data(self, authed, product):
         inv = Inventory.objects.get(product=product)

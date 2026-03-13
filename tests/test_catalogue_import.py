@@ -10,7 +10,6 @@ from procurement.models import Supplier, SupplierProduct
 
 
 class ImportCatalogueProductViewTest(TestCase):
-
     @classmethod
     def setUpTestData(cls):
         cls.staff_user = User.objects.create_user("staffimport", is_staff=True)

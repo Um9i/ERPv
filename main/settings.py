@@ -82,11 +82,10 @@ INSTALLED_APPS = [
     "finance.apps.FinanceConfig",
     "config.apps.ConfigConfig",
     "dashboards.apps.DashboardsConfig",
-    "django_migration_linter",
 ]
 
 if DEBUG:
-    INSTALLED_APPS += ["debug_toolbar", "silk"]
+    INSTALLED_APPS += ["debug_toolbar", "django_migration_linter", "silk"]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
