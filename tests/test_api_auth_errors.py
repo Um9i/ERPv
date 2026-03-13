@@ -390,7 +390,9 @@ class TestInventoryListApi:
 
     @pytest.mark.django_db
     def test_returns_inventory_data(self, authed, product):
-        Inventory.objects.create(product=product, quantity=42)
+        inv = Inventory.objects.get(product=product)
+        inv.quantity = 42
+        inv.save(update_fields=["quantity"])
         resp = authed.get(INVENTORY_API_URL)
         assert resp.status_code == 200
         data = resp.json()
