@@ -220,7 +220,11 @@ LOGOUT_REDIRECT_URL = "/"
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
-REGISTRATION_OPEN = False
+REGISTRATION_OPEN = os.getenv("REGISTRATION_OPEN", "False").lower() in (
+    "1",
+    "true",
+    "yes",
+)
 
 # Cache
 CACHES = {
