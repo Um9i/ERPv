@@ -1,3 +1,6 @@
+x-podman:
+  in_pod: true
+
 services:
   db:
     image: postgres:latest
@@ -5,8 +8,6 @@ services:
     env_file: .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - erpv_net
     deploy:
       resources:
         limits:
@@ -26,14 +27,13 @@ services:
       - DEBUG=0
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
       - DB_SSL_REQUIRE=${DB_SSL_REQUIRE:-0}
+      - DB_HOST=127.0.0.1
     ports:
       - "${PORT:-8000}:8000"
     volumes:
       - media:/app/media:z
     depends_on:
       - db
-    networks:
-      - erpv_net
     deploy:
       resources:
         limits:
@@ -44,10 +44,6 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
-
-networks:
-  erpv_net:
-    driver: bridge
 
 volumes:
   postgres_data:
