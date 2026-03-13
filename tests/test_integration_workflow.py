@@ -30,7 +30,7 @@ from sales.models import (
     SalesOrderLine,
 )
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.integration, pytest.mark.e2e]
 
 
 @pytest.fixture
