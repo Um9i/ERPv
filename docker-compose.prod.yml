@@ -1,6 +1,39 @@
 services:
-  web:
+  db:
+    restart: always
+    env_file: .env
     volumes:
-      - .:/app:Z
-      - /var/www/erpv/staticfiles:/app/staticfiles:z
-      - /var/www/erpv/media:/app/media:z
+      - postgres_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  web:
+    restart: always
+    env_file: .env
+    environment:
+      - DEBUG=0
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      - DB_SSL_REQUIRE=${DB_SSL_REQUIRE:-0}
+    ports:
+      - "${PORT:-8000}:8000"
+    volumes:
+      - staticfiles:/app/staticfiles:z
+      - media:/app/media:z
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
