@@ -781,6 +781,7 @@ class PickConfirmView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        self.object.refresh_unconfirmed()
         lines = list(
             self.object.lines.select_related(
                 "sales_order_line__product__product",
@@ -812,6 +813,26 @@ class PickConfirmView(LoginRequiredMixin, DetailView):
             except PickListLine.DoesNotExist, ValueError:
                 if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                     return JsonResponse({"ok": False, "error": "Line not found."})
+                return redirect(request.path)
+            # Verify stock is still available
+            from inventory.models import Inventory
+
+            product = line.sales_order_line.product.product
+            try:
+                inv = Inventory.objects.get(product=product)
+                available = inv.quantity
+            except Inventory.DoesNotExist:
+                available = 0
+            if available < line.quantity:
+                self.object.refresh_unconfirmed()
+                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return JsonResponse(
+                        {
+                            "ok": False,
+                            "error": f"Insufficient stock for {product.name}. Pick list refreshed.",
+                            "refresh": True,
+                        }
+                    )
                 return redirect(request.path)
             line.confirmed = True
             line.confirmed_at = timezone.now()
@@ -859,6 +880,25 @@ class PickConfirmView(LoginRequiredMixin, DetailView):
                     )
                 return redirect(request.path)
 
+            # Verify stock is still available before confirming scan
+            from inventory.models import Inventory as Inv
+
+            try:
+                inv = Inv.objects.get(product=product)
+                available = inv.quantity
+            except Inv.DoesNotExist:
+                available = 0
+            if available < line.quantity:
+                self.object.refresh_unconfirmed()
+                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return JsonResponse(
+                        {
+                            "ok": False,
+                            "error": f"Insufficient stock for {product.name}. Pick list refreshed.",
+                            "refresh": True,
+                        }
+                    )
+                return redirect(request.path)
             line.confirmed = True
             line.confirmed_at = timezone.now()
             line.save(update_fields=["confirmed", "confirmed_at"])

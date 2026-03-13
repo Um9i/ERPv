@@ -11,12 +11,12 @@
         <p class="mb-0"><strong>Ship By:</strong> {{ pick_list.sales_order.ship_by_date|date:"d M Y" }}</p>
         {% endif %}
     </div>
-    <div class="d-print-none d-flex gap-2 align-items-center">
+    <div class="d-print-none d-flex flex-wrap gap-2 align-items-center">
         <span class="badge bg-{% if all_confirmed %}success{% else %}secondary{% endif %} fs-6">
             {{ confirmed_lines }} / {{ total_lines }} confirmed
         </span>
         {% if all_confirmed %}
-        <a href="{% url 'sales:sales-order-ship' pick_list.sales_order.pk %}" class="btn btn-success">
+        <a href="{% url 'sales:sales-order-ship' pick_list.sales_order.pk %}" class="btn btn-success btn-sm">
             <i class="bi bi-truck me-1"></i>Proceed to Ship
         </a>
         {% endif %}

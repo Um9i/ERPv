@@ -71,12 +71,15 @@ class CustomerProduct(models.Model):
         return f"{self.product.name}"
 
     def on_sales_order(self):
+        from django.db.models import F
+
         total = (
             self.product_sales_orders.filter(complete=False)
-            .aggregate(total=Sum("quantity"))
+            .annotate(remaining=F("quantity") - F("quantity_shipped"))
+            .aggregate(total=Sum("remaining"))
             .get("total")
         )
-        return total or 0
+        return max(total or 0, 0)
 
 
 class SalesOrder(AuditMixin, models.Model):
@@ -295,6 +298,100 @@ class PickList(models.Model):
         """Delete existing lines and regenerate from current stock levels."""
         self.lines.all().delete()
         self._populate_lines()
+
+    def refresh_unconfirmed(self):
+        """Re-check stock for unconfirmed lines, preserving confirmed ones."""
+        self.lines.filter(confirmed=False).delete()
+        confirmed_by_sol = (
+            self.lines.filter(confirmed=True)
+            .values("sales_order_line_id")
+            .annotate(confirmed_qty=Sum("quantity"))
+        )
+        confirmed_map = {
+            row["sales_order_line_id"]: row["confirmed_qty"] for row in confirmed_by_sol
+        }
+        for line in self.sales_order.sales_order_lines.filter(complete=False):
+            already_confirmed = confirmed_map.get(line.pk, 0)
+            remaining = line.remaining - already_confirmed
+            if remaining <= 0:
+                continue
+            product = line.product.product
+            try:
+                inv = Inventory.objects.get(product=product)
+            except Inventory.DoesNotExist:
+                PickListLine.objects.create(
+                    pick_list=self,
+                    sales_order_line=line,
+                    location=None,
+                    quantity=remaining,
+                    is_shortage=True,
+                )
+                continue
+
+            # figure out which locations are already claimed by confirmed lines
+            confirmed_locs = (
+                self.lines.filter(
+                    sales_order_line=line, confirmed=True, location__isnull=False
+                )
+                .values("location_id")
+                .annotate(used=Sum("quantity"))
+            )
+            confirmed_loc_map = {r["location_id"]: r["used"] for r in confirmed_locs}
+
+            stock_locs = list(
+                InventoryLocation.objects.filter(
+                    inventory=inv, quantity__gt=0
+                ).order_by("location__name")
+            )
+            allocated = 0
+            for sl in stock_locs:
+                if allocated >= remaining:
+                    break
+                available = sl.quantity - confirmed_loc_map.get(sl.location_id, 0)
+                if available <= 0:
+                    continue
+                pick_qty = min(available, remaining - allocated)
+                PickListLine.objects.create(
+                    pick_list=self,
+                    sales_order_line=line,
+                    location=sl.location,
+                    quantity=pick_qty,
+                )
+                allocated += pick_qty
+
+            if allocated < remaining:
+                loc_total = (
+                    InventoryLocation.objects.filter(inventory=inv).aggregate(
+                        total=Sum("quantity")
+                    )["total"]
+                    or 0
+                )
+                unallocated_qty = max(inv.quantity - loc_total, 0)
+                confirmed_unallocated = (
+                    self.lines.filter(
+                        sales_order_line=line, confirmed=True, location__isnull=True
+                    ).aggregate(used=Sum("quantity"))["used"]
+                    or 0
+                )
+                unallocated_qty = max(unallocated_qty - confirmed_unallocated, 0)
+                if unallocated_qty > 0:
+                    pick_qty = min(unallocated_qty, remaining - allocated)
+                    PickListLine.objects.create(
+                        pick_list=self,
+                        sales_order_line=line,
+                        location=None,
+                        quantity=pick_qty,
+                    )
+                    allocated += pick_qty
+
+            if allocated < remaining:
+                PickListLine.objects.create(
+                    pick_list=self,
+                    sales_order_line=line,
+                    location=None,
+                    quantity=remaining - allocated,
+                    is_shortage=True,
+                )
 
     @classmethod
     def generate_for_order(cls, sales_order):
