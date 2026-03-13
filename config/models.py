@@ -139,3 +139,69 @@ class Notification(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class WebhookEndpoint(models.Model):
+    """External HTTP endpoint that receives event notifications."""
+
+    class EventType(models.TextChoices):
+        ORDER_CREATED = "order.created", "Sales Order Created"
+        ORDER_COMPLETED = "order.completed", "Sales Order Completed"
+        SHIPMENT_COMPLETED = "shipment.completed", "Shipment Completed"
+        PURCHASE_ORDER_RECEIVED = "purchase_order.received", "Purchase Order Received"
+        STOCK_ADJUSTED = "stock.adjusted", "Stock Adjusted"
+        PRODUCTION_COMPLETED = "production.completed", "Production Completed"
+
+    name = models.CharField(max_length=255)
+    url = models.URLField(help_text="The URL that will receive POST requests.")
+    secret = models.CharField(
+        max_length=128,
+        blank=True,
+        help_text="Shared secret for HMAC-SHA256 signature verification.",
+    )
+    events = models.JSONField(
+        default=list, help_text="List of event types this endpoint subscribes to."
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.secret:
+            self.secret = secrets.token_urlsafe(32)
+        super().save(*args, **kwargs)
+
+    @property
+    def secret_preview(self):
+        return self.secret[:8] + "…" if self.secret else ""
+
+
+class WebhookDelivery(models.Model):
+    """Log entry for a webhook delivery attempt."""
+
+    endpoint = models.ForeignKey(
+        WebhookEndpoint, on_delete=models.CASCADE, related_name="deliveries"
+    )
+    event_type = models.CharField(max_length=64)
+    payload = models.JSONField()
+    response_status = models.PositiveSmallIntegerField(null=True, blank=True)
+    response_body = models.TextField(blank=True)
+    success = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    duration_ms = models.PositiveIntegerField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name_plural = "Webhook deliveries"
+        indexes = [
+            models.Index(fields=["endpoint", "-created_at"]),
+        ]
+
+    def __str__(self):
+        status = "✓" if self.success else "✗"
+        return f"{status} {self.event_type} → {self.endpoint.name}"

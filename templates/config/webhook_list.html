@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="detail-section">
+  <div class="detail-section-header d-flex justify-content-between align-items-start">
+    <div>
+      <h1>Webhooks</h1>
+      <p class="text-muted">External endpoints that receive event notifications when orders, shipments, stock, or production changes occur.</p>
+    </div>
+    <a href="{% url 'config:webhook-create' %}" class="btn btn-primary">
+      <i class="bi bi-plus-lg"></i> Add Webhook
+    </a>
+  </div>
+
+  {% if new_secret %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+      <strong><i class="bi bi-key-fill"></i> Signing secret generated.</strong>
+      Use this secret to verify webhook signatures. It will <strong>not</strong> be shown in full again.
+      <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
+        <code id="new-webhook-secret" class="fs-6 user-select-all">{{ new_secret }}</code>
+        <button type="button" class="btn btn-sm btn-outline-secondary"
+                onclick="navigator.clipboard.writeText(document.getElementById('new-webhook-secret').innerText)">
+          <i class="bi bi-clipboard"></i> Copy
+        </button>
+      </div>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% endif %}
+
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% endfor %}
+
+  {% if endpoints %}
+    <div class="table-responsive mt-3">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Name</th>
+            <th>URL</th>
+            <th>Events</th>
+            <th>Secret (preview)</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ep in endpoints %}
+          <tr>
+            <td><strong>{{ ep.name }}</strong></td>
+            <td class="text-break"><a href="{{ ep.url }}" target="_blank" rel="noopener noreferrer">{{ ep.url|truncatechars:50 }}</a></td>
+            <td>
+              {% for event in ep.events %}
+                <span class="badge bg-secondary-subtle text-secondary">{{ event }}</span>
+              {% endfor %}
+            </td>
+            <td><code>{{ ep.secret_preview }}</code></td>
+            <td>
+              {% if ep.is_active %}
+                <span class="badge bg-success-subtle text-success">Active</span>
+              {% else %}
+                <span class="badge bg-warning-subtle text-warning">Inactive</span>
+              {% endif %}
+            </td>
+            <td>{{ ep.created_at|date:"d M Y" }}</td>
+            <td class="text-end">
+              <a href="{% url 'config:webhook-deliveries' ep.pk %}" class="btn btn-sm btn-outline-secondary me-1" title="View delivery log">
+                <i class="bi bi-list-check"></i> Deliveries
+              </a>
+              <a href="{% url 'config:webhook-edit' ep.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'config:webhook-delete' ep.pk %}" class="btn btn-sm btn-outline-danger" title="Delete">
+                <i class="bi bi-trash"></i>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-broadcast fs-1 d-block mb-2"></i>
+      <p>No webhooks configured yet.</p>
+      <a href="{% url 'config:webhook-create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Webhook</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

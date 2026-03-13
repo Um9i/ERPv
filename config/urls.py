@@ -72,4 +72,30 @@ urlpatterns = [
         views.ImportCatalogueProductView.as_view(),
         name="paired-instance-import-product",
     ),
+    # ── Webhooks ─────────────────────────────────────────────────────
+    path(
+        "webhooks/",
+        views.WebhookEndpointListView.as_view(),
+        name="webhook-list",
+    ),
+    path(
+        "webhooks/create/",
+        views.WebhookEndpointCreateView.as_view(),
+        name="webhook-create",
+    ),
+    path(
+        "webhooks/<int:pk>/edit/",
+        views.WebhookEndpointUpdateView.as_view(),
+        name="webhook-edit",
+    ),
+    path(
+        "webhooks/<int:pk>/delete/",
+        views.WebhookEndpointDeleteView.as_view(),
+        name="webhook-delete",
+    ),
+    path(
+        "webhooks/<int:pk>/deliveries/",
+        views.WebhookDeliveryListView.as_view(),
+        name="webhook-deliveries",
+    ),
 ]

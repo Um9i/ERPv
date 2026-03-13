@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import CompanyConfig, PairedInstance
+from .models import CompanyConfig, PairedInstance, WebhookEndpoint
 
 
 class CompanyConfigForm(forms.ModelForm):
@@ -79,3 +79,19 @@ class CompletePairingForm(forms.Form):
         if not key:
             raise forms.ValidationError("API key is required.")
         return key
+
+
+class WebhookEndpointForm(forms.ModelForm):
+    events = forms.MultipleChoiceField(
+        choices=WebhookEndpoint.EventType.choices,
+        widget=forms.CheckboxSelectMultiple,
+        help_text="Select the events this endpoint should receive.",
+    )
+
+    class Meta:
+        model = WebhookEndpoint
+        fields = ["name", "url", "events", "is_active"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "url": forms.URLInput(attrs={"class": "form-control"}),
+        }

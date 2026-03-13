@@ -13,8 +13,19 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import CreateView, DeleteView, ListView
 from django.views.generic.edit import UpdateView
 
-from .forms import CompanyConfigForm, CompletePairingForm, PairedInstanceForm
-from .models import CompanyConfig, Notification, PairedInstance
+from .forms import (
+    CompanyConfigForm,
+    CompletePairingForm,
+    PairedInstanceForm,
+    WebhookEndpointForm,
+)
+from .models import (
+    CompanyConfig,
+    Notification,
+    PairedInstance,
+    WebhookDelivery,
+    WebhookEndpoint,
+)
 from .notifications import _notify_remote_customer, _notify_remote_customer_product
 
 _IMPORT_FIELDS = [
@@ -534,3 +545,84 @@ class NotificationMarkAllReadView(LoginRequiredMixin, View):
             is_read=True
         )
         return redirect("config:notification-list")
+
+
+# ── Webhook views ───────────────────────────────────────────────────
+
+
+class WebhookEndpointListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    model = WebhookEndpoint
+    template_name = "config/webhook_list.html"
+    context_object_name = "endpoints"
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["new_secret"] = self.request.session.pop("new_webhook_secret", None)
+        return ctx
+
+
+class WebhookEndpointCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+    model = WebhookEndpoint
+    form_class = WebhookEndpointForm
+    template_name = "config/webhook_form.html"
+    success_url = reverse_lazy("config:webhook-list")
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        self.request.session["new_webhook_secret"] = self.object.secret
+        messages.success(
+            self.request,
+            f'Webhook "{self.object.name}" created.',
+        )
+        return response
+
+
+class WebhookEndpointUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = WebhookEndpoint
+    form_class = WebhookEndpointForm
+    template_name = "config/webhook_form.html"
+    success_url = reverse_lazy("config:webhook-list")
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def form_valid(self, form):
+        messages.success(self.request, f'Webhook "{self.object.name}" updated.')
+        return super().form_valid(form)
+
+
+class WebhookEndpointDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    model = WebhookEndpoint
+    template_name = "config/webhook_delete.html"
+    success_url = reverse_lazy("config:webhook-list")
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+
+class WebhookDeliveryListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    model = WebhookDelivery
+    template_name = "config/webhook_deliveries.html"
+    context_object_name = "deliveries"
+    paginate_by = 50
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def get_queryset(self):
+        return (
+            WebhookDelivery.objects.filter(endpoint_id=self.kwargs["pk"])
+            .select_related("endpoint")
+            .order_by("-created_at")
+        )
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["endpoint"] = get_object_or_404(WebhookEndpoint, pk=self.kwargs["pk"])
+        return ctx
