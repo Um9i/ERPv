@@ -5,6 +5,8 @@ services:
     env_file: .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - erpv_net
     deploy:
       resources:
         limits:
@@ -30,6 +32,8 @@ services:
       - media:/app/media:z
     depends_on:
       - db
+    networks:
+      - erpv_net
     deploy:
       resources:
         limits:
@@ -40,6 +44,10 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
+
+networks:
+  erpv_net:
+    driver: bridge
 
 volumes:
   postgres_data:
