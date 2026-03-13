@@ -121,10 +121,11 @@ pre-commit run --all-files  # manual run
 
 This runs **ruff** (formatting & linting) and **bandit** (security scanning) automatically.
 
-Type checking via mypy is available for the finance module:
+Type checking via mypy:
 
 ```bash
-DEBUG=True SECRETKEY=test mypy finance/
+mypy .                      # check entire project
+mypy finance/               # check a single module
 ```
 
 ## Project Structure
