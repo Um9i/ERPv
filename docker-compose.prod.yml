@@ -29,6 +29,7 @@ services:
     ports:
       - "${PORT:-8000}:8000"
     volumes:
+      - staticfiles:/app/staticfiles:z
       - media:/app/media:z
     depends_on:
       - db
@@ -51,4 +52,5 @@ networks:
 
 volumes:
   postgres_data:
+  staticfiles:
   media:

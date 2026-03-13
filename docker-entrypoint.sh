@@ -10,6 +10,10 @@ while ! python -c "import socket; socket.create_connection(('$DB_HOST', $DB_PORT
   sleep 1
 done
 
+# Collect static files into the shared volume
+echo "Collecting static files..."
+python manage.py collectstatic --noinput
+
 # Apply database migrations
 echo "Running migrations..."
 python manage.py migrate --noinput
