@@ -101,7 +101,11 @@ Without it, the app falls back to a local SQLite file — fine for development.
 Tests run with pytest and include coverage reporting:
 
 ```bash
-DEBUG=True SECRETKEY=test pytest
+pytest                        # run all 500+ tests
+pytest -m unit                # unit tests only (~134 tests)
+pytest -m integration         # integration tests only (~337 tests)
+pytest -m e2e                 # end-to-end workflow tests
+pytest -m "integration and not e2e"  # integration without e2e
 ```
 
 Coverage reports are generated in `htmlcov/`.
