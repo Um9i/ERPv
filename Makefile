@@ -7,7 +7,7 @@ dev:
 	podman compose up --build
 
 prod:
-	podman compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+	podman compose -f docker-compose.prod.yml up --build -d
 
 test:
 	DEBUG=True SECRETKEY=test-secret $(PYTEST) -o "addopts=" --tb=short -q -n auto

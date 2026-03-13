@@ -1,5 +1,6 @@
 services:
   db:
+    image: postgres:latest
     restart: always
     env_file: .env
     volumes:
@@ -16,6 +17,7 @@ services:
         max-file: "3"
 
   web:
+    build: .
     restart: always
     env_file: .env
     environment:
@@ -26,6 +28,8 @@ services:
       - "${PORT:-8000}:8000"
     volumes:
       - media:/app/media:z
+    depends_on:
+      - db
     deploy:
       resources:
         limits:
@@ -36,3 +40,7 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
+
+volumes:
+  postgres_data:
+  media:
