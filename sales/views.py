@@ -524,139 +524,33 @@ class SalesOrderShipView(LoginRequiredMixin, DetailView):
     context_object_name = "sales_order"
 
     def get_context_data(self, **kwargs):
-        from inventory.models import Inventory
+        from sales.services import get_ship_context
 
         context = super().get_context_data(**kwargs)
-        all_lines = list(
-            self.object.sales_order_lines.select_related("product__product").all()
-        )
-        open_product_ids = {
-            line.product.product_id for line in all_lines if not line.complete
-        }
-        inv_map = (
-            dict(
-                Inventory.objects.filter(product_id__in=open_product_ids).values_list(
-                    "product_id", "quantity"
-                )
-            )
-            if open_product_ids
-            else {}
-        )
-        any_shortage = False
-        for line in all_lines:
-            if line.complete:
-                line.stock = None
-                line.stock_ok = None
-                line.max_shippable = 0
-            else:
-                stock = inv_map.get(line.product.product_id, 0)
-                line.stock = stock
-                line.stock_ok = stock >= line.remaining
-                line.max_shippable = min(line.remaining, max(stock, 0))
-                if not line.stock_ok:
-                    any_shortage = True
-        context["lines"] = all_lines
-        context["any_shortage"] = any_shortage
+        context.update(get_ship_context(self.object))
         return context
 
     def post(self, request, *args, **kwargs):
-        # wrap whole operation in a transaction so select_for_update works
-        from django.db import transaction
+        from sales.services import ship_sales_order
 
         self.object = self.get_object()
-        ship_all = "ship_all" in request.POST
-        touched = False
-        errors = []
 
-        with transaction.atomic():
-            # iterate lines to attempt shipment, but validate stock first
-            for line in self.object.sales_order_lines.filter(complete=False):
-                if ship_all:
-                    qty = line.remaining
-                else:
-                    key = f"shipped_{line.id}"
-                    if key not in request.POST:
-                        continue
+        # build line_quantities mapping from POST data
+        line_quantities: dict = {}
+        if "ship_all" in request.POST:
+            line_quantities["__all__"] = True
+        else:
+            for key, val in request.POST.items():
+                if key.startswith("shipped_"):
                     try:
-                        qty = int(request.POST[key])
+                        line_id = int(key.split("_", 1)[1])
+                        line_quantities[line_id] = int(val)
                     except ValueError:
                         continue
-                if qty <= 0:
-                    # line may be fully shipped but not yet flagged complete
-                    if line.quantity_shipped >= line.quantity:
-                        line.complete = True
-                        line.closed = True
-                        line.save(update_fields=["complete", "closed"])
-                    continue
-                # before we touch inventory ensure sufficient quantity exists
-                from inventory.models import Inventory, InventoryLedger
-                from sales.models import SalesLedger
 
-                try:
-                    inv = Inventory.objects.select_for_update().get(
-                        product=line.product.product
-                    )
-                except Inventory.DoesNotExist:
-                    inv = None
-                if inv is None or (inv.quantity - qty) < 0:
-                    errors.append(
-                        f"Not enough inventory to ship {qty} of {line.product.product.name}."
-                    )
-                    continue
+        touched, errors = ship_sales_order(self.object, line_quantities)
 
-                # perform updates
-                touched = True
-                inv.quantity -= qty
-                inv.save(update_fields=["quantity", "last_updated"])
-
-                # deduct from stock locations that hold inventory
-                from inventory.models import InventoryLocation
-
-                remaining_to_deduct = qty
-                locations_used = []
-                stock_locs = list(
-                    InventoryLocation.objects.select_for_update()
-                    .filter(inventory=inv, quantity__gt=0)
-                    .order_by("location__name")
-                )
-                for sl in stock_locs:
-                    if remaining_to_deduct <= 0:
-                        break
-                    deduct = min(sl.quantity, remaining_to_deduct)
-                    sl.quantity -= deduct
-                    sl.save(update_fields=["quantity", "last_updated"])
-                    remaining_to_deduct -= deduct
-                    locations_used.append(sl.location)
-
-                InventoryLedger.objects.create(
-                    product=line.product.product,
-                    quantity=-abs(qty),
-                    action=InventoryLedger.Action.SALES_ORDER,
-                    transaction_id=self.object.pk,
-                    location=locations_used[0] if len(locations_used) == 1 else None,
-                )
-                SalesLedger.objects.create(
-                    product=line.product.product,
-                    quantity=qty,
-                    customer=self.object.customer,
-                    value=(line.product.price or 0) * qty,
-                    transaction_id=self.object.pk,
-                )
-
-                line.quantity_shipped = line.quantity_shipped + qty
-                if line.quantity_shipped >= line.quantity:
-                    line.complete = True
-                    line.closed = True
-                    try:
-                        line.value = line.product.price * line.quantity
-                    except Exception:
-                        line.value = None
-                fields = ["quantity_shipped"]
-                if line.complete:
-                    fields += ["complete", "closed", "value"]
-                line.save(update_fields=fields)
         if errors:
-            # re-render form with error messages
             context = self.get_context_data()
             context["errors"] = errors
             from django.shortcuts import render
