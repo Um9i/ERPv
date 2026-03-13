@@ -1,0 +1,127 @@
+{% load currency_tags %}
+{% url 'dashboards:shipping-schedule' as poll_url %}
+<div id="shipping-metrics" hx-get="{{ poll_url }}?date={{ current_date|date:'Y-m-d' }}" hx-trigger="every 30s" hx-swap="outerHTML">
+
+{# ── Week navigation bar ──────────────────────────────────────────── #}
+<div class="panel mb-3">
+  <div class="panel-header d-flex align-items-center justify-content-between">
+    <a href="?date={{ prev_date|date:'Y-m-d' }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-left"></i></a>
+    <span class="fw-semibold">
+      {{ current_date|date:'l, N j, Y' }}
+      {% if current_date == today %}<span class="badge bg-primary ms-1">Today</span>{% endif %}
+    </span>
+    <a href="?date={{ next_date|date:'Y-m-d' }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-right"></i></a>
+  </div>
+  <div class="panel-body p-2">
+    <div class="d-flex justify-content-between text-center">
+      {% for d in week_data %}
+      <a href="?date={{ d.date|date:'Y-m-d' }}" class="flex-fill text-decoration-none px-1">
+        <div class="rounded p-2 {% if d.is_current %}bg-primary text-white{% elif d.is_today %}bg-light border{% else %}{% endif %}">
+          <div class="small {% if d.is_current %}text-white{% else %}text-muted{% endif %}">{{ d.date|date:'D' }}</div>
+          <div class="fw-bold {% if d.is_current %}text-white{% endif %}">{{ d.date|date:'j' }}</div>
+          {% if d.count %}<span class="badge {% if d.is_current %}bg-white text-primary{% else %}bg-primary{% endif %} mt-1">{{ d.count }}</span>{% endif %}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{# ── Today button ─────────────────────────────────────────────────── #}
+{% if current_date != today %}
+<div class="mb-3 text-center">
+  <a href="{% url 'dashboards:shipping-schedule' %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-calendar-event me-1"></i>Jump to Today</a>
+</div>
+{% endif %}
+
+{# ── Overdue orders ───────────────────────────────────────────────── #}
+{% if overdue_orders %}
+<div class="panel mb-3 border-danger">
+  <div class="panel-header text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>Overdue Orders ({{ overdue_orders|length }})</div>
+  <div class="panel-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Order</th>
+            <th>Customer</th>
+            <th>Ship By</th>
+            <th>Status</th>
+            <th class="text-end">Value</th>
+            <th class="text-end d-print-none">Pick List</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for order in overdue_orders %}
+          <tr>
+            <td><a href="{% url 'sales:sales-order-detail' order.pk %}">{{ order.order_number }}</a></td>
+            <td>{{ order.customer.name }}</td>
+            <td class="text-danger">{{ order.ship_by_date|date:'N j, Y' }}</td>
+            <td>{{ order.status }}</td>
+            <td class="text-end">{{ order.remaining_total|currency }}</td>
+            <td class="text-end d-print-none">
+              {% if order.pick_lists.all %}
+              <a href="{% url 'sales:pick-list-detail' order.pick_lists.all.0.pk %}" class="btn btn-sm btn-outline-secondary" title="View Pick List"><i class="bi bi-clipboard"></i> Pick List</a>
+              {% else %}
+              <a href="{% url 'sales:pick-list-create' order.pk %}" class="btn btn-sm btn-outline-success" title="Generate Pick List"><i class="bi bi-clipboard-check"></i> Generate</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Orders for the selected date ─────────────────────────────────── #}
+<div class="panel">
+  <div class="panel-header">
+    <i class="bi bi-truck me-2"></i>Orders to Ship — {{ current_date|date:'N j, Y' }}
+    {% if orders %}<span class="badge bg-primary ms-2">{{ orders|length }}</span>{% endif %}
+  </div>
+  <div class="panel-body p-0">
+    {% if orders %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Order</th>
+            <th>Customer</th>
+            <th>Status</th>
+            <th class="text-end">Total Value</th>
+            <th class="text-end">Remaining</th>
+            <th class="text-end d-print-none">Pick List</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for order in orders %}
+          <tr>
+            <td><a href="{% url 'sales:sales-order-detail' order.pk %}">{{ order.order_number }}</a></td>
+            <td>{{ order.customer.name }}</td>
+            <td>{{ order.status }}</td>
+            <td class="text-end">{{ order.total_amount|currency }}</td>
+            <td class="text-end">{{ order.remaining_total|currency }}</td>
+            <td class="text-end d-print-none">
+              {% if order.pick_lists.all %}
+              <a href="{% url 'sales:pick-list-detail' order.pick_lists.all.0.pk %}" class="btn btn-sm btn-outline-secondary" title="View Pick List"><i class="bi bi-clipboard"></i> Pick List</a>
+              {% else %}
+              <a href="{% url 'sales:pick-list-create' order.pk %}" class="btn btn-sm btn-outline-success" title="Generate Pick List"><i class="bi bi-clipboard-check"></i> Generate</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-4 text-muted">
+      <i class="bi bi-calendar-check fs-1 d-block mb-2"></i>
+      <p class="mb-0">No orders scheduled for shipment on this date.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+</div>{# /shipping-metrics #}

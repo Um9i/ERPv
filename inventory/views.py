@@ -10,6 +10,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.vary import vary_on_headers
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -205,10 +206,17 @@ class InventoryAdjustCreateView(LoginRequiredMixin, CreateView):
 
 
 @method_decorator(cache_page(60 * 10), name="dispatch")
+@method_decorator(vary_on_headers("HX-Request"), name="dispatch")
 class InventoryDashboardView(LoginRequiredMixin, TemplateView):
     """Dashboard showing inventory metrics for the inventory app."""
 
     template_name = "inventory/inventory_dashboard.html"
+    partial_template_name = "inventory/_dashboard_metrics.html"
+
+    def get_template_names(self):
+        if self.request.headers.get("HX-Request"):
+            return [self.partial_template_name]
+        return [self.template_name]
 
     def get_context_data(self, **kwargs):
         from datetime import timedelta

@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_headers
 from django.views.generic import TemplateView
 
 from procurement.models import PurchaseOrder
@@ -14,10 +15,17 @@ class DashboardHomeView(LoginRequiredMixin, TemplateView):
 
 
 @method_decorator(cache_page(60 * 5), name="dispatch")
+@method_decorator(vary_on_headers("HX-Request"), name="dispatch")
 class ShippingScheduleView(LoginRequiredMixin, TemplateView):
     """Day-based shipping schedule driven by SalesOrder.ship_by_date."""
 
     template_name = "dashboards/shipping_schedule.html"
+    partial_template_name = "dashboards/_shipping_metrics.html"
+
+    def get_template_names(self):
+        if self.request.headers.get("HX-Request"):
+            return [self.partial_template_name]
+        return [self.template_name]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -86,10 +94,17 @@ class ShippingScheduleView(LoginRequiredMixin, TemplateView):
 
 
 @method_decorator(cache_page(60 * 5), name="dispatch")
+@method_decorator(vary_on_headers("HX-Request"), name="dispatch")
 class DeliveryScheduleView(LoginRequiredMixin, TemplateView):
     """Day-based delivery schedule driven by PurchaseOrder.due_date."""
 
     template_name = "dashboards/delivery_schedule.html"
+    partial_template_name = "dashboards/_delivery_metrics.html"
+
+    def get_template_names(self):
+        if self.request.headers.get("HX-Request"):
+            return [self.partial_template_name]
+        return [self.template_name]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

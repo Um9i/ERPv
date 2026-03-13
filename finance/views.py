@@ -24,6 +24,12 @@ logger = logging.getLogger(__name__)
 
 class FinanceDashboardView(LoginRequiredMixin, TemplateView):
     template_name = "finance/dashboard.html"
+    partial_template_name = "finance/_dashboard_metrics.html"
+
+    def get_template_names(self):
+        if self.request.headers.get("HX-Request"):
+            return [self.partial_template_name]
+        return [self.template_name]
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)
