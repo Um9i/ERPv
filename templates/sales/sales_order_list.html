@@ -36,7 +36,7 @@
     </button>
 </div>
 <div class="table-responsive">
-<table class="table">
+<table class="table table-striped">
     <thead>
         <tr>
             <th><input type="checkbox" id="select-all"></th>
@@ -46,7 +46,7 @@
             <th>Stock Available</th>
             <th>Ship By</th>
             <th>Created At</th>
-            <th>Actions</th>
+            <th class=\"text-end\">Actions</th>
         </tr>
     </thead>
     <tbody>
@@ -55,7 +55,7 @@
             <td><input type="checkbox" name="selected" value="{{ order.pk }}" class="row-select"></td>
             <td><a href="{% url 'sales:sales-order-detail' order.id %}">{{ order.order_number }}</a></td>
             <td><a href="{% url 'sales:customer-detail' order.customer.id %}">{{ order.customer.name }}</a></td>
-            <td>{% if order.has_open_lines %}Open{% else %}Closed{% endif %}</td>
+            <td>{% if order.has_open_lines %}<span class="badge bg-success-subtle text-success">Open</span>{% else %}<span class="badge bg-secondary-subtle text-secondary">Closed</span>{% endif %}</td>
             <td>
               {% if order.stock_ok is None %}
                 <span class="text-muted">—</span>
@@ -80,6 +80,8 @@
                 {% endif %}
             </td>
         </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-muted">No sales orders found.</td></tr>
         {% endfor %}
     </tbody>
 </table>

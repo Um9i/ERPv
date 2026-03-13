@@ -2,5 +2,4 @@
 
 {% block delete_title %}Delete Customer{% endblock %}
 {% block delete_message %}Are you sure you want to delete {{ customer.name }}?{% endblock %}
-{% block delete_submit %}Yes, delete{% endblock %}
 {% block delete_cancel_url %}{% url 'sales:customer-detail' customer.id %}{% endblock %}

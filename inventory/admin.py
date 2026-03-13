@@ -4,6 +4,8 @@ from django.contrib import admin
 from django.http import HttpResponse
 from django_admin_inline_paginator.admin import TabularInlinePaginated
 
+from main.admin import NoDeleteActionMixin
+
 from .models import (
     Inventory,
     InventoryAdjust,
@@ -35,7 +37,7 @@ class ExportCsvMixin:
 
 
 @admin.register(InventoryLedger)
-class InventoryLedgerAdmin(admin.ModelAdmin, ExportCsvMixin):
+class InventoryLedgerAdmin(NoDeleteActionMixin, admin.ModelAdmin, ExportCsvMixin):
     list_display = ["product", "quantity", "action", "transaction_id", "date"]
     list_filter = ["action", "date", "product"]
     list_select_related = ["product"]
@@ -43,12 +45,6 @@ class InventoryLedgerAdmin(admin.ModelAdmin, ExportCsvMixin):
     search_fields = ["product__name", "transaction_id"]
     actions = ["export_as_csv"]
     readonly_fields = ["product", "quantity", "action", "transaction_id", "date"]
-
-    def get_actions(self, request):
-        actions = super().get_actions(request)
-        if "delete_selected" in actions:
-            del actions["delete_selected"]
-        return actions
 
 
 class InventoryLedgerInline(TabularInlinePaginated):
@@ -114,21 +110,15 @@ class StockTransferAdmin(admin.ModelAdmin):
 
 
 @admin.register(InventoryAdjust)
-class InventoryAdjustAdmin(admin.ModelAdmin):
+class InventoryAdjustAdmin(NoDeleteActionMixin, admin.ModelAdmin):
     autocomplete_fields = ["product"]
     # complete is always true, no need for readonly_fields here
     list_display = ["product", "quantity"]
     search_fields = ["product"]
 
-    def get_actions(self, request):
-        actions = super().get_actions(request)
-        if "delete_selected" in actions:
-            del actions["delete_selected"]
-        return actions
-
 
 @admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
+class ProductAdmin(NoDeleteActionMixin, admin.ModelAdmin):
     inlines = [
         InventoryLedgerInline,
     ]
@@ -150,12 +140,6 @@ class ProductAdmin(admin.ModelAdmin):
         "production_allocated",
         "required",
     ]
-
-    def get_actions(self, request):
-        actions = super().get_actions(request)
-        if "delete_selected" in actions:
-            del actions["delete_selected"]
-        return actions
 
     def inventory_quantity(self, obj) -> int:
         return obj.product_inventory.quantity

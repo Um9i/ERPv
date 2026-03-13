@@ -1,5 +1,23 @@
+from __future__ import annotations
+
+from typing import Any
+
 from django.conf import settings
 from django.db import models
+
+
+class HtmxPartialMixin:
+    """View mixin that returns a partial template for HTMX requests.
+
+    Set ``partial_template_name`` on the view class.
+    """
+
+    partial_template_name: str = ""
+
+    def get_template_names(self: Any) -> list[str]:
+        if self.request.headers.get("HX-Request"):
+            return [self.partial_template_name]
+        return [self.template_name]
 
 
 class AuditMixin(models.Model):

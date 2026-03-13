@@ -1,5 +1,4 @@
 import csv
-import hmac
 import logging
 from decimal import Decimal
 
@@ -27,6 +26,7 @@ from config.notifications import (
     _notify_remote_customer_product,
     _notify_remote_supplier_product_cost,
 )
+from main.mixins import HtmxPartialMixin
 
 from .forms import (
     InventoryAdjustForm,
@@ -220,16 +220,11 @@ class InventoryAdjustCreateView(LoginRequiredMixin, CreateView):
 
 @method_decorator(cache_page(60 * 10), name="dispatch")
 @method_decorator(vary_on_headers("HX-Request"), name="dispatch")
-class InventoryDashboardView(LoginRequiredMixin, TemplateView):
+class InventoryDashboardView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
     """Dashboard showing inventory metrics for the inventory app."""
 
     template_name = "inventory/inventory_dashboard.html"
     partial_template_name = "inventory/_dashboard_metrics.html"
-
-    def get_template_names(self):
-        if self.request.headers.get("HX-Request"):
-            return [self.partial_template_name]
-        return [self.template_name]
 
     def get_context_data(self, **kwargs):
         from datetime import timedelta
@@ -705,18 +700,11 @@ class CatalogueApiView(View):
     """Public endpoint — returns catalogue products to paired instances."""
 
     def get(self, request, *args, **kwargs):
-        auth = request.META.get("HTTP_AUTHORIZATION", "")
-        if not auth.startswith("Bearer "):
-            logger.warning(
-                "catalogue_api_auth_failed", extra={"reason": "missing_bearer"}
-            )
-            return JsonResponse({"error": "Unauthorized"}, status=401)
-        key = auth[len("Bearer ") :]
-        if not any(
-            hmac.compare_digest(key, pi.our_key) for pi in PairedInstance.objects.all()
-        ):
-            logger.warning("catalogue_api_auth_failed", extra={"reason": "invalid_key"})
-            return JsonResponse({"error": "Unauthorized"}, status=401)
+        from main.auth import verify_bearer_token
+
+        err = verify_bearer_token(request, log_prefix="catalogue_api")
+        if err:
+            return err
         products = Product.objects.filter(catalogue_item=True, sale_price__isnull=False)
         data = [
             {

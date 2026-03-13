@@ -2,6 +2,7 @@ from django.contrib import admin
 from django_admin_inline_paginator.admin import TabularInlinePaginated
 
 from inventory.admin import ExportCsvMixin
+from main.admin import NoDeleteActionMixin
 
 from .models import (
     PurchaseLedger,
@@ -28,7 +29,7 @@ class PurchaseLedgerInline(TabularInlinePaginated):
 
 
 @admin.register(PurchaseLedger)
-class PurchaseLedgerAdmin(admin.ModelAdmin, ExportCsvMixin):
+class PurchaseLedgerAdmin(NoDeleteActionMixin, admin.ModelAdmin, ExportCsvMixin):
     list_display = [
         "product",
         "quantity",
@@ -51,26 +52,14 @@ class PurchaseLedgerAdmin(admin.ModelAdmin, ExportCsvMixin):
         "date",
     ]
 
-    def get_actions(self, request):
-        actions = super().get_actions(request)
-        if "delete_selected" in actions:
-            del actions["delete_selected"]
-        return actions
-
 
 @admin.register(SupplierProduct)
-class SupplierProductAdmin(admin.ModelAdmin):
+class SupplierProductAdmin(NoDeleteActionMixin, admin.ModelAdmin):
     autocomplete_fields = ["supplier", "product"]
     list_display = ["product", "supplier", "cost"]
     list_filter = ["supplier"]
     list_select_related = ["product", "supplier"]
     search_fields = ["product"]
-
-    def get_actions(self, request):
-        actions = super().get_actions(request)
-        if "delete_selected" in actions:
-            del actions["delete_selected"]
-        return actions
 
     def get_model_perms(self, request):
         return {}

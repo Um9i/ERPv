@@ -15,6 +15,7 @@ from django.views.generic import TemplateView
 from django.views.generic.dates import ArchiveIndexView, MonthArchiveView
 
 from inventory.models import Product
+from main.mixins import HtmxPartialMixin
 from procurement.models import PurchaseLedger, PurchaseOrder, Supplier
 from production.models import Production, ProductionLedger
 from sales.models import Customer, SalesLedger, SalesOrder
@@ -22,14 +23,9 @@ from sales.models import Customer, SalesLedger, SalesOrder
 logger = logging.getLogger(__name__)
 
 
-class FinanceDashboardView(LoginRequiredMixin, TemplateView):
+class FinanceDashboardView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
     template_name = "finance/dashboard.html"
     partial_template_name = "finance/_dashboard_metrics.html"
-
-    def get_template_names(self):
-        if self.request.headers.get("HX-Request"):
-            return [self.partial_template_name]
-        return [self.template_name]
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         context = super().get_context_data(**kwargs)

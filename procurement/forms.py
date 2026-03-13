@@ -1,6 +1,8 @@
 from django import forms
-from django.core.validators import EmailValidator, RegexValidator
+from django.core.validators import EmailValidator
 from django.utils import timezone
+
+from main.validators import phone_validator
 
 from .models import (
     PurchaseOrder,
@@ -8,13 +10,6 @@ from .models import (
     Supplier,
     SupplierContact,
     SupplierProduct,
-)
-
-# ── shared validators ──────────────────────────────────────────────────
-
-phone_validator = RegexValidator(
-    regex=r"^\+?[\d\s\-().]{7,64}$",
-    message="Enter a valid phone number (digits, spaces, dashes, parentheses).",
 )
 
 ADDRESS_FIELDS = [

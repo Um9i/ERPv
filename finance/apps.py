@@ -13,9 +13,9 @@ class FinanceConfig(AppConfig):
         from production.models import ProductionLedger
         from sales.models import SalesLedger
 
-        from .signals import _refresh_cache_on_inventory, _refresh_cache_on_ledger
+        from .signals import _refresh_finance_cache
 
-        post_save.connect(_refresh_cache_on_ledger, sender=SalesLedger)
-        post_save.connect(_refresh_cache_on_ledger, sender=PurchaseLedger)
-        post_save.connect(_refresh_cache_on_ledger, sender=ProductionLedger)
-        post_save.connect(_refresh_cache_on_inventory, sender=Inventory)
+        post_save.connect(_refresh_finance_cache, sender=SalesLedger)
+        post_save.connect(_refresh_finance_cache, sender=PurchaseLedger)
+        post_save.connect(_refresh_finance_cache, sender=ProductionLedger)
+        post_save.connect(_refresh_finance_cache, sender=Inventory)

@@ -2,5 +2,4 @@
 
 {% block delete_title %}Delete BOM Component{% endblock %}
 {% block delete_message %}Are you sure you want to remove {{ bom_item.product.name }} from {{ bom_item.bom.product.name }}?{% endblock %}
-{% block delete_submit %}Yes, delete{% endblock %}
 {% block delete_cancel_url %}{% url 'production:bom-detail' bom_item.bom.pk %}{% endblock %}

@@ -1,12 +1,16 @@
-{% extends "base.html" %}
+{% extends "includes/card.html" %}
 {% load currency_tags %}
-{% block content %}
-<h1>Products for {{ customer.name }}</h1>
+{% block card_icon %}bi-people-fill{% endblock %}
+{% block card_icon_color %}page-header-icon--indigo{% endblock %}
+{% block card_title %}Products for {{ customer.name }}{% endblock %}
+{% block card_body %}
+<div class="table-responsive">
 <table class="table table-striped">
     <thead>
         <tr>
             <th>Product</th>
             <th>Price</th>
+            <th class="text-end">Actions</th>
         </tr>
     </thead>
     <tbody>
@@ -14,8 +18,16 @@
         <tr>
             <td>{{ cp.product.name }}</td>
             <td>{{ cp.price|currency }}</td>
+            <td class="text-end">
+                <a href="{% url 'sales:customer-product-delete' cp.pk %}" class="btn btn-danger btn-sm"
+                   onclick="return confirm('Delete {{ cp.product.name }}?');">Delete</a>
+            </td>
         </tr>
+        {% empty %}
+        <tr><td colspan="3">No products found.</td></tr>
         {% endfor %}
     </tbody>
 </table>
+</div>
+{% include "includes/pagination.html" with page_obj=customer_products %}
 {% endblock %}

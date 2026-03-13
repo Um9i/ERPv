@@ -2,6 +2,7 @@ from django.contrib import admin
 from django_admin_inline_paginator.admin import TabularInlinePaginated
 
 from inventory.admin import ExportCsvMixin
+from main.admin import NoDeleteActionMixin
 
 from .models import (
     Customer,
@@ -28,7 +29,7 @@ class SalesLedgerInline(TabularInlinePaginated):
 
 
 @admin.register(SalesLedger)
-class SalesLedgerAdmin(admin.ModelAdmin, ExportCsvMixin):
+class SalesLedgerAdmin(NoDeleteActionMixin, admin.ModelAdmin, ExportCsvMixin):
     list_display = [
         "product",
         "quantity",
@@ -51,15 +52,9 @@ class SalesLedgerAdmin(admin.ModelAdmin, ExportCsvMixin):
         "date",
     ]
 
-    def get_actions(self, request):
-        actions = super().get_actions(request)
-        if "delete_selected" in actions:
-            del actions["delete_selected"]
-        return actions
-
 
 @admin.register(CustomerProduct)
-class CustomerProductAdmin(admin.ModelAdmin):
+class CustomerProductAdmin(NoDeleteActionMixin, admin.ModelAdmin):
     autocomplete_fields = ["customer", "product"]
     list_display = ["product", "customer", "price"]
     list_filter = ["customer"]
@@ -68,12 +63,6 @@ class CustomerProductAdmin(admin.ModelAdmin):
 
     def get_model_perms(self, request):
         return {}
-
-    def get_actions(self, request):
-        actions = super().get_actions(request)
-        if "delete_selected" in actions:
-            del actions["delete_selected"]
-        return actions
 
 
 class CustomerContactInline(admin.StackedInline):

@@ -2,22 +2,32 @@
 {% load currency_tags %}
 {% block card_icon %}bi-truck{% endblock %}
 {% block card_icon_color %}page-header-icon--blue{% endblock %}
-{% block card_title %}Products for {{ view.kwargs.pk }}{% endblock %}
+{% block card_title %}Products for {{ supplier.name }}{% endblock %}
 {% block card_body %}
-<table class="table">
+<div class="table-responsive">
+<table class="table table-striped">
   <thead>
-    <tr><th>Product</th><th>Cost</th></tr>
+    <tr>
+      <th>Product</th>
+      <th>Cost</th>
+      <th class="text-end">Actions</th>
+    </tr>
   </thead>
   <tbody>
   {% for sp in supplier_products %}
     <tr>
       <td>{{ sp.product.name }}</td>
       <td>{{ sp.cost|currency }}</td>
+      <td class="text-end">
+        <a href="{% url 'procurement:supplier-product-delete' sp.pk %}" class="btn btn-danger btn-sm"
+           onclick="return confirm('Delete {{ sp.product.name }}?');">Delete</a>
+      </td>
     </tr>
   {% empty %}
-    <tr><td colspan="2">No products found.</td></tr>
+    <tr><td colspan="3">No products found.</td></tr>
   {% endfor %}
   </tbody>
 </table>
+</div>
 {% include "includes/pagination.html" with page_obj=supplier_products page_param="sp_page" %}
 {% endblock %}

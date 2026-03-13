@@ -17,6 +17,8 @@ from django.views.generic import (
     UpdateView,
 )
 
+from main.constants import PARTNER_PREFILL_FIELDS
+
 from .forms import (
     CustomerContactForm,
     CustomerForm,
@@ -38,19 +40,6 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
-_CUSTOMER_PREFILL_FIELDS = [
-    "name",
-    "phone",
-    "email",
-    "website",
-    "address_line_1",
-    "address_line_2",
-    "city",
-    "state",
-    "postal_code",
-    "country",
-]
-
 
 class CustomerCreateView(LoginRequiredMixin, CreateView):
     model = Customer
@@ -59,7 +48,7 @@ class CustomerCreateView(LoginRequiredMixin, CreateView):
 
     def get_initial(self):
         initial = super().get_initial()
-        for field in _CUSTOMER_PREFILL_FIELDS:
+        for field in PARTNER_PREFILL_FIELDS:
             if field in self.request.GET:
                 initial[field] = self.request.GET[field]
         return initial
@@ -286,6 +275,11 @@ class CustomerProductListView(LoginRequiredMixin, ListView):
         return CustomerProduct.objects.filter(customer_id=customer_id).select_related(
             "customer", "product"
         )
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["customer"] = Customer.objects.get(pk=self.kwargs["pk"])
+        return ctx
 
 
 class CustomerProductIDsView(LoginRequiredMixin, DetailView):

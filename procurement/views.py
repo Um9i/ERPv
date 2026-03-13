@@ -21,6 +21,8 @@ from django.views.generic import (
     UpdateView,
 )
 
+from main.constants import PARTNER_PREFILL_FIELDS
+
 from .forms import (
     PurchaseOrderForm,
     PurchaseOrderLineForm,
@@ -42,19 +44,6 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
-_SUPPLIER_PREFILL_FIELDS = [
-    "name",
-    "phone",
-    "email",
-    "website",
-    "address_line_1",
-    "address_line_2",
-    "city",
-    "state",
-    "postal_code",
-    "country",
-]
-
 
 class SupplierCreateView(LoginRequiredMixin, CreateView):
     model = Supplier
@@ -63,7 +52,7 @@ class SupplierCreateView(LoginRequiredMixin, CreateView):
 
     def get_initial(self):
         initial = super().get_initial()
-        for field in _SUPPLIER_PREFILL_FIELDS:
+        for field in PARTNER_PREFILL_FIELDS:
             if field in self.request.GET:
                 initial[field] = self.request.GET[field]
         return initial
@@ -325,6 +314,11 @@ class SupplierProductListView(LoginRequiredMixin, ListView):
         return SupplierProduct.objects.filter(supplier_id=supplier_id).select_related(
             "supplier", "product"
         )
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["supplier"] = Supplier.objects.get(pk=self.kwargs["pk"])
+        return ctx
 
 
 class SupplierProductIDsView(LoginRequiredMixin, DetailView):

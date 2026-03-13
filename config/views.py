@@ -1,4 +1,3 @@
-import hmac
 import logging
 from urllib.parse import urlencode
 
@@ -13,6 +12,8 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import CreateView, DeleteView, ListView
 from django.views.generic.edit import UpdateView
+
+from main.constants import PARTNER_PREFILL_FIELDS
 
 from .forms import (
     CompanyConfigForm,
@@ -30,19 +31,6 @@ from .models import (
 from .notifications import _notify_remote_customer, _notify_remote_customer_product
 
 logger = logging.getLogger(__name__)
-
-_IMPORT_FIELDS = [
-    "name",
-    "phone",
-    "email",
-    "website",
-    "address_line_1",
-    "address_line_2",
-    "city",
-    "state",
-    "postal_code",
-    "country",
-]
 
 
 class CompanyConfigView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
@@ -76,18 +64,11 @@ class CompanyApiView(View):
     """Machine-to-machine endpoint — returns company info to paired instances."""
 
     def get(self, request, *args, **kwargs):
-        auth = request.META.get("HTTP_AUTHORIZATION", "")
-        if not auth.startswith("Bearer "):
-            logger.warning(
-                "company_api_auth_failed", extra={"reason": "missing_bearer"}
-            )
-            return JsonResponse({"error": "Unauthorized"}, status=401)
-        key = auth[len("Bearer ") :]
-        if not any(
-            hmac.compare_digest(key, pi.our_key) for pi in PairedInstance.objects.all()
-        ):
-            logger.warning("company_api_auth_failed", extra={"reason": "invalid_key"})
-            return JsonResponse({"error": "Unauthorized"}, status=401)
+        from main.auth import verify_bearer_token
+
+        err = verify_bearer_token(request, log_prefix="company_api")
+        if err:
+            return err
         company = CompanyConfig.get_or_default()
         return JsonResponse(
             {
@@ -217,7 +198,7 @@ class ImportAsCustomerView(LoginRequiredMixin, UserPassesTestMixin, View):
         except (httpx.HTTPStatusError, httpx.RequestError) as exc:
             messages.error(request, f"Could not fetch data from {instance.name}: {exc}")
             return redirect(reverse_lazy("config:paired-instance-list"))
-        params = {f: data.get(f, "") for f in _IMPORT_FIELDS}
+        params = {f: data.get(f, "") for f in PARTNER_PREFILL_FIELDS}
         remote_name = data.get("name", "").strip()
 
         if remote_name:
@@ -261,7 +242,7 @@ class ImportAsSupplierView(LoginRequiredMixin, UserPassesTestMixin, View):
         except (httpx.HTTPStatusError, httpx.RequestError) as exc:
             messages.error(request, f"Could not fetch data from {instance.name}: {exc}")
             return redirect(reverse_lazy("config:paired-instance-list"))
-        params = {f: data.get(f, "") for f in _IMPORT_FIELDS}
+        params = {f: data.get(f, "") for f in PARTNER_PREFILL_FIELDS}
         remote_name = data.get("name", "").strip()
 
         # If a supplier with this name already exists, link it directly without

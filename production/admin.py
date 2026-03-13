@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from inventory.admin import ExportCsvMixin
+from main.admin import NoDeleteActionMixin
 
 from .models import BillOfMaterials, BOMItem, Production, ProductionLedger
 
@@ -12,7 +13,7 @@ class BOMItemInline(admin.TabularInline):
 
 
 @admin.register(BillOfMaterials)
-class BillOfMaterialsAdmin(admin.ModelAdmin):
+class BillOfMaterialsAdmin(NoDeleteActionMixin, admin.ModelAdmin):
     autocomplete_fields = ["product"]
     inlines = [
         BOMItemInline,
@@ -21,15 +22,9 @@ class BillOfMaterialsAdmin(admin.ModelAdmin):
     list_per_page = 15
     search_fields = ["product"]
 
-    def get_actions(self, request):
-        actions = super().get_actions(request)
-        if "delete_selected" in actions:
-            del actions["delete_selected"]
-        return actions
-
 
 @admin.register(Production)
-class ProductionAdmin(admin.ModelAdmin):
+class ProductionAdmin(NoDeleteActionMixin, admin.ModelAdmin):
     autocomplete_fields = ["product"]
     list_display = ["id", "product", "quantity", "complete"]
     list_filter = ["complete"]
@@ -38,15 +33,9 @@ class ProductionAdmin(admin.ModelAdmin):
     search_fields = ["product"]
     readonly_fields = ["closed", "bom_allocated", "bom_allocated_amount"]
 
-    def get_actions(self, request):
-        actions = super().get_actions(request)
-        if "delete_selected" in actions:
-            del actions["delete_selected"]
-        return actions
-
 
 @admin.register(ProductionLedger)
-class ProductionLedgerAdmin(admin.ModelAdmin, ExportCsvMixin):
+class ProductionLedgerAdmin(NoDeleteActionMixin, admin.ModelAdmin, ExportCsvMixin):
     list_display = ["product", "quantity", "transaction_id", "value", "date"]
     list_filter = ["date", "product"]
     list_select_related = ["product"]
@@ -60,9 +49,3 @@ class ProductionLedgerAdmin(admin.ModelAdmin, ExportCsvMixin):
 
     def has_delete_permission(self, request, obj=None):
         return False
-
-    def get_actions(self, request):
-        actions = super().get_actions(request)
-        if "delete_selected" in actions:
-            del actions["delete_selected"]
-        return actions
