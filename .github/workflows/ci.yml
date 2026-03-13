@@ -74,7 +74,13 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Type check (mypy)
-        run: mypy finance/
+        run: >
+          mypy finance/
+          config/models.py dashboards/models.py
+          inventory/models.py inventory/services.py
+          sales/models.py sales/services.py
+          procurement/models.py procurement/services.py
+          production/models.py production/services.py
         env:
           DEBUG: "True"
           SECRETKEY: "ci-test-key"

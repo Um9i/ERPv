@@ -536,10 +536,9 @@ class SalesOrderShipView(LoginRequiredMixin, DetailView):
         self.object = self.get_object()
 
         # build line_quantities mapping from POST data
-        line_quantities: dict = {}
-        if "ship_all" in request.POST:
-            line_quantities["__all__"] = True
-        else:
+        ship_all = "ship_all" in request.POST
+        line_quantities: dict[int, int] = {}
+        if not ship_all:
             for key, val in request.POST.items():
                 if key.startswith("shipped_"):
                     try:
@@ -548,7 +547,9 @@ class SalesOrderShipView(LoginRequiredMixin, DetailView):
                     except ValueError:
                         continue
 
-        touched, errors = ship_sales_order(self.object, line_quantities)
+        touched, errors = ship_sales_order(
+            self.object, line_quantities, ship_all=ship_all
+        )
 
         if errors:
             context = self.get_context_data()

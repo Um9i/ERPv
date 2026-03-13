@@ -134,7 +134,7 @@ def get_inventory_detail_context(
         running -= qty
 
     for entry in ledger_page:
-        entry.balance = balance_map.get(entry.pk, None)
+        entry.balance = balance_map.get(entry.pk, None)  # type: ignore[attr-defined]
     ctx["ledger"] = ledger_page
 
     # ── Chart history anchored to real stock ──

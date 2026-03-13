@@ -97,19 +97,21 @@ def get_ship_context(sales_order) -> dict[str, Any]:
 
 @transaction.atomic
 def ship_sales_order(
-    sales_order, line_quantities: dict[int, int]
+    sales_order,
+    line_quantities: dict[int, int],
+    *,
+    ship_all: bool = False,
 ) -> tuple[bool, list[str]]:
     """Ship quantities for a sales order.
 
     *line_quantities* maps ``SalesOrderLine.pk`` → quantity to ship.
-    A key of ``None`` with value ``True`` signals "ship all remaining".
+    When *ship_all* is ``True``, all remaining quantities are shipped.
 
     Returns ``(touched, errors)`` where *touched* is ``True`` when any
     inventory was modified and *errors* is a list of user-facing messages.
     """
     from sales.models import SalesLedger
 
-    ship_all = line_quantities.pop("__all__", False)
     touched = False
     errors: list[str] = []
 
