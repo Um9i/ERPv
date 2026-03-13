@@ -1,19 +1,19 @@
 """Signal handlers that keep the finance dashboard cache fresh."""
 
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
-# Guard to prevent recursive refreshes within the same thread.
-_refreshing = False
+# Thread-local guard to prevent recursive refreshes.
+_state = threading.local()
 
 
 def _refresh_cache_on_ledger(sender, instance, **kwargs):
     """Refresh dashboard cache when a SalesLedger or PurchaseLedger row is created."""
-    global _refreshing  # noqa: PLW0603
-    if _refreshing:
+    if getattr(_state, "refreshing", False):
         return
-    _refreshing = True
+    _state.refreshing = True
     try:
         from finance.services import refresh_finance_dashboard_cache
 
@@ -21,15 +21,14 @@ def _refresh_cache_on_ledger(sender, instance, **kwargs):
     except Exception:
         logger.exception("Failed to refresh finance dashboard cache (ledger signal)")
     finally:
-        _refreshing = False
+        _state.refreshing = False
 
 
 def _refresh_cache_on_inventory(sender, instance, **kwargs):
     """Refresh stock-value portion of the cache when inventory changes."""
-    global _refreshing  # noqa: PLW0603
-    if _refreshing:
+    if getattr(_state, "refreshing", False):
         return
-    _refreshing = True
+    _state.refreshing = True
     try:
         from finance.services import refresh_finance_dashboard_cache
 
@@ -37,4 +36,4 @@ def _refresh_cache_on_inventory(sender, instance, **kwargs):
     except Exception:
         logger.exception("Failed to refresh finance dashboard cache (inventory signal)")
     finally:
-        _refreshing = False
+        _state.refreshing = False

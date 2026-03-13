@@ -29,6 +29,12 @@ jobs:
       - name: Lint (ruff)
         run: ruff check .
 
+      - name: Lint migrations
+        run: python manage.py lintmigrations --no-cache
+        env:
+          DEBUG: "True"
+          SECRETKEY: "ci-test-key"
+
   security:
     runs-on: ubuntu-latest
     steps:

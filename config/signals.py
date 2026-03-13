@@ -12,18 +12,25 @@ User = get_user_model()
 
 def _notify_all_users(*, category, level, title, message, link):
     """Create a notification for every active user (skipping duplicates)."""
-    users = User.objects.filter(is_active=True)
-    for user in users:
-        if Notification.objects.filter(user=user, title=title, is_read=False).exists():
-            continue
-        Notification.objects.create(
-            user=user,
-            category=category,
-            level=level,
-            title=title,
-            message=message,
-            link=link,
+    already_notified = set(
+        Notification.objects.filter(title=title, is_read=False).values_list(
+            "user_id", flat=True
         )
+    )
+    users = User.objects.filter(is_active=True).exclude(pk__in=already_notified)
+    Notification.objects.bulk_create(
+        [
+            Notification(
+                user=user,
+                category=category,
+                level=level,
+                title=title,
+                message=message,
+                link=link,
+            )
+            for user in users
+        ]
+    )
 
 
 @receiver(pre_save, sender="sales.SalesOrderLine")
