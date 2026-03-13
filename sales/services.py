@@ -34,7 +34,7 @@ def complete_sales_line(line) -> None:
     InventoryLedger.objects.create(
         product=line.product.product,
         quantity=-abs(line.quantity),
-        action="Sales Order",
+        action=InventoryLedger.Action.SALES_ORDER,
         transaction_id=line.sales_order.pk,
     )
     SalesLedger.objects.create(

@@ -70,6 +70,10 @@ class CustomerProduct(models.Model):
     def __str__(self):
         return f"{self.product.name}"
 
+    def clean(self):
+        if self.price is not None and self.price < 0:
+            raise ValidationError({"price": "Price cannot be negative."})
+
     def on_sales_order(self):
         from django.db.models import F
 
@@ -178,6 +182,15 @@ class SalesLedger(models.Model):
 
     def __str__(self) -> str:
         return f"{self.product}"
+
+    def clean(self):
+        errors = {}
+        if self.value is not None and self.value < 0:
+            errors["value"] = "Value cannot be negative."
+        if self.quantity is not None and self.quantity <= 0:
+            errors["quantity"] = "Quantity must be positive."
+        if errors:
+            raise ValidationError(errors)
 
     class Meta:
         ordering = ["-date"]

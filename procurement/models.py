@@ -1,5 +1,6 @@
 from decimal import ROUND_HALF_UP, Decimal
 
+from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import F, Sum
 from django.db.models.functions import Greatest, Lower
@@ -68,6 +69,10 @@ class SupplierProduct(models.Model):
 
     def __str__(self) -> str:
         return self.product.name
+
+    def clean(self):
+        if self.cost is not None and self.cost < 0:
+            raise ValidationError({"cost": "Cost cannot be negative."})
 
     def on_purchase_order(self):
         total = (
@@ -177,6 +182,15 @@ class PurchaseLedger(models.Model):
 
     def __str__(self) -> str:
         return f"{self.product}"
+
+    def clean(self):
+        errors = {}
+        if self.value is not None and self.value < 0:
+            errors["value"] = "Value cannot be negative."
+        if self.quantity is not None and self.quantity <= 0:
+            errors["quantity"] = "Quantity must be positive."
+        if errors:
+            raise ValidationError(errors)
 
     class Meta:
         ordering = ["-date"]

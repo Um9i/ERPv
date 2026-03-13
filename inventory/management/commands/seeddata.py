@@ -425,7 +425,7 @@ class Command(BaseCommand):
                         InventoryLedger(
                             product=cp.product,
                             quantity=-abs(qty),
-                            action="Sales Order",
+                            action=InventoryLedger.Action.SALES_ORDER,
                             transaction_id=so.pk,
                             date=dt,
                         )
@@ -473,7 +473,7 @@ class Command(BaseCommand):
                         InventoryLedger(
                             product=sp.product,
                             quantity=qty,
-                            action="Purchase Order",
+                            action=InventoryLedger.Action.PURCHASE_ORDER,
                             transaction_id=po.pk,
                             date=dt,
                         )
@@ -505,7 +505,7 @@ class Command(BaseCommand):
             InventoryLedger(
                 product_id=pid,
                 quantity=change,
-                action="Seed",
+                action=InventoryLedger.Action.SEED,
                 transaction_id=0,
                 date=dt,
             )

@@ -98,7 +98,7 @@ def receive_purchase_order_line(line: PurchaseOrderLine, qty: int) -> int | None
     InventoryLedger.objects.create(
         product=product,
         quantity=qty,
-        action="Purchase Order",
+        action=InventoryLedger.Action.PURCHASE_ORDER,
         transaction_id=line.purchase_order_id,
         location=recv_location,
     )

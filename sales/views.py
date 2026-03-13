@@ -631,7 +631,7 @@ class SalesOrderShipView(LoginRequiredMixin, DetailView):
                 InventoryLedger.objects.create(
                     product=line.product.product,
                     quantity=-abs(qty),
-                    action="Sales Order",
+                    action=InventoryLedger.Action.SALES_ORDER,
                     transaction_id=self.object.pk,
                     location=locations_used[0] if len(locations_used) == 1 else None,
                 )

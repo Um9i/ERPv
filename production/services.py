@@ -91,14 +91,14 @@ def receive_production(job: Production, delta: int) -> set[int]:
             InventoryLedger.objects.create(
                 product=item.product,
                 quantity=-abs(qty_change),
-                action="Production",
+                action=InventoryLedger.Action.PRODUCTION,
                 transaction_id=job.pk,
             )
             affected_product_ids.add(item.product_id)
         InventoryLedger.objects.create(
             product=job.product,
             quantity=delta,
-            action="Production",
+            action=InventoryLedger.Action.PRODUCTION,
             transaction_id=job.pk,
         )
 

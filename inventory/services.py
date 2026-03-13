@@ -69,7 +69,7 @@ def apply_inventory_adjustment(
     InventoryLedger.objects.create(
         product=product,
         quantity=adjustment.quantity,
-        action="Inventory Adjustment",
+        action=InventoryLedger.Action.INVENTORY_ADJUSTMENT,
         transaction_id=product.pk,
         location=location,
     )

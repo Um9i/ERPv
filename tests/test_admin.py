@@ -102,7 +102,7 @@ class TestInventoryLedgerAdmin:
     def test_changelist_loads(self, admin_client):
         product = _product_with_deps("ledger_prod")
         InventoryLedger.objects.create(
-            product=product, quantity=5, action="ADD", transaction_id=1
+            product=product, quantity=5, action="Inventory Adjustment", transaction_id=1
         )
         response = admin_client.get("/admin/inventory/inventoryledger/")
         assert response.status_code == 200
@@ -111,7 +111,7 @@ class TestInventoryLedgerAdmin:
     def test_search_by_product_name(self, admin_client):
         product = _product_with_deps("UniqueSearchLedger")
         InventoryLedger.objects.create(
-            product=product, quantity=1, action="ADD", transaction_id=1
+            product=product, quantity=1, action="Inventory Adjustment", transaction_id=1
         )
         response = admin_client.get(
             "/admin/inventory/inventoryledger/?q=UniqueSearchLedger"
@@ -123,7 +123,10 @@ class TestInventoryLedgerAdmin:
     def test_csv_export_action(self, admin_client):
         product = _product_with_deps("csv_ledger_prod")
         entry = InventoryLedger.objects.create(
-            product=product, quantity=10, action="ADD", transaction_id=99
+            product=product,
+            quantity=10,
+            action="Inventory Adjustment",
+            transaction_id=99,
         )
         response = admin_client.post(
             "/admin/inventory/inventoryledger/",
@@ -140,9 +143,11 @@ class TestInventoryLedgerAdmin:
     def test_filter_by_action(self, admin_client):
         product = _product_with_deps("filter_prod")
         InventoryLedger.objects.create(
-            product=product, quantity=1, action="ADD", transaction_id=1
+            product=product, quantity=1, action="Inventory Adjustment", transaction_id=1
         )
-        response = admin_client.get("/admin/inventory/inventoryledger/?action=ADD")
+        response = admin_client.get(
+            "/admin/inventory/inventoryledger/?action=Inventory+Adjustment"
+        )
         assert response.status_code == 200
 
 
@@ -411,7 +416,7 @@ class TestInventoryLedgerFilterByProduct:
     def test_filter_by_product(self, admin_client):
         product = _product_with_deps("inv_filt_prod")
         InventoryLedger.objects.create(
-            product=product, quantity=1, action="ADD", transaction_id=1
+            product=product, quantity=1, action="Inventory Adjustment", transaction_id=1
         )
         response = admin_client.get(
             f"/admin/inventory/inventoryledger/?product__id__exact={product.pk}"

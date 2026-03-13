@@ -293,12 +293,20 @@ class InventoryLocation(models.Model):
 
 
 class InventoryLedger(models.Model):
+    class Action(models.TextChoices):
+        PURCHASE_ORDER = "Purchase Order", _("Purchase Order")
+        SALES_ORDER = "Sales Order", _("Sales Order")
+        PRODUCTION = "Production", _("Production")
+        INVENTORY_ADJUSTMENT = "Inventory Adjustment", _("Inventory Adjustment")
+        STOCK_TRANSFER = "Stock Transfer", _("Stock Transfer")
+        SEED = "Seed", _("Seed")
+
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name="inventory_ledger"
     )
     quantity = models.BigIntegerField()
     date = models.DateTimeField(auto_now_add=True)
-    action = models.CharField(max_length=128)
+    action = models.CharField(max_length=128, choices=Action.choices)
     transaction_id = models.PositiveBigIntegerField()
     location = models.ForeignKey(
         "Location",
@@ -475,14 +483,14 @@ class StockTransfer(AuditMixin, models.Model):
             InventoryLedger.objects.create(
                 product=self.inventory.product,
                 quantity=-self.quantity,
-                action="Stock Transfer",
+                action=InventoryLedger.Action.STOCK_TRANSFER,
                 transaction_id=self.inventory.pk,
                 location=self.from_location,
             )
             InventoryLedger.objects.create(
                 product=self.inventory.product,
                 quantity=self.quantity,
-                action="Stock Transfer",
+                action=InventoryLedger.Action.STOCK_TRANSFER,
                 transaction_id=self.inventory.pk,
                 location=self.to_location,
             )

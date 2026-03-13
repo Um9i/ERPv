@@ -301,6 +301,10 @@ class ProductionLedger(models.Model):
     def __str__(self) -> str:
         return f"{self.product}"
 
+    def clean(self):
+        if self.value is not None and self.value < 0:
+            raise ValidationError({"value": "Value cannot be negative."})
+
     class Meta:
         ordering = ["-date"]
         verbose_name_plural = "Production Ledger"
