@@ -299,7 +299,9 @@ h1, h2, h3, h4, h5, h6 {
     background: var(--color-bg-white);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
-    overflow: hidden;
+}
+.panel .table-responsive {
+    overflow: visible;
 }
 .panel-header {
     padding: 0.85rem 1.25rem;
