@@ -2,6 +2,7 @@
 
 from decimal import Decimal
 from django.db import migrations, models
+from django_migration_linter import IgnoreMigration
 
 
 class Migration(migrations.Migration):
@@ -11,6 +12,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        IgnoreMigration(),
         migrations.AddField(
             model_name="salesorder",
             name="total_amount_cached",

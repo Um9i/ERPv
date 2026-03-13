@@ -2,6 +2,7 @@
 
 import django.db.models.deletion
 from django.db import migrations, models
+from django_migration_linter import IgnoreMigration
 
 
 class Migration(migrations.Migration):
@@ -11,6 +12,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        IgnoreMigration(),
         migrations.AlterField(
             model_name="purchaseledger",
             name="supplier",

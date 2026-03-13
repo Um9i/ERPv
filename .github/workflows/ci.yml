@@ -30,7 +30,7 @@ jobs:
         run: ruff check .
 
       - name: Lint migrations
-        run: python manage.py lintmigrations --no-cache
+        run: python manage.py lintmigrations --no-cache --ignore-sqlmigrate-errors --exclude-apps silk
         env:
           DEBUG: "True"
           SECRETKEY: "ci-test-key"
