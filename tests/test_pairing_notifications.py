@@ -1,12 +1,15 @@
 import json
 from decimal import Decimal
 
+import pytest
 from django.test import TestCase
 from django.urls import reverse
 
 from config.models import PairedInstance
 from inventory.models import Product
 from sales.models import Customer, CustomerProduct
+
+pytestmark = pytest.mark.integration
 
 
 class NotifyCustomerViewTest(TestCase):

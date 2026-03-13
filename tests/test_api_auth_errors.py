@@ -22,6 +22,8 @@ from procurement.models import Supplier, SupplierProduct
 from production.models import Production
 from sales.models import Customer
 
+pytestmark = pytest.mark.integration
+
 User = get_user_model()
 
 

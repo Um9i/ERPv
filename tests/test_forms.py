@@ -26,6 +26,8 @@ from sales.forms import (
 )
 from sales.models import Customer
 
+pytestmark = pytest.mark.unit
+
 
 def _product_with_deps(name, quantity=0, sale_price=None):
     p = Product.objects.bulk_create([Product(name=name, sale_price=sale_price)])[0]

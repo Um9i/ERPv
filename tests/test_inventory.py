@@ -12,16 +12,20 @@ def _adjust(product, quantity, location=None):
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestInventory:
+    @pytest.mark.unit
     def test_inventory_model_exists(self, product):
         inventory = Inventory.objects.get(pk=product.pk)
         assert inventory.product.name == "product"
 
+    @pytest.mark.unit
     def test_inventory_adjustment_alters_inventory_quantity(self, product):
         _adjust(product, 1)
         inventory = Inventory.objects.get(pk=product.pk)
         assert inventory.quantity == 1
 
+    @pytest.mark.unit
     def test_inventory_adjustment_ledger_is_created(self, product):
         _adjust(product, 1)
         ledger = InventoryLedger.objects.filter(product=product).order_by("pk").first()
@@ -29,6 +33,7 @@ class TestInventory:
         assert ledger.product == product
         assert ledger.quantity == 1
 
+    @pytest.mark.unit
     def test_closed_field_no_longer_exists(self):
         # ensure our migrations actually removed the closed column from the model
         assert not hasattr(InventoryAdjust, "closed"), "closed field should be removed"
@@ -152,6 +157,7 @@ class TestInventory:
             == len(ctx["monthly_production"])
         )
 
+    @pytest.mark.unit
     def test_last_updated_changes_on_inventory_operations(self, product):
         from inventory.models import Inventory
 
@@ -162,6 +168,7 @@ class TestInventory:
         inv.refresh_from_db()
         assert inv.last_updated > orig
 
+    @pytest.mark.unit
     def test_stock_value_uses_bom(self, product):
         """Stock value should include BOM-derived cost when no direct cost.
 
@@ -432,6 +439,7 @@ class TestInventory:
         form = resp2.context["form"]
         assert int(form.initial.get("quantity")) == entry["order_qty"]
 
+    @pytest.mark.unit
     def test_production_allocation_accumulates(self, product, bom):
         """Multiple production jobs add to component allocations."""
         from inventory.models import ProductionAllocated
@@ -535,6 +543,7 @@ class TestInventory:
 
     # ── Location & Stock Transfer tests ────────────────────────
 
+    @pytest.mark.unit
     def test_location_hierarchy_full_path(self, db):
         """Location.full_path() builds Warehouse / Zone / Bin string."""
         from inventory.models import Location
@@ -632,6 +641,7 @@ class TestInventory:
         assert resp.status_code == 200  # re-renders form with error
         assert "exceed stock on hand" in resp.content.decode()
 
+    @pytest.mark.unit
     def test_stock_transfer_moves_quantity(self, product):
         """Transfer deducts from source, adds to dest, creates ledger entries."""
         from inventory.models import (
@@ -679,6 +689,7 @@ class TestInventory:
         assert new_entries.filter(quantity=-30).exists()
         assert new_entries.filter(quantity=30).exists()
 
+    @pytest.mark.unit
     def test_stock_transfer_creates_destination_if_missing(self, product):
         """Transfer to an unassigned location creates the InventoryLocation."""
         from inventory.models import (
@@ -710,6 +721,7 @@ class TestInventory:
             InventoryLocation.objects.get(inventory=inv, location=bin_a).quantity == 35
         )
 
+    @pytest.mark.unit
     def test_stock_transfer_rejects_insufficient_source(self, product):
         """Transfer more than source has should raise ValidationError."""
         from django.core.exceptions import ValidationError
@@ -741,6 +753,7 @@ class TestInventory:
             InventoryLocation.objects.get(inventory=inv, location=bin_a).quantity == 10
         )
 
+    @pytest.mark.unit
     def test_stock_transfer_rejects_same_location(self, product):
         """Transfer from and to the same location should be rejected."""
         from django.core.exceptions import ValidationError
@@ -877,6 +890,7 @@ class TestInventory:
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestInventoryAdjustWithLocation:
     """Phase 3 — adjustments route deltas to InventoryLocation bins."""
 

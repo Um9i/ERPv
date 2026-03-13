@@ -30,6 +30,8 @@ from sales.models import (
     SalesOrderLine,
 )
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture
 def user(db):

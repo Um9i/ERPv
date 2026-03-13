@@ -1,6 +1,9 @@
+import pytest
 from django.test import TestCase
 
 from config.models import CompanyConfig
+
+pytestmark = pytest.mark.unit
 
 
 class CompanyConfigSingletonTest(TestCase):

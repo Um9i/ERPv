@@ -34,7 +34,7 @@ from sales.models import (
     SalesOrderLine,
 )
 
-pytestmark = pytest.mark.urls("main.test_urls")
+pytestmark = [pytest.mark.integration, pytest.mark.urls("main.test_urls")]
 
 
 def _product_with_deps(name, quantity=0, sale_price=None):

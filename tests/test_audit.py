@@ -6,6 +6,8 @@ import pytest
 
 from main.models import AuditLog
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.django_db
 class TestAuditTrailFields:

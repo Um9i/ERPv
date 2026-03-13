@@ -1,6 +1,7 @@
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
+import pytest
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase, TestCase
@@ -10,6 +11,7 @@ from config.models import PairedInstance
 from inventory.models import Product
 
 
+@pytest.mark.unit
 class ProductCatalogueCleanTest(SimpleTestCase):
     """Model-level validation for catalogue_item field."""
 
@@ -26,6 +28,7 @@ class ProductCatalogueCleanTest(SimpleTestCase):
         product.clean()
 
 
+@pytest.mark.integration
 class CatalogueApiViewTest(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -106,6 +109,7 @@ class CatalogueApiViewTest(TestCase):
         self.assertNotIn("Unpriced Widget", names)
 
 
+@pytest.mark.integration
 class BrowseCatalogueViewTest(TestCase):
     @classmethod
     def setUpTestData(cls):

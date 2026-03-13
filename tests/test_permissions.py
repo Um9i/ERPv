@@ -16,6 +16,8 @@ from django.test import Client
 from config.models import PairedInstance
 from procurement.models import Supplier
 
+pytestmark = pytest.mark.integration
+
 User = get_user_model()
 
 

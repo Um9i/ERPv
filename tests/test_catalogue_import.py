@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+import pytest
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
@@ -7,6 +8,8 @@ from django.urls import reverse
 from config.models import PairedInstance
 from inventory.models import Product
 from procurement.models import Supplier, SupplierProduct
+
+pytestmark = pytest.mark.integration
 
 
 class ImportCatalogueProductViewTest(TestCase):

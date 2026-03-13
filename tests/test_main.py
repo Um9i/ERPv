@@ -1,6 +1,8 @@
 import pytest
 from django.test import override_settings
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.django_db
 class TestMainPages:

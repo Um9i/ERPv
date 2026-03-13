@@ -46,6 +46,7 @@ def user(db):
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestSupplierProductCheck:
     def test_no_duplicate_returns_false(self, client, user):
         client.force_login(user)
@@ -105,6 +106,7 @@ class TestSupplierProductCheck:
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 class TestHelpText:
     """Verify that complex fields have help_text set."""
 
@@ -189,6 +191,7 @@ class TestHelpText:
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 class TestWidgetAttrs:
     """Verify min/step attributes are present on numeric inputs."""
 

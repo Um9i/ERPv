@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 
 from config.models import CompanyConfig
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.django_db
 class TestToastNotifications:

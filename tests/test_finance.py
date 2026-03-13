@@ -28,6 +28,8 @@ from sales.models import (
     SalesOrderLine,
 )
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture
 def staff_client(client, db):
@@ -134,6 +136,7 @@ def test_finance_dashboard_query_count(client):
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 def test_finance_cache_refresh_computes_totals():
     """refresh_finance_dashboard_cache populates the singleton snapshot."""
     product = ProductFactory()
@@ -164,6 +167,7 @@ def test_finance_cache_refresh_computes_totals():
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 def test_finance_cache_signal_updates_on_ledger_write():
     """Creating a SalesLedger row triggers a cache refresh via signal."""
     product = ProductFactory()
@@ -182,6 +186,7 @@ def test_finance_cache_signal_updates_on_ledger_write():
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 def test_finance_cache_chart_data_has_12_months():
     """Chart data in the snapshot always contains 12 months."""
     snapshot = refresh_finance_dashboard_cache()
@@ -522,6 +527,7 @@ def test_product_pl_chart_color_coding(staff_client):
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 def test_stock_value_with_supplier_cost():
     """Stock value = sum(qty × cheapest supplier cost)."""
     product = _product_with_deps("sv_prod", quantity=50)
@@ -535,6 +541,7 @@ def test_stock_value_with_supplier_cost():
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 def test_stock_value_cheapest_supplier_wins():
     """Multiple suppliers — cheapest cost is used."""
     product = _product_with_deps("multi_sup_prod", quantity=20)
@@ -548,6 +555,7 @@ def test_stock_value_cheapest_supplier_wins():
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 def test_stock_value_bom_fallback():
     """Products without supplier cost use BOM component costs instead."""
     parent = _product_with_deps("bom_parent", quantity=5)
@@ -566,6 +574,7 @@ def test_stock_value_bom_fallback():
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 def test_stock_value_no_cost_returns_zero():
     """Products with no supplier cost and no BOM contribute zero."""
     _product_with_deps("orphan_prod", quantity=100)
@@ -574,6 +583,7 @@ def test_stock_value_no_cost_returns_zero():
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 def test_stock_value_zero_quantity_ignored():
     """Products with zero inventory don't inflate stock value."""
     product = _product_with_deps("zero_qty_prod", quantity=0)
@@ -592,6 +602,7 @@ def test_stock_value_zero_quantity_ignored():
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 def test_cache_refresh_empty_ledgers():
     """Refresh with no ledger entries should produce all-zero snapshot."""
     snapshot = refresh_finance_dashboard_cache()
@@ -603,6 +614,7 @@ def test_cache_refresh_empty_ledgers():
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 def test_cache_refresh_stores_current_month():
     """Snapshot records the year/month for staleness detection."""
     snapshot = refresh_finance_dashboard_cache()

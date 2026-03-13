@@ -5,10 +5,13 @@ from procurement.models import PurchaseLedger, PurchaseOrder, PurchaseOrderLine
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestSupplier:
+    @pytest.mark.unit
     def test_supplier_creation(self, supplier):
         assert supplier.name == "Test Supplier"
 
+    @pytest.mark.unit
     def test_supplier_contact_creation(self, supplier_contact):
         assert supplier_contact.name == "Test Contact"
 
@@ -239,7 +242,9 @@ class TestSupplier:
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestSupplierProduct:
+    @pytest.mark.unit
     def test_supplier_product_creation(self, supplier_product):
         assert supplier_product.cost == 10.00
 
@@ -269,6 +274,7 @@ class TestSupplierProduct:
         assert resp.status_code == 200
         assert "Edit Supplier Product" in resp.content.decode()
 
+    @pytest.mark.unit
     def test_on_purchase_order(self, supplier_product, purchase_order_line):
         assert supplier_product.on_purchase_order() == 5
 
@@ -508,7 +514,9 @@ class TestSupplierProduct:
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestPurchaseOrder:
+    @pytest.mark.unit
     def test_purchase_order_creation(self, purchase_order):
         assert purchase_order.supplier.name == "Test Supplier"
 
@@ -623,6 +631,7 @@ class TestPurchaseOrder:
         assert open_po.order_number in content
         assert received_po.order_number not in content
 
+    @pytest.mark.unit
     def test_purchase_order_properties(self, purchase_order, purchase_order_line):
         # Ensure computed fields work
         assert purchase_order.order_number.startswith("PO")
@@ -640,6 +649,7 @@ class TestPurchaseOrder:
         assert purchase_order.status == "Closed"
         assert purchase_order.total_amount == expected
 
+    @pytest.mark.unit
     def test_remaining_and_order_values(self, purchase_order_line):
         """Computed totals should include remaining and received amounts."""
         po = purchase_order_line.purchase_order
@@ -911,6 +921,7 @@ class TestPurchaseOrder:
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 class TestPurchaseOrderLine:
     def test_purchase_order_line_creation(self, purchase_order_line):
         assert purchase_order_line.quantity == 5
@@ -940,6 +951,7 @@ class TestPurchaseOrderLine:
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestStoreConfirmation:
     """Tests for the scan-to-store confirmation workflow."""
 
@@ -1113,6 +1125,7 @@ class TestStoreConfirmation:
         purchase_order_line.refresh_from_db()
         assert purchase_order_line.store_confirmed is False
 
+    @pytest.mark.unit
     def test_all_store_confirmed_property(self, purchase_order_line):
         po = purchase_order_line.purchase_order
         assert po.all_store_confirmed is False

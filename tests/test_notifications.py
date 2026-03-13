@@ -32,6 +32,7 @@ def _create_product(name, quantity=0):
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 class TestNotificationModel:
     def test_create_notification(self):
         user = User.objects.create_user("tester")
@@ -60,6 +61,7 @@ class TestNotificationModel:
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestNotificationListView:
     def test_login_required(self, client):
         url = reverse("config:notification-list")
@@ -96,6 +98,7 @@ class TestNotificationListView:
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestNotificationMarkRead:
     def test_mark_single_read(self, client):
         user = User.objects.create_user("tester")
@@ -137,6 +140,7 @@ class TestNotificationMarkRead:
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestNotificationMarkAllRead:
     def test_mark_all_read(self, client):
         user = User.objects.create_user("tester")
@@ -168,6 +172,7 @@ class TestNotificationMarkAllRead:
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestNotificationContextProcessor:
     def test_unread_count_in_context(self, client):
         user = User.objects.create_user("tester")
@@ -195,6 +200,7 @@ class TestNotificationContextProcessor:
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 class TestOrderStatusSignals:
     def test_sales_order_line_complete_creates_notification(self):
         user = User.objects.create_user("tester")
@@ -261,6 +267,7 @@ class TestOrderStatusSignals:
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 class TestCheckNotificationsCommand:
     def test_low_stock_notification(self):
         from django.core.management import call_command
@@ -359,6 +366,7 @@ class TestCheckNotificationsCommand:
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestNavbarBadge:
     def test_bell_icon_shown_when_logged_in(self, client):
         user = User.objects.create_user("tester")

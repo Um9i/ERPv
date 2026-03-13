@@ -1,3 +1,4 @@
+import pytest
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
@@ -5,6 +6,7 @@ from django.urls import reverse
 from config.models import CompanyConfig, PairedInstance
 
 
+@pytest.mark.unit
 class PairedInstanceModelTest(TestCase):
     def test_our_key_auto_generated_on_save(self):
         instance = PairedInstance.objects.create(
@@ -43,6 +45,7 @@ class PairedInstanceModelTest(TestCase):
         self.assertEqual(instance.status, "active")
 
 
+@pytest.mark.integration
 class CompanyApiViewTest(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -97,6 +100,7 @@ class CompanyApiViewTest(TestCase):
         self.assertIn("company_number", data)
 
 
+@pytest.mark.integration
 class PairedInstanceListViewTest(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -118,6 +122,7 @@ class PairedInstanceListViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
 
+@pytest.mark.integration
 class CompletePairingViewTest(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -148,6 +153,7 @@ class CompletePairingViewTest(TestCase):
         self.assertEqual(self.instance.api_key, "")
 
 
+@pytest.mark.integration
 class ImportGuardTest(TestCase):
     @classmethod
     def setUpTestData(cls):

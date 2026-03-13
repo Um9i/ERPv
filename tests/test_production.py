@@ -6,6 +6,7 @@ from production.models import BillOfMaterials, BOMItem, Production
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 class TestBillOfMaterials:
     def test_bom_creation(self, product):
         bom = BillOfMaterials.objects.create(product=product)
@@ -17,6 +18,7 @@ class TestBillOfMaterials:
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 class TestBOMItem:
     def test_bom_item_creation(self, product, bom):
         bom_item = BOMItem.objects.create(bom=bom, product=product, quantity=10)
@@ -41,7 +43,9 @@ class TestBOMItem:
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestProduction:
+    @pytest.mark.unit
     def test_production_creation(self, product):
         production = Production.objects.create(product=product, quantity=10)
         assert production.product == product
@@ -52,27 +56,32 @@ class TestProduction:
         assert not production.bom_allocated
         assert production.bom_allocated_amount is None
 
+    @pytest.mark.unit
     def test_production_str(self, product):
         production = Production.objects.create(product=product, quantity=10)
         assert str(production) == product.name
 
+    @pytest.mark.unit
     def test_production_clean_no_bom(self, product):
         production = Production(product=product, quantity=10)
         with pytest.raises(ValidationError):
             production.clean()
 
+    @pytest.mark.unit
     def test_production_clean_not_enough_inventory(self, product, bom, bom_item):
         # trying to receive more than available components should raise
         production = Production(product=product, quantity=100, quantity_received=50)
         with pytest.raises(ValidationError):
             production.clean()
 
+    @pytest.mark.unit
     def test_production_save(self, product, bom, bom_item):
         production = Production.objects.create(product=product, quantity=10)
         production.save()
         assert production.bom_allocated is True
         assert production.bom_allocated_amount == 10
 
+    @pytest.mark.unit
     def test_production_complete(self, product, bom, bom_item):
         production = Production.objects.create(product=product, quantity=10)
         production.save()
@@ -95,6 +104,7 @@ class TestProduction:
         assert ledger.action == "Production"
         assert ledger.transaction_id == production.pk
 
+    @pytest.mark.unit
     def test_partial_receive_updates_inventory(self, product, bom, bom_item):
         # receiving part of a job should only adjust inventory proportionally
         production = Production.objects.create(product=product, quantity=20)
@@ -526,6 +536,7 @@ class TestProduction:
 
     # --- due date tests ---
 
+    @pytest.mark.unit
     def test_due_date_saves_and_roundtrips(self, product, bom, bom_item):
         """due_date persists through create and refresh."""
         import datetime
@@ -536,6 +547,7 @@ class TestProduction:
         job.refresh_from_db()
         assert job.due_date == datetime.date(2026, 4, 1)
 
+    @pytest.mark.unit
     def test_due_date_nullable(self, product, bom, bom_item):
         """Jobs without a due_date default to None."""
         job = Production.objects.create(product=product, quantity=1)
@@ -694,6 +706,7 @@ class TestProduction:
         resp = client.get(url)
         assert resp.context["any_shortage"] is False
 
+    @pytest.mark.unit
     def test_missing_inventory_treated_as_zero(self, product, bom, bom_item):
         """Component with no Inventory record has stock=0 and shortfall."""
         from inventory.models import Product as P
@@ -752,6 +765,7 @@ class TestProduction:
 
     # --- BOM tree visualiser tests ---
 
+    @pytest.mark.unit
     def test_bom_tree_root_node(self, product, bom, bom_item):
         """build_bom_tree returns root with correct name, quantity and stock."""
         from production.services import build_bom_tree
@@ -764,6 +778,7 @@ class TestProduction:
         assert "sufficient" in tree
         assert "children" in tree
 
+    @pytest.mark.unit
     def test_bom_tree_children_nested(self, product, bom, bom_item):
         """Children are nested with scaled quantities for a two-level BOM."""
         from production.services import build_bom_tree
@@ -781,6 +796,7 @@ class TestProduction:
             if child["id"] in bom_items:
                 assert child["quantity"] == bom_items[child["id"]] * 5
 
+    @pytest.mark.unit
     def test_bom_tree_sufficient_false_when_short(self, product, bom, bom_item):
         """sufficient is False when stock < scaled quantity."""
         from production.services import build_bom_tree
@@ -790,6 +806,7 @@ class TestProduction:
         short_children = [c for c in tree["children"] if not c["sufficient"]]
         assert len(short_children) > 0
 
+    @pytest.mark.unit
     def test_bom_tree_circular_reference_guard(self, product, bom):
         """Circular reference returns None and does not infinite-loop."""
         from production.services import build_bom_tree
@@ -798,6 +815,7 @@ class TestProduction:
         tree = build_bom_tree(product, quantity=1, visited={product.pk})
         assert tree is None
 
+    @pytest.mark.unit
     def test_bom_tree_leaf_node_no_bom(self):
         """Product without a BOM returns a leaf node with empty children."""
         from inventory.models import Product as P
@@ -858,6 +876,7 @@ class TestProduction:
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 class TestReceiveIntoLocation:
     """Tests for receiving production into a specific inventory location."""
 
@@ -947,9 +966,11 @@ class TestReceiveIntoLocation:
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestCostSummary:
     """Tests for sale_price, effective_sale_price, and cost summary logic."""
 
+    @pytest.mark.unit
     def test_effective_sale_price_returns_sale_price_when_set(self, product):
         """effective_sale_price returns sale_price when it is set."""
         from decimal import Decimal
@@ -958,6 +979,7 @@ class TestCostSummary:
         product.save()
         assert product.effective_sale_price == Decimal("125.00")
 
+    @pytest.mark.unit
     def test_effective_sale_price_falls_back_to_last_sold(self, product):
         """effective_sale_price falls back to last sales order line price."""
         from decimal import Decimal
@@ -974,6 +996,7 @@ class TestCostSummary:
         assert product.sale_price is None
         assert product.effective_sale_price == Decimal("99.50")
 
+    @pytest.mark.unit
     def test_effective_sale_price_zero_when_none_set(self, product):
         """effective_sale_price returns 0 when neither sale_price nor sales exist."""
         assert product.sale_price is None

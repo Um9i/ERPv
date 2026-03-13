@@ -8,6 +8,8 @@ from config.models import PairedInstance
 from inventory.models import Product
 from procurement.models import Supplier, SupplierProduct
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture
 def staff_user(django_user_model):

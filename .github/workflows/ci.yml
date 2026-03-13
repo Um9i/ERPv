@@ -120,8 +120,15 @@ jobs:
       - run: npm ci
       - run: npx tsc
 
-      - name: Run tests
-        run: pytest
+      - name: Run unit tests
+        run: pytest -m unit
+        env:
+          DJANGO_SETTINGS_MODULE: main.settings
+          DEBUG: "True"
+          SECRETKEY: "ci-test-key"
+
+      - name: Run integration tests
+        run: pytest -m integration
         env:
           DJANGO_SETTINGS_MODULE: main.settings
           DEBUG: "True"

@@ -5,10 +5,13 @@ from sales.models import SalesLedger
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestCustomer:
+    @pytest.mark.unit
     def test_customer_creation(self, customer):
         assert customer.name == "Test Customer"
 
+    @pytest.mark.unit
     def test_customer_contact_creation(self, customer_contact):
         assert customer_contact.name == "Test Contact"
 
@@ -184,7 +187,9 @@ class TestCustomer:
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestCustomerProduct:
+    @pytest.mark.unit
     def test_customer_product_creation(self, customer_product):
         assert customer_product.price == 10.00
 
@@ -212,12 +217,15 @@ class TestCustomerProduct:
         assert resp.status_code == 200
         assert "Edit Customer Product" in resp.content.decode()
 
+    @pytest.mark.unit
     def test_on_sales_order(self, customer_product, sales_order_line):
         assert customer_product.on_sales_order() == 5
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestSalesOrder:
+    @pytest.mark.unit
     def test_sales_order_creation(self, sales_order):
         assert sales_order.customer.name == "Test Customer"
 
@@ -258,6 +266,7 @@ class TestSalesOrder:
         resp2 = client.get(url, {"q": str(sales_order.pk), "status": ""})
         assert sales_order.order_number in resp2.content.decode()
 
+    @pytest.mark.unit
     def test_sales_order_properties(self, sales_order, sales_order_line):
         assert sales_order.order_number.startswith("SO")
         assert sales_order.date == sales_order.created_at
@@ -273,6 +282,7 @@ class TestSalesOrder:
         assert sales_order.status == "Closed"
         assert sales_order.total_amount == expected
 
+    @pytest.mark.unit
     def test_remaining_and_order_values(self, sales_order_line):
         so = sales_order_line.sales_order
         assert so.remaining_total == so.total_amount
@@ -513,6 +523,7 @@ class TestSalesOrder:
 
 
 @pytest.mark.django_db
+@pytest.mark.unit
 class TestSalesOrderLine:
     def test_sales_order_line_creation(self, sales_order_line):
         assert sales_order_line.quantity == 5
@@ -538,6 +549,7 @@ class TestSalesOrderLine:
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestShipping:
     def test_ship_view_marks_lines(self, client, sales_order_line):
         from django.contrib.auth.models import User
@@ -662,6 +674,7 @@ class TestShipping:
 
 
 @pytest.mark.django_db
+@pytest.mark.integration
 class TestPickConfirmation:
     """Tests for the scan-to-pick confirmation workflow."""
 
@@ -848,6 +861,7 @@ class TestPickConfirmation:
         line.refresh_from_db()
         assert line.confirmed is False
 
+    @pytest.mark.unit
     def test_all_confirmed_property(self, sales_order_line):
 
         pick_list, line = self._make_pick_list(sales_order_line)
