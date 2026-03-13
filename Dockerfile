@@ -14,9 +14,18 @@ RUN apt-get update \
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
+# ── TypeScript build stage ──
+FROM node:22-slim AS ts-build
+WORKDIR /build
+COPY package.json package-lock.json tsconfig.json ./
+RUN npm ci
+COPY static/ts/ static/ts/
+RUN npx tsc
+
 FROM base AS production
 
 COPY . /app
+COPY --from=ts-build /build/static/js/ /app/static/js/
 
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh

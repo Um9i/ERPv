@@ -29,6 +29,13 @@ jobs:
       - name: Lint (ruff)
         run: ruff check .
 
+      - name: TypeScript type check
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx tsc --noEmit
+
       - name: Lint migrations
         run: python manage.py lintmigrations --no-cache --ignore-sqlmigrate-errors --exclude-apps silk
         env:

@@ -1,0 +1,14 @@
+{
+  "name": "erpv",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bootstrap": "^5.2.10",
+    "chart.js": "^4.5.1",
+    "typescript": "^5.9.3"
+  }
+}

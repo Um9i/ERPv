@@ -1,7 +1,7 @@
 PYTHON = .venv/bin/python
 PYTEST = .venv/bin/pytest
 
-.PHONY: dev prod test test-coverage lint format check mypy audit migrate shell clean lint-migrations seed build
+.PHONY: dev prod test test-coverage lint format check mypy audit migrate shell clean lint-migrations seed build tsc
 
 dev:
 	podman compose up --build
@@ -31,6 +31,7 @@ format:
 check:
 	$(PYTHON) -m ruff format --check .
 	$(PYTHON) -m ruff check .
+	npx tsc --noEmit
 
 MYPY_TARGETS = config/ dashboards/ finance/ inventory/ main/ procurement/ production/ sales/
 
@@ -54,3 +55,6 @@ clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name '*.pyc' -delete 2>/dev/null || true
 	rm -rf htmlcov .coverage .mypy_cache .ruff_cache .pytest_cache
+
+tsc:
+	npx tsc
