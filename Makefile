@@ -19,7 +19,7 @@ seed:
 	DEBUG=True SECRETKEY=test-secret $(PYTHON) manage.py seeddata
 
 build:
-	podman build -t erpv .
+	podman build --format docker -t erpv .
 
 lint:
 	$(PYTHON) -m ruff check .
