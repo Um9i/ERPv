@@ -13,5 +13,5 @@ venv
 .vscode
 node_modules
 static/js/*.js
-TODO.md
+*TODO*.md
 zDoc
