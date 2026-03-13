@@ -4,7 +4,7 @@ services:
     restart: always
     env_file: .env
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     networks:
       - erpv_net
     deploy:
