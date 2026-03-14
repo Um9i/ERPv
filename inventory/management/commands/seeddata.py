@@ -329,22 +329,22 @@ class Command(BaseCommand):
 
         num_boms = min(15, len(products))
         sample_prods = random.sample(products, num_boms)
-        bom_product_ids: set[int] = set()
+        bom_product_ids: set[int] = {p.pk for p in sample_prods}
         bom_items_to_create = []
         # Track BOM structure in memory for production ledger cost calc
         bom_component_map: dict[
             int, list[tuple[int, int]]
         ] = {}  # product_id → [(comp_id, qty)]
         bom_products_to_reprice: list[tuple] = []  # (prod, material_cost, prod_cost)
+        # Only non-BOM products with a supplier cost can be components
+        eligible_components = [
+            p for p in products if p.pk not in bom_product_ids and p.pk in cheapest_cost
+        ]
         for prod in sample_prods:
-            bom_product_ids.add(prod.pk)
-            components = [
-                p
-                for p in products
-                if p.pk not in bom_product_ids and p != prod and p.pk in cheapest_cost
-            ]
-            n_comps = random.randint(2, min(4, len(components)))
-            chosen = random.sample(components, n_comps)
+            if len(eligible_components) < 2:
+                break
+            n_comps = random.randint(2, min(4, len(eligible_components)))
+            chosen = random.sample(eligible_components, n_comps)
             comp_list = []
             material_cost = Decimal("0")
             for comp in chosen:

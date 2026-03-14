@@ -66,8 +66,8 @@ class Product(models.Model):
         """Return a per-unit cost for this product.
 
         Priority:
-        1. Cheapest supplier cost if any supplier products exist.
-        2. If a bill of materials exists, compute cost as sum(component_cost * quantity).
+        1. If a bill of materials exists, compute cost from components + production cost.
+        2. Cheapest supplier cost if any supplier products exist.
         3. Otherwise zero.
         """
         from collections import defaultdict
@@ -75,18 +75,19 @@ class Product(models.Model):
         from procurement.models import SupplierProduct
         from production.models import BillOfMaterials, BOMItem
 
-        # cheapest supplier cost for this product
-        first = (
-            SupplierProduct.objects.filter(product=self)
-            .order_by("cost")
-            .values_list("cost", flat=True)
-            .first()
-        )
-        if first is not None:
-            return first
+        # BOM cost roll-up takes priority (manufactured product)
+        has_bom = BillOfMaterials.objects.filter(product=self).exists()
 
-        # no supplier — try BOM cost roll-up
-        if not BillOfMaterials.objects.filter(product=self).exists():
+        if not has_bom:
+            # no BOM — use cheapest supplier cost
+            first = (
+                SupplierProduct.objects.filter(product=self)
+                .order_by("cost")
+                .values_list("cost", flat=True)
+                .first()
+            )
+            if first is not None:
+                return first
             return 0
 
         # collect all product IDs in the BOM tree iteratively
@@ -124,7 +125,13 @@ class Product(models.Model):
         )
 
         # bottom-up cost computation
-        costs = {pid: supplier_costs[pid] for pid in all_ids if pid in supplier_costs}
+        # Products with BOMs must be computed from components, not supplier cost
+        bom_pids = set(prod_costs.keys())
+        costs = {
+            pid: supplier_costs[pid]
+            for pid in all_ids
+            if pid in supplier_costs and pid not in bom_pids
+        }
         changed = True
         while changed:
             changed = False
