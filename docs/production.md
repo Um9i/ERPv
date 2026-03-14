@@ -139,6 +139,20 @@ The detail page combines:
 
 Rendered as metric cards with links to the appropriate lists.
 
+### Production Schedule (Dashboards App)
+
+`ProductionScheduleView` provides a day-based production schedule driven by
+`Production.due_date`, consistent with the Shipping and Delivery Schedule
+dashboards:
+* Week navigation bar with daily links and job counts for non-closed jobs
+* Jump to Today button when viewing a different date
+* Overdue production jobs section (red border, critical) for non-closed jobs
+  past their due date
+* Production Jobs table for the selected date showing Job #, Product, Status,
+  Quantity, and Remaining
+* HTMX partial updates every 30 seconds via `_production_metrics.html`
+* 5-minute cache with `vary_on_headers("HX-Request")`
+
 ## Key Features
 
 * Fully atomic `Production.save()` covering allocation, receiving, ledger,

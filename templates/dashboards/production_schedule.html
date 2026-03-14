@@ -1,9 +1,9 @@
 {% extends "dashboard_base.html" %}
 {% load currency_tags %}
 
-{% block dashboard_icon %}bi-truck{% endblock %}
+{% block dashboard_icon %}bi-gear{% endblock %}
 {% block dashboard_icon_color %}page-header-icon--purple{% endblock %}
-{% block dashboard_title %}Shipping Schedule{% endblock %}
+{% block dashboard_title %}Production Schedule{% endblock %}
 
 {% block dashboard_links %}
 <a href="{% url 'dashboards:dashboard-home' %}"><i class="bi bi-speedometer2"></i>Dashboards</a>
@@ -14,13 +14,12 @@
 
 {% block dashboard_search %}
 <div class="list-filter mt-3">
-  <form method="get" action="{% url 'sales:sales-order-list' %}">
-    <input type="hidden" name="status" value="shipped">
+  <form method="get" action="{% url 'production:production-list' %}">
     <div class="input-group">
       <span class="input-group-text bg-light border-end-0">
         <i class="bi bi-search text-muted"></i>
       </span>
-      <input type="search" name="q" class="form-control border-start-0" placeholder="Search shipped orders…" autocomplete="off">
+      <input type="search" name="q" class="form-control border-start-0" placeholder="Search production jobs…" autocomplete="off">
       <button type="submit" class="btn btn-primary">Search</button>
     </div>
   </form>
@@ -28,5 +27,5 @@
 {% endblock %}
 
 {% block dashboard_metrics %}
-{% include "dashboards/_shipping_metrics.html" %}
+{% include "dashboards/_production_metrics.html" %}
 {% endblock %}

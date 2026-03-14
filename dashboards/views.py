@@ -8,6 +8,7 @@ from django.views.generic import TemplateView
 
 from main.mixins import HtmxPartialMixin
 from procurement.models import PurchaseOrder
+from production.models import Production
 from sales.models import SalesOrder
 
 
@@ -147,5 +148,65 @@ class DeliveryScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
             .select_related("supplier")
             .distinct()
         )
+
+        return context
+
+
+@method_decorator(cache_page(60 * 5), name="dispatch")
+@method_decorator(vary_on_headers("HX-Request"), name="dispatch")
+class ProductionScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
+    """Day-based production schedule driven by Production.due_date."""
+
+    template_name = "dashboards/production_schedule.html"
+    partial_template_name = "dashboards/_production_metrics.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        today = date.today()
+        raw = self.request.GET.get("date")
+        if raw:
+            try:
+                current = date.fromisoformat(raw)
+            except ValueError:
+                current = today
+        else:
+            current = today
+
+        context["current_date"] = current
+        context["today"] = today
+        context["prev_date"] = current - timedelta(days=1)
+        context["next_date"] = current + timedelta(days=1)
+        context["week_start"] = current - timedelta(days=current.weekday())
+
+        # production jobs due on this date (exclude closed jobs)
+        context["jobs"] = Production.objects.filter(
+            due_date=current,
+            closed=False,
+        ).select_related("product")
+
+        # week overview
+        week_start = context["week_start"]
+        week_dates = [week_start + timedelta(days=i) for i in range(7)]
+        week_data = []
+        for d in week_dates:
+            count = Production.objects.filter(
+                due_date=d,
+                closed=False,
+            ).count()
+            week_data.append(
+                {
+                    "date": d,
+                    "count": count,
+                    "is_today": d == today,
+                    "is_current": d == current,
+                }
+            )
+        context["week_data"] = week_data
+
+        # overdue jobs
+        context["overdue_jobs"] = Production.objects.filter(
+            due_date__lt=today,
+            closed=False,
+        ).select_related("product")
 
         return context
