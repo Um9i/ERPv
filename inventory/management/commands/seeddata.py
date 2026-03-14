@@ -13,21 +13,26 @@ from faker import Faker
 from finance.services import refresh_finance_dashboard_cache
 from inventory.models import (
     Inventory,
+    InventoryAdjust,
     InventoryLedger,
     InventoryLocation,
     Location,
+    Product,
     ProductionAllocated,
+    StockTransfer,
 )
 from main.factories import CustomerFactory, ProductFactory, SupplierFactory
 from procurement.models import (
     PurchaseLedger,
     PurchaseOrder,
     PurchaseOrderLine,
+    Supplier,
     SupplierContact,
     SupplierProduct,
 )
 from production.models import BillOfMaterials, BOMItem, Production, ProductionLedger
 from sales.models import (
+    Customer,
     CustomerContact,
     CustomerProduct,
     SalesLedger,
@@ -128,6 +133,34 @@ class Command(BaseCommand):
     def _seed(
         self, start_date, now, total_days, num_customers, num_suppliers, num_products
     ):
+        # ── 0. Flush existing seed data ──────────────────────────
+        self._log("Clearing existing data...")
+
+        SalesLedger.objects.all().delete()
+        SalesOrderLine.objects.all().delete()
+        SalesOrder.objects.all().delete()
+        PurchaseLedger.objects.all().delete()
+        PurchaseOrderLine.objects.all().delete()
+        PurchaseOrder.objects.all().delete()
+        ProductionLedger.objects.all().delete()
+        Production.objects.all().delete()
+        BOMItem.objects.all().delete()
+        BillOfMaterials.objects.all().delete()
+        InventoryLedger.objects.all().delete()
+        StockTransfer.objects.all().delete()
+        InventoryAdjust.objects.all().delete()
+        InventoryLocation.objects.all().delete()
+        ProductionAllocated.objects.all().delete()
+        Inventory.objects.all().delete()
+        SupplierProduct.objects.all().delete()
+        SupplierContact.objects.all().delete()
+        CustomerProduct.objects.all().delete()
+        CustomerContact.objects.all().delete()
+        Product.objects.all().delete()
+        Customer.objects.all().delete()
+        Supplier.objects.all().delete()
+        Location.objects.all().delete()
+
         # ── 1. Warehouse locations ───────────────────────────────
         leaf_locations = self._create_locations()
 
@@ -140,7 +173,6 @@ class Command(BaseCommand):
         for prod in catalogue_products:
             prod.sale_price = Decimal(str(round(random.uniform(10, 600), 2)))
             prod.catalogue_item = True
-        from inventory.models import Product
 
         Product.objects.bulk_update(
             catalogue_products, ["sale_price", "catalogue_item"], batch_size=BATCH_SIZE
