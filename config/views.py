@@ -132,6 +132,21 @@ class PairedInstanceCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateVi
         return response
 
 
+class PairedInstanceUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = PairedInstance
+    form_class = PairedInstanceForm
+    template_name = "config/paired_instance_form.html"
+    success_url = reverse_lazy("config:paired-instance-list")
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, f'Paired instance "{self.object.name}" updated.')
+        return response
+
+
 class PairedInstanceDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = PairedInstance
     template_name = "config/paired_instance_delete.html"

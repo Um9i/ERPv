@@ -43,6 +43,11 @@ urlpatterns = [
         name="paired-instance-create",
     ),
     path(
+        "paired/<int:pk>/edit/",
+        views.PairedInstanceUpdateView.as_view(),
+        name="paired-instance-edit",
+    ),
+    path(
         "paired/<int:pk>/delete/",
         views.PairedInstanceDeleteView.as_view(),
         name="paired-instance-delete",

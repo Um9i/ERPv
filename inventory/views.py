@@ -79,10 +79,16 @@ class ProductUpdateView(LoginRequiredMixin, UpdateView):
             and product.sale_price is not None
             and product.sale_price != old_price
         ):
-            paired_instances = PairedInstance.objects.filter(
-                supplier__supplier_products__product=product,
-                api_key__gt="",
-            ).distinct()
+            from django.db.models import Q
+
+            paired_instances = (
+                PairedInstance.objects.filter(api_key__gt="")
+                .filter(
+                    Q(supplier__supplier_products__product=product)
+                    | Q(customer__isnull=False)
+                )
+                .distinct()
+            )
 
             failed = []
             for pi in paired_instances:
