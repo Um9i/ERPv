@@ -15,6 +15,7 @@ from .views import (
     CustomerProductUpdateView,
     CustomerSalesOrderListView,
     CustomerUpdateView,
+    NotifyPurchaseOrderView,
     PickConfirmResetView,
     PickConfirmView,
     PickListCreateView,
@@ -141,5 +142,10 @@ urlpatterns = [
         "products/<int:pk>/qrcode/",
         ProductQRCodeView.as_view(),
         name="product-qrcode",
+    ),
+    path(
+        "api/notify/purchase-order/",
+        NotifyPurchaseOrderView.as_view(),
+        name="api-notify-purchase-order",
     ),
 ]

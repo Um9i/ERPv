@@ -30,7 +30,7 @@ ERPv is a full-featured ERP web application designed for small-to-medium manufac
 
 📊 **Dashboards** — Shipping and delivery schedules with day/week navigation, overdue order tracking, and per-module dashboards with search and KPI cards.
 
-🔗 **Multi-site Pairing** — Connect multiple ERPv instances together with API-key authentication, browse remote catalogues, and automatically import suppliers and customers across sites.
+🔗 **Multi-site Pairing** — Connect multiple ERPv instances together with API-key authentication, browse remote catalogues, and automatically import suppliers and customers across sites. Purchase orders created against a paired supplier are automatically forwarded to the remote instance, which auto-creates a matching sales order and notifies the supplier.
 
 🔔 **Notifications** — In-app notification centre with a navbar bell badge, low stock alerts, overdue order warnings, and order status change notifications. Optional email delivery of alert digests. Run `check_notifications` periodically for proactive alerts.
 

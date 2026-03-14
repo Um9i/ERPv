@@ -93,6 +93,19 @@ reporting.
 * `pending_po_by_product()` – returns a dict of product ID → remaining
   quantity on open purchase orders.
 
+### Purchase Order → Remote Supplier Notification
+
+* When a purchase order is created and the PO's supplier is linked to a
+  `PairedInstance` with an active API key, the system automatically sends the
+  PO details to the remote supplier instance via
+  `POST /sales/api/notify/purchase-order/`.
+* The payload includes the order number, due date, and line items (product
+  names and quantities).
+* The remote instance auto-creates a matching `SalesOrder` and notifies its
+  local users about the incoming order.
+* This is a fire-and-forget operation — failures are logged but do not block
+  the local PO creation.
+
 ## Notes
 
 * All forms and listings require authentication.

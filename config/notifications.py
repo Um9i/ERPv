@@ -83,3 +83,47 @@ def _notify_remote_supplier_product_cost(paired_instance, product_name, cost) ->
             extra={"url": paired_instance.url, "product": product_name},
         )
         return False
+
+
+def _notify_remote_purchase_order(paired_instance, purchase_order) -> bool:
+    """Tell the remote supplier instance to auto-create a matching sales order.
+
+    Sends the PO details (due date and line items) so the supplier can
+    create a corresponding SalesOrder on their side.
+
+    Returns True on success, False on any failure (fire-and-forget).
+    """
+    lines = []
+    for line in purchase_order.purchase_order_lines.select_related("product__product"):
+        lines.append(
+            {
+                "product_name": line.product.product.name,
+                "quantity": line.quantity,
+            }
+        )
+
+    payload = {
+        "order_number": purchase_order.order_number,
+        "due_date": (
+            purchase_order.due_date.isoformat() if purchase_order.due_date else None
+        ),
+        "lines": lines,
+    }
+    try:
+        resp = httpx.post(
+            f"{paired_instance.url.rstrip('/')}/sales/api/notify/purchase-order/",
+            json=payload,
+            headers={"Authorization": f"Bearer {paired_instance.api_key}"},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        return True
+    except Exception:
+        logger.warning(
+            "notify_remote_purchase_order_failed",
+            extra={
+                "url": paired_instance.url,
+                "order": purchase_order.order_number,
+            },
+        )
+        return False

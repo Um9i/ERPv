@@ -1,13 +1,16 @@
 import csv
+import hmac
 import logging
 
 from django import forms
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.forms.models import inlineformset_factory
-from django.http import HttpResponse, HttpResponseNotAllowed
+from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
+from django.utils.decorators import method_decorator
 from django.views import View
+from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -938,3 +941,120 @@ class SalesOrderExportView(LoginRequiredMixin, View):
                 ]
             )
         return response
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class NotifyPurchaseOrderView(View):
+    """Inbound: a customer's paired instance sends a PO for us to fulfil.
+
+    Auto-creates a matching SalesOrder + lines and notifies local users.
+    """
+
+    def post(self, request, *args, **kwargs):
+        import json
+        from datetime import date as date_cls
+
+        from config.models import Notification, PairedInstance
+        from config.signals import _notify_all_users
+        from inventory.models import Product
+
+        auth = request.META.get("HTTP_AUTHORIZATION", "")
+        if not auth.startswith("Bearer "):
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+        key = auth[len("Bearer ") :]
+        paired_instance = next(
+            (
+                pi
+                for pi in PairedInstance.objects.all()
+                if hmac.compare_digest(key, pi.our_key)
+            ),
+            None,
+        )
+        if paired_instance is None:
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+
+        if not paired_instance.customer:
+            return JsonResponse(
+                {"error": "Customer not linked to this paired instance"}, status=400
+            )
+
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        lines_data = data.get("lines", [])
+        if not lines_data:
+            return JsonResponse({"error": "No line items provided"}, status=400)
+
+        due_date_raw = data.get("due_date")
+        ship_by_date = None
+        if due_date_raw:
+            try:
+                ship_by_date = date_cls.fromisoformat(due_date_raw)
+            except (ValueError, TypeError):
+                pass
+
+        customer = paired_instance.customer
+        remote_order_number = data.get("order_number", "")
+
+        # Build line items, skipping any products we can't resolve.
+        resolved_lines = []
+        skipped = []
+        for item in lines_data:
+            product_name = (item.get("product_name") or "").strip()
+            quantity = item.get("quantity", 0)
+            if not product_name or not quantity:
+                continue
+            product = Product.objects.filter(name__iexact=product_name).first()
+            if not product:
+                skipped.append(product_name)
+                continue
+            cp = CustomerProduct.objects.filter(
+                customer=customer, product=product
+            ).first()
+            if not cp:
+                skipped.append(product_name)
+                continue
+            resolved_lines.append((cp, int(quantity)))
+
+        if not resolved_lines:
+            return JsonResponse(
+                {"error": "No matching products found for any line item"}, status=400
+            )
+
+        so = SalesOrder.objects.create(
+            customer=customer,
+            ship_by_date=ship_by_date,
+        )
+        for cp, qty in resolved_lines:
+            SalesOrderLine.objects.create(
+                sales_order=so,
+                product=cp,
+                quantity=qty,
+            )
+        so.update_cached_total()
+
+        # Notify local users about the new incoming order.
+        line_summary = ", ".join(
+            f"{qty} \u00d7 {cp.product.name}" for cp, qty in resolved_lines
+        )
+        skip_note = f" (skipped: {', '.join(skipped)})" if skipped else ""
+        _notify_all_users(
+            category=Notification.Category.ORDER_STATUS,
+            level=Notification.Level.INFO,
+            title=f"New order from {paired_instance.name}",
+            message=(
+                f"{so.order_number} auto-created from {remote_order_number}: "
+                f"{line_summary}.{skip_note}"
+            ),
+            link=reverse_lazy("sales:sales-order-detail", args=[so.pk]),
+        )
+
+        return JsonResponse(
+            {
+                "status": "ok",
+                "sales_order": so.order_number,
+                "skipped_products": skipped,
+            }
+        )

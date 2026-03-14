@@ -120,4 +120,17 @@ redirected to login.
   notification links directly to the production job creation form
   pre-populated with the product and shortage quantity.
 
+## API Endpoints
+
+* **NotifyPurchaseOrderView** — CSRF-exempt POST endpoint at
+  `/sales/api/notify/purchase-order/` for remote paired instances (acting as
+  customers) to push purchase orders.  Validates a Bearer token against
+  `PairedInstance.our_key`, expects JSON with `order_number`, `due_date`, and
+  `lines` (each with `product_name` and `quantity`).  Auto-creates a matching
+  `SalesOrder` with `SalesOrderLine` entries for every product that can be
+  resolved via the paired customer's `CustomerProduct` records.  Skipped
+  products (unrecognised names or missing `CustomerProduct` links) are
+  reported in the response.  An `ORDER_STATUS` notification is created for
+  all active users listing the new order and its line items.
+
 ---
