@@ -394,23 +394,28 @@ class Command(BaseCommand):
                 # ship_by_date: 3-30 days from order date
                 ship_by = (current + timedelta(days=random.randint(3, 30))).date()
                 ship_by_passed = ship_by < now.date()
+                # Decide completion at the ORDER level for past-due
+                if ship_by_passed:
+                    order_complete = random.random() < 0.97
+                else:
+                    order_complete = None  # decide per-line
                 lines = []
                 for _ in range(random.randint(1, 4)):
                     cp = random.choice(cp_list)
                     qty = random.randint(1, 20)
                     pid = cp.product_id
                     current_stock = inv_quantities.get(pid, 0)
-                    # If ship_by has passed, almost always complete (few overdue)
-                    if ship_by_passed:
-                        complete_chance = 0.97
-                    elif (now - current).days > 14:
-                        complete_chance = 0.7
-                    else:
-                        complete_chance = 0.2
-                    if current_stock >= qty and random.random() < complete_chance:
+                    if order_complete is True:
+                        # Ensure stock is available for past-due completion
+                        if current_stock < qty:
+                            inv_quantities[pid] = qty
+                            current_stock = qty
                         complete = True
-                    else:
+                    elif order_complete is False:
                         complete = False
+                    else:
+                        chance = 0.7 if (now - current).days > 14 else 0.2
+                        complete = current_stock >= qty and random.random() < chance
                     shipped = qty if complete else random.randint(0, qty - 1)
                     if complete:
                         inv_quantities[pid] = current_stock - qty
@@ -425,18 +430,22 @@ class Command(BaseCommand):
                     continue
                 due = (current + timedelta(days=random.randint(7, 45))).date()
                 due_passed = due < now.date()
+                # Decide at the ORDER level for past-due
+                if due_passed:
+                    order_complete = random.random() < 0.97
+                else:
+                    order_complete = None
                 po_lines: list[tuple] = []
                 for _ in range(random.randint(1, 4)):
                     sp = random.choice(sp_list)
                     qty = random.randint(5, 100)
-                    # If due date has passed, almost always complete
-                    if due_passed:
-                        complete_chance = 0.97
-                    elif (now - current).days > 14:
-                        complete_chance = 0.7
+                    if order_complete is True:
+                        complete = True
+                    elif order_complete is False:
+                        complete = False
                     else:
-                        complete_chance = 0.2
-                    complete = random.random() < complete_chance
+                        chance = 0.7 if (now - current).days > 14 else 0.2
+                        complete = random.random() < chance
                     received = qty if complete else random.randint(0, qty - 1)
                     store_confirmed = complete and random.random() < 0.95
                     if complete:
@@ -452,11 +461,12 @@ class Command(BaseCommand):
                     due = (current + timedelta(days=random.randint(5, 30))).date()
                     due_passed = due < now.date()
                     qty = random.randint(5, 50)
-                    # If due date passed, almost always fully received
                     if due_passed:
-                        received = (
-                            qty if random.random() < 0.95 else random.randint(0, qty)
-                        )
+                        # 97% of past-due jobs are fully complete
+                        if random.random() < 0.97:
+                            received = qty
+                        else:
+                            received = random.randint(0, qty - 1)
                     elif (now - current).days > 14:
                         received = (
                             qty if random.random() < 0.6 else random.randint(0, qty)
