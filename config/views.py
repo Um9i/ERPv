@@ -121,7 +121,10 @@ class PairedInstanceCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateVi
         self.request.session["new_paired_key"] = self.object.our_key
         logger.info(
             "paired_instance_created",
-            extra={"name": self.object.name, "user": self.request.user.get_username()},
+            extra={
+                "instance_name": self.object.name,
+                "user": self.request.user.get_username(),
+            },
         )
         messages.success(
             self.request, f'Paired instance "{self.object.name}" created successfully.'
@@ -572,7 +575,10 @@ class WebhookEndpointCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateV
         self.request.session["new_webhook_secret"] = self.object.secret
         logger.info(
             "webhook_endpoint_created",
-            extra={"name": self.object.name, "user": self.request.user.get_username()},
+            extra={
+                "endpoint_name": self.object.name,
+                "user": self.request.user.get_username(),
+            },
         )
         messages.success(
             self.request,

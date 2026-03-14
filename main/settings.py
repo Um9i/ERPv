@@ -31,7 +31,11 @@ if not _secret and not DEBUG:
     raise RuntimeError("SECRETKEY environment variable is required when DEBUG is off.")
 SECRET_KEY = _secret or "insecure-dev-key-do-not-use-in-production"
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS = [
+    h.strip().strip("'\"")
+    for h in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if h.strip()
+]
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"
@@ -54,6 +58,13 @@ CORS_ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 CORS_URLS_REGEX = r"^/(?:config|inventory|procurement)/api/.*$"
+
+# CSRF — trusted origins for cross-site POST requests (ngrok, paired instances)
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
 
 # ── Email ──────────────────────────────────────────────────────────────
 EMAIL_BACKEND = os.getenv(

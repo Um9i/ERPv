@@ -1,7 +1,7 @@
 PYTHON = .venv/bin/python
 PYTEST = .venv/bin/pytest
 
-.PHONY: dev prod test test-coverage lint format check mypy audit migrate shell clean lint-migrations seed build tsc
+.PHONY: dev prod test test-coverage lint format check mypy audit migrate shell clean lint-migrations seed build tsc ngrok
 
 dev:
 	podman compose up --build
@@ -58,3 +58,6 @@ clean:
 
 tsc:
 	npx tsc
+
+ngrok:
+	$(PYTHON) manage.py runngrok
