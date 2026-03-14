@@ -26,6 +26,7 @@ class LoginRequiredMiddleware:
             "/healthz/",
             "/inventory/api/",
             "/procurement/api/",
+            "/sales/api/",
         ]
 
     def __call__(self, request):
