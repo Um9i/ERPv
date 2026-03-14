@@ -28,17 +28,6 @@
                     </a>
                 </li>
                 {% endif %}
-                <li class="nav-item">
-                    <span class="nav-user-badge">
-                        <i class="bi bi-person-circle me-1"></i>{{ user.username }}
-                    </span>
-                </li>
-                <li class="nav-item">
-                    <form method="post" action="{% url 'logout' %}">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-nav-logout">Sign out</button>
-                    </form>
-                </li>
             </ul>
         </div>
     </div>

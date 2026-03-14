@@ -5,4 +5,27 @@
             {% include "includes/sidebar_links.html" %}
         </ul>
     </div>
+    {% if user.is_staff %}
+    <div class="app-sidebar-settings mb-2">
+        <a href="{% url 'config:company-config' %}" class="nav-link sidebar-link{% if request.resolver_match.app_name == 'config' %} active{% endif %}"
+           {% if request.resolver_match.app_name == 'config' %}aria-current="page"{% endif %}>
+            <span class="sidebar-icon sidebar-icon--rose"><i class="bi bi-sliders" aria-hidden="true"></i></span>
+            <span class="sidebar-label">Settings</span>
+        </a>
+    </div>
+    {% endif %}
+    {% if user.is_authenticated %}
+    <div class="app-sidebar-footer">
+        <div class="sidebar-user">
+            <i class="bi bi-person-circle"></i>
+            <span class="sidebar-user-name">{{ user.username }}</span>
+            <form method="post" action="{% url 'logout' %}" class="ms-auto">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sidebar-logout" title="Sign out">
+                    <i class="bi bi-power"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
 </aside>

@@ -33,6 +33,7 @@
         <span class="sidebar-label">Finance</span>
     </a>
 </li>
+<li class="sidebar-spacer" aria-hidden="true"></li>
 <li class="nav-item">
     <a href="{% url 'dashboards:dashboard-home' %}" class="nav-link sidebar-link{% if request.resolver_match.app_name == 'dashboards' %} active{% endif %}"
        {% if request.resolver_match.app_name == 'dashboards' %}aria-current="page"{% endif %}>
@@ -40,12 +41,3 @@
         <span class="sidebar-label">Dashboards</span>
     </a>
 </li>
-{% if request.user.is_staff %}
-<li class="nav-item">
-    <a href="{% url 'config:company-config' %}" class="nav-link sidebar-link{% if request.resolver_match.app_name == 'config' %} active{% endif %}"
-       {% if request.resolver_match.app_name == 'config' %}aria-current="page"{% endif %}>
-        <span class="sidebar-icon sidebar-icon--rose"><i class="bi bi-sliders" aria-hidden="true"></i></span>
-        <span class="sidebar-label">Settings</span>
-    </a>
-</li>
-{% endif %}
