@@ -2,7 +2,6 @@ from datetime import date, timedelta
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_headers
 from django.views.generic import TemplateView
 
@@ -16,7 +15,6 @@ class DashboardHomeView(LoginRequiredMixin, TemplateView):
     template_name = "dashboards/home.html"
 
 
-@method_decorator(cache_page(60 * 5), name="dispatch")
 @method_decorator(vary_on_headers("HX-Request"), name="dispatch")
 class ShippingScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
     """Day-based shipping schedule driven by SalesOrder.ship_by_date."""
@@ -90,7 +88,6 @@ class ShippingScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
         return context
 
 
-@method_decorator(cache_page(60 * 5), name="dispatch")
 @method_decorator(vary_on_headers("HX-Request"), name="dispatch")
 class DeliveryScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
     """Day-based delivery schedule driven by PurchaseOrder.due_date."""
@@ -116,11 +113,15 @@ class DeliveryScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
         context["next_date"] = current + timedelta(days=1)
         context["week_start"] = current - timedelta(days=current.weekday())
 
-        # orders due on this date
+        # orders due on this date (exclude closed orders)
         context["orders"] = (
-            PurchaseOrder.objects.filter(due_date=current)
+            PurchaseOrder.objects.filter(
+                due_date=current,
+                purchase_order_lines__complete=False,
+            )
             .select_related("supplier")
             .prefetch_related("purchase_order_lines__product__product")
+            .distinct()
         )
 
         # week overview
@@ -128,7 +129,14 @@ class DeliveryScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
         week_dates = [week_start + timedelta(days=i) for i in range(7)]
         week_data = []
         for d in week_dates:
-            count = PurchaseOrder.objects.filter(due_date=d).count()
+            count = (
+                PurchaseOrder.objects.filter(
+                    due_date=d,
+                    purchase_order_lines__complete=False,
+                )
+                .distinct()
+                .count()
+            )
             week_data.append(
                 {
                     "date": d,
@@ -152,7 +160,6 @@ class DeliveryScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
         return context
 
 
-@method_decorator(cache_page(60 * 5), name="dispatch")
 @method_decorator(vary_on_headers("HX-Request"), name="dispatch")
 class ProductionScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
     """Day-based production schedule driven by Production.due_date."""

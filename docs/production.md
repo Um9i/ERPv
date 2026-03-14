@@ -169,3 +169,12 @@ dashboards:
 * Bulk N+1 query mitigation on the production list view
 * Dashboard with producible-item suggestions and due-date awareness
 * All views require authentication
+
+## Notifications
+
+* **Material shortage on job creation** — when a production job is created
+  and any BOM component has insufficient inventory for the job quantity, all
+  active users receive a `LOW_STOCK` / `WARNING` notification.  The message
+  lists each short component with the deficit and whether it can be produced
+  (has its own BOM) or must be procured.  The notification links to the
+  production job detail page.

@@ -110,4 +110,14 @@ redirected to login.
 * Customer creation supports pre-filling from GET parameters and automatic
   linking to a `PairedInstance` for multi-site workflows.
 
+## Notifications
+
+* **Inventory shortage on order creation** — when a sales order line is
+  created and the product's current inventory is insufficient for the ordered
+  quantity, all active users receive a `LOW_STOCK` / `WARNING` notification.
+  The message reports the shortage amount and suggests producing (if the
+  product has a BOM) or procuring the inventory.  If a BOM exists, the
+  notification links directly to the production job creation form
+  pre-populated with the product and shortage quantity.
+
 ---

@@ -190,3 +190,104 @@ def _webhook_production_completed(sender, instance, **kwargs):
                 "quantity": instance.quantity,
             },
         )
+
+
+# ── Inventory shortage notifications ────────────────────────────────
+
+
+@receiver(post_save, sender="sales.SalesOrderLine")
+def _notify_sales_order_shortage(sender, instance, created, **kwargs):
+    """When a sales order line is created, notify if inventory is insufficient."""
+    if not created:
+        return
+
+    from inventory.models import Inventory
+    from production.models import BillOfMaterials
+
+    product = instance.product.product
+    try:
+        inv = Inventory.objects.get(product=product)
+    except Inventory.DoesNotExist:
+        inv = None
+
+    stock = inv.quantity if inv else 0
+    if stock >= instance.quantity:
+        return
+
+    shortage = instance.quantity - stock
+    so = instance.sales_order
+    has_bom = BillOfMaterials.objects.filter(product=product).exists()
+
+    if has_bom:
+        action = "produce or procure"
+        link = (
+            reverse("production:production-create")
+            + f"?product={product.pk}&quantity={shortage}"
+        )
+    else:
+        action = "procure"
+        link = reverse("procurement:purchase-order-list")
+
+    _notify_all_users(
+        category=Notification.Category.LOW_STOCK,
+        level=Notification.Level.WARNING,
+        title=f"Insufficient stock: {product.name}",
+        message=(
+            f"{so.order_number} requires {instance.quantity} × {product.name} "
+            f"but only {stock} in stock (short {shortage}). "
+            f"Consider creating a job to {action} the remaining inventory."
+        ),
+        link=link,
+    )
+
+
+@receiver(post_save, sender="production.Production")
+def _notify_production_material_shortage(sender, instance, created, **kwargs):
+    """When a production job is created, notify if BOM materials are insufficient."""
+    if not created:
+        return
+
+    from inventory.models import Inventory
+    from production.models import BillOfMaterials, BOMItem
+
+    try:
+        bom = BillOfMaterials.objects.get(product=instance.product)
+    except BillOfMaterials.DoesNotExist:
+        return
+
+    bom_items = BOMItem.objects.filter(bom=bom).select_related("product")
+    inv_map = {
+        inv.product_id: inv.quantity
+        for inv in Inventory.objects.filter(
+            product__in=[item.product for item in bom_items]
+        )
+    }
+
+    shortages = []
+    for item in bom_items:
+        required = item.quantity * instance.quantity
+        available = inv_map.get(item.product_id, 0)
+        if available < required:
+            short = required - available
+            has_sub_bom = BillOfMaterials.objects.filter(product=item.product).exists()
+            shortages.append((item.product, short, has_sub_bom))
+
+    if not shortages:
+        return
+
+    lines = []
+    for product, short, has_sub_bom in shortages:
+        action = "produce or procure" if has_sub_bom else "procure"
+        lines.append(f"  • {product.name}: short {short} (can {action})")
+
+    _notify_all_users(
+        category=Notification.Category.LOW_STOCK,
+        level=Notification.Level.WARNING,
+        title=f"Material shortage: {instance.order_number}",
+        message=(
+            f"Production job {instance.order_number} for "
+            f"{instance.quantity} × {instance.product.name} "
+            f"has insufficient materials:\n" + "\n".join(lines)
+        ),
+        link=reverse("production:production-detail", args=[instance.pk]),
+    )
