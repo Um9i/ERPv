@@ -192,32 +192,6 @@ def _webhook_production_completed(sender, instance, **kwargs):
         )
 
 
-# ── Purchase order → remote supplier ────────────────────────────────
-
-
-@receiver(post_save, sender="procurement.PurchaseOrder")
-def _notify_remote_supplier_purchase_order(sender, instance, created, **kwargs):
-    """When a PO is created, notify the supplier's paired instance."""
-    if not created:
-        return
-    from config.models import PairedInstance
-    from config.notifications import _notify_remote_purchase_order
-
-    paired = PairedInstance.objects.filter(
-        supplier=instance.supplier, api_key__gt=""
-    ).first()
-    if not paired:
-        return
-    if not _notify_remote_purchase_order(paired, instance):
-        logger.warning(
-            "remote_purchase_order_notify_failed",
-            extra={
-                "order": instance.order_number,
-                "supplier": instance.supplier.name,
-            },
-        )
-
-
 # ── Inventory shortage notifications ────────────────────────────────
 
 

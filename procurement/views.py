@@ -569,6 +569,8 @@ class PurchaseOrderCreateView(LoginRequiredMixin, CreateView):
         return context
 
     def form_valid(self, form):
+        from django.contrib import messages as django_messages
+
         context = self.get_context_data(form=form)
         lines_formset = context.get("lines_formset")
         if lines_formset.is_valid():
@@ -586,9 +588,35 @@ class PurchaseOrderCreateView(LoginRequiredMixin, CreateView):
                     "user": self.request.user.get_username(),
                 },
             )
+            # Notify the supplier's paired instance (if linked and active)
+            self._notify_paired_supplier(self.object, self.request, django_messages)
             return super().form_valid(form)
         else:
             return self.form_invalid(form)
+
+    @staticmethod
+    def _notify_paired_supplier(purchase_order, request, django_messages):
+        """Forward the PO to the supplier's paired instance, with toast feedback."""
+        from config.models import PairedInstance
+        from config.notifications import _notify_remote_purchase_order
+
+        paired = PairedInstance.objects.filter(
+            supplier=purchase_order.supplier, api_key__gt=""
+        ).first()
+        if not paired:
+            return
+        if _notify_remote_purchase_order(paired, purchase_order):
+            django_messages.success(
+                request,
+                f"Purchase order {purchase_order.order_number} sent to "
+                f"{paired.name} — a matching sales order has been created.",
+            )
+        else:
+            django_messages.warning(
+                request,
+                f"Could not notify {paired.name} of "
+                f"{purchase_order.order_number} — check connectivity.",
+            )
 
     def get_success_url(self):
         # once saved redirect to the supplier's detail view so the user can
