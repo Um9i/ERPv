@@ -50,6 +50,11 @@ def bom(db, product):
     ProductionAllocated.objects.bulk_create(
         [ProductionAllocated(product=p) for p in comps]
     )
+    # components need a supplier to be valid BOM items
+    sup = Supplier.objects.create(name="bom fixture supplier")
+    SupplierProduct.objects.bulk_create(
+        [SupplierProduct(supplier=sup, product=p, cost=1) for p in comps]
+    )
     # set the main product's inventory to 100 too
     Inventory.objects.filter(product=product).update(quantity=100)
     bom = BillOfMaterials.objects.create(product=product)
@@ -65,6 +70,8 @@ def bom(db, product):
 @pytest.fixture
 def bom_item(db, product, bom):
     comp = _create_product_with_deps(f"component for {product.name}", quantity=100)
+    sup, _ = Supplier.objects.get_or_create(name="bom fixture supplier")
+    SupplierProduct.objects.create(supplier=sup, product=comp, cost=1)
     return BOMItem.objects.create(bom=bom, product=comp, quantity=10)
 
 
