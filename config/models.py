@@ -120,6 +120,7 @@ class Notification(models.Model):
         LOW_STOCK = "low_stock", "Low Stock"
         ORDER_OVERDUE = "order_overdue", "Order Overdue"
         ORDER_STATUS = "order_status", "Order Status Change"
+        PRICE_UPDATE = "price_update", "Price Update"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

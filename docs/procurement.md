@@ -80,7 +80,9 @@ reporting.
   `/procurement/api/notify/supplier-product/` for remote paired instances to
   notify cost updates.  Validates a Bearer token against
   `PairedInstance.our_key`, expects JSON with `product_name` and `cost`, and
-  updates the corresponding `SupplierProduct.cost`.
+  updates the corresponding `SupplierProduct.cost`.  When the cost actually
+  changes, a `PRICE_UPDATE` notification is created for all active users
+  showing the old and new cost and linking to the product detail page.
 
 ## Services
 

@@ -950,8 +950,26 @@ class NotifySupplierProductView(View):
         if not sp:
             return JsonResponse({"error": "SupplierProduct not found"}, status=400)
 
+        old_cost = sp.cost
         sp.cost = cost
         sp.save(update_fields=["cost"])
+
+        if cost != old_cost:
+            from config.models import Notification
+            from config.signals import _notify_all_users
+
+            product = sp.product
+            _notify_all_users(
+                category=Notification.Category.PRICE_UPDATE,
+                level=Notification.Level.INFO,
+                title=f"Price update: {product.name}",
+                message=(
+                    f"{paired_instance.name} updated the cost of "
+                    f"{product.name} from {old_cost} to {cost}."
+                ),
+                link=reverse_lazy("inventory:inventory-detail", args=[product.pk]),
+            )
+
         return JsonResponse({"status": "ok"})
 
 
