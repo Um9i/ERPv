@@ -369,6 +369,8 @@ class Command(BaseCommand):
         ledger_ops: list[tuple[int, int, object]] = []
 
         inv_quantities = {inv.product_id: inv.quantity for inv in inventories}
+        # Record initial quantities for seed ledger entries
+        initial_quantities = dict(inv_quantities)
         all_product_ids = list(inv_quantities.keys())
 
         current = start_date
@@ -435,17 +437,24 @@ class Command(BaseCommand):
                         )
                     else:
                         received = random.randint(0, qty // 2)
+                    # Cap received to what components can actually support
+                    comps = bom_component_map.get(prod_product.pk, [])
+                    if comps and received > 0:
+                        max_producible = min(
+                            inv_quantities.get(comp_id, 0) // comp_qty
+                            for comp_id, comp_qty in comps
+                        )
+                        received = min(received, max(max_producible, 0))
                     complete = received >= qty
                     allocated = True
-                    if complete:
+                    if received > 0:
                         inv_quantities[prod_product.pk] = (
                             inv_quantities.get(prod_product.pk, 0) + received
                         )
-                        comps = bom_component_map.get(prod_product.pk, [])
                         for comp_id, comp_qty in comps:
                             deduction = comp_qty * received
-                            inv_quantities[comp_id] = max(
-                                inv_quantities.get(comp_id, 0) - deduction, 0
+                            inv_quantities[comp_id] = (
+                                inv_quantities.get(comp_id, 0) - deduction
                             )
                     prod_job_list.append(
                         (prod_product, current, due, qty, received, complete, allocated)
@@ -472,11 +481,13 @@ class Command(BaseCommand):
                     line_specs.append((cp, qty))
 
                 if order_complete is True:
-                    # Check if we can fill all lines; if not, create a
-                    # restocking purchase so the books balance.
+                    # Aggregate total demand per product across all lines
+                    # before checking shortfall, to handle duplicate products.
+                    demand_by_product: dict[int, int] = defaultdict(int)
                     for cp, qty in line_specs:
-                        pid = cp.product_id
-                        shortfall = qty - inv_quantities.get(pid, 0)
+                        demand_by_product[cp.product_id] += qty
+                    for pid, total_needed in demand_by_product.items():
+                        shortfall = total_needed - inv_quantities.get(pid, 0)
                         if shortfall > 0:
                             # Find a supplier for this product
                             restock_sp = None
@@ -575,6 +586,8 @@ class Command(BaseCommand):
                 ledger_ops,
                 inv_quantities,
                 bom_component_map,
+                initial_quantities,
+                start_date,
             )
         finally:
             for field, attr, orig in auto_date_fields:
@@ -593,6 +606,35 @@ class Command(BaseCommand):
         if inv_updates:
             Inventory.objects.bulk_update(
                 inv_updates, ["quantity"], batch_size=BATCH_SIZE
+            )
+
+        # ── Sync inventory location quantities ───────────────────
+        self._log("Syncing inventory location quantities...")
+        loc_updates = []
+        for inv in Inventory.objects.prefetch_related("stock_locations").all():
+            locs = list(inv.stock_locations.all())
+            if not locs:
+                continue
+            total_in_locs = sum(loc.quantity for loc in locs)
+            if total_in_locs == 0:
+                continue
+            if inv.quantity == 0:
+                for loc in locs:
+                    loc.quantity = 0
+                    loc_updates.append(loc)
+            elif total_in_locs != inv.quantity:
+                ratio = inv.quantity / total_in_locs
+                remaining = inv.quantity
+                for i, loc in enumerate(locs):
+                    if i == len(locs) - 1:
+                        loc.quantity = max(remaining, 0)
+                    else:
+                        loc.quantity = max(0, int(loc.quantity * ratio))
+                        remaining -= loc.quantity
+                    loc_updates.append(loc)
+        if loc_updates:
+            InventoryLocation.objects.bulk_update(
+                loc_updates, ["quantity"], batch_size=BATCH_SIZE
             )
 
         # ── Rebuild cached totals ────────────────────────────────
@@ -652,6 +694,8 @@ class Command(BaseCommand):
         ledger_ops,
         inv_quantities,
         bom_component_map,
+        initial_quantities,
+        start_date,
     ):
         """Create all orders, lines, and ledger entries with correct dates.
 
@@ -831,7 +875,20 @@ class Command(BaseCommand):
             )
 
         # ── All inventory ledger entries ─────────────────────────
+        # Initial seed entries for starting inventory
         all_inv_ledger = [
+            InventoryLedger(
+                product_id=pid,
+                quantity=init_qty,
+                action=InventoryLedger.Action.SEED,
+                transaction_id=0,
+                date=start_date,
+            )
+            for pid, init_qty in initial_quantities.items()
+            if init_qty > 0
+        ]
+        # Daily random adjustments
+        all_inv_ledger.extend(
             InventoryLedger(
                 product_id=pid,
                 quantity=change,
@@ -840,7 +897,7 @@ class Command(BaseCommand):
                 date=dt,
             )
             for pid, change, dt in ledger_ops
-        ]
+        )
         all_inv_ledger.extend(sales_inv_ledger_objs)
         all_inv_ledger.extend(purchase_inv_ledger_objs)
         all_inv_ledger.extend(prod_inv_ledger_objs)
