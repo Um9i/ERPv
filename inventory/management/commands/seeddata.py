@@ -250,7 +250,7 @@ class Command(BaseCommand):
         self._log("Setting initial inventory quantities...")
         inventories = list(Inventory.objects.all())
         for inv in inventories:
-            inv.quantity = random.randint(20, 300)
+            inv.quantity = random.randint(5, 80)
         Inventory.objects.bulk_update(inventories, ["quantity"], batch_size=BATCH_SIZE)
 
         self._log("Distributing inventory to warehouse locations...")
@@ -380,49 +380,11 @@ class Command(BaseCommand):
 
             weekday = current.weekday()
             is_weekend = weekday >= 5
-            # Fewer orders on weekends, more mid-week
             so_count = random.randint(0, 1) if is_weekend else random.randint(1, 5)
-            po_count = 0 if is_weekend else random.randint(0, 3)
+            po_count = 0 if is_weekend else random.randint(0, 4)
             prod_count = 0 if is_weekend else random.randint(0, 2)
 
-            # Sales orders
-            for _ in range(so_count):
-                cust = random.choice(customers)
-                cp_list = cust_prod_map.get(cust.pk, [])
-                if not cp_list:
-                    continue
-                # ship_by_date: 3-30 days from order date
-                ship_by = (current + timedelta(days=random.randint(3, 30))).date()
-                ship_by_passed = ship_by < now.date()
-                # Decide completion at the ORDER level for past-due
-                if ship_by_passed:
-                    order_complete = random.random() < 0.97
-                else:
-                    order_complete = None  # decide per-line
-                lines = []
-                for _ in range(random.randint(1, 4)):
-                    cp = random.choice(cp_list)
-                    qty = random.randint(1, 20)
-                    pid = cp.product_id
-                    current_stock = inv_quantities.get(pid, 0)
-                    if order_complete is True:
-                        # Ensure stock is available for past-due completion
-                        if current_stock < qty:
-                            inv_quantities[pid] = qty
-                            current_stock = qty
-                        complete = True
-                    elif order_complete is False:
-                        complete = False
-                    else:
-                        chance = 0.7 if (now - current).days > 14 else 0.2
-                        complete = current_stock >= qty and random.random() < chance
-                    shipped = qty if complete else random.randint(0, qty - 1)
-                    if complete:
-                        inv_quantities[pid] = current_stock - qty
-                    lines.append((cp, qty, complete, shipped))
-                so_descriptors.append((cust, current, ship_by, lines))
-
-            # Purchase orders
+            # ── Purchase orders FIRST (stock flows in) ───────────
             for _ in range(po_count):
                 supp = random.choice(suppliers)
                 sp_list = supp_prod_map.get(supp.pk, [])
@@ -430,7 +392,6 @@ class Command(BaseCommand):
                     continue
                 due = (current + timedelta(days=random.randint(7, 45))).date()
                 due_passed = due < now.date()
-                # Decide at the ORDER level for past-due
                 if due_passed:
                     order_complete = random.random() < 0.97
                 else:
@@ -438,7 +399,7 @@ class Command(BaseCommand):
                 po_lines: list[tuple] = []
                 for _ in range(random.randint(1, 4)):
                     sp = random.choice(sp_list)
-                    qty = random.randint(5, 100)
+                    qty = random.randint(10, 100)
                     if order_complete is True:
                         complete = True
                     elif order_complete is False:
@@ -454,7 +415,7 @@ class Command(BaseCommand):
                     po_lines.append((sp, qty, complete, received, store_confirmed))
                 po_descriptors.append((supp, current, due, po_lines))
 
-            # Production jobs
+            # ── Production jobs ──────────────────────────────────
             for _ in range(prod_count):
                 if bom_products:
                     prod_product = random.choice(bom_products)
@@ -462,7 +423,6 @@ class Command(BaseCommand):
                     due_passed = due < now.date()
                     qty = random.randint(5, 50)
                     if due_passed:
-                        # 97% of past-due jobs are fully complete
                         if random.random() < 0.97:
                             received = qty
                         else:
@@ -479,7 +439,6 @@ class Command(BaseCommand):
                         inv_quantities[prod_product.pk] = (
                             inv_quantities.get(prod_product.pk, 0) + received
                         )
-                        # Deduct components
                         comps = bom_component_map.get(prod_product.pk, [])
                         for comp_id, comp_qty in comps:
                             deduction = comp_qty * received
@@ -490,7 +449,84 @@ class Command(BaseCommand):
                         (prod_product, current, due, qty, received, complete, allocated)
                     )
 
-            # Inventory adjustments (small corrections)
+            # ── Sales orders AFTER (stock flows out) ─────────────
+            for _ in range(so_count):
+                cust = random.choice(customers)
+                cp_list = cust_prod_map.get(cust.pk, [])
+                if not cp_list:
+                    continue
+                ship_by = (current + timedelta(days=random.randint(3, 30))).date()
+                ship_by_passed = ship_by < now.date()
+                if ship_by_passed:
+                    order_complete = random.random() < 0.97
+                else:
+                    order_complete = None
+                lines = []
+                # Collect stock needs for past-due orders first
+                line_specs = []
+                for _ in range(random.randint(1, 4)):
+                    cp = random.choice(cp_list)
+                    qty = random.randint(1, 20)
+                    line_specs.append((cp, qty))
+
+                if order_complete is True:
+                    # Check if we can fill all lines; if not, create a
+                    # restocking purchase so the books balance.
+                    for cp, qty in line_specs:
+                        pid = cp.product_id
+                        shortfall = qty - inv_quantities.get(pid, 0)
+                        if shortfall > 0:
+                            # Find a supplier for this product
+                            restock_sp = None
+                            for sp_obj in sp_objs:
+                                if sp_obj.product_id == pid:
+                                    restock_sp = sp_obj
+                                    break
+                            if restock_sp:
+                                restock_qty = shortfall + random.randint(5, 20)
+                                restock_due = (
+                                    current - timedelta(days=random.randint(1, 5))
+                                ).date()
+                                po_descriptors.append(
+                                    (
+                                        restock_sp.supplier,
+                                        current - timedelta(days=random.randint(7, 14)),
+                                        restock_due,
+                                        [
+                                            (
+                                                restock_sp,
+                                                restock_qty,
+                                                True,
+                                                restock_qty,
+                                                True,
+                                            )
+                                        ],
+                                    )
+                                )
+                                inv_quantities[pid] = (
+                                    inv_quantities.get(pid, 0) + restock_qty
+                                )
+                            else:
+                                # No supplier — just inject stock
+                                inv_quantities[pid] = (
+                                    inv_quantities.get(pid, 0) + shortfall
+                                )
+
+                for cp, qty in line_specs:
+                    pid = cp.product_id
+                    current_stock = inv_quantities.get(pid, 0)
+                    if order_complete is True:
+                        complete = True
+                    elif order_complete is False:
+                        complete = False
+                    else:
+                        chance = 0.7 if (now - current).days > 14 else 0.2
+                        complete = current_stock >= qty and random.random() < chance
+                    shipped = qty if complete else random.randint(0, qty - 1)
+                    if complete:
+                        inv_quantities[pid] = current_stock - qty
+                    lines.append((cp, qty, complete, shipped))
+                so_descriptors.append((cust, current, ship_by, lines))
             sample_size = random.randint(0, 2)
             if sample_size > 0 and all_product_ids:
                 for pid in random.sample(
