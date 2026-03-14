@@ -199,6 +199,9 @@ STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static/"]
 if not DEBUG:
     STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
         "staticfiles": {
             "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
         },
