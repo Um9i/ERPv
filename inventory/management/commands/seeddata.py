@@ -277,6 +277,14 @@ class Command(BaseCommand):
 
         # ── 5. Bills of materials ────────────────────────────────
         self._log("Creating bills of materials...")
+
+        # Build cheapest-supplier-cost lookup for realistic BOM costing
+        cheapest_cost: dict[int, float] = {}
+        for sp in SupplierProduct.objects.all():
+            c = float(sp.cost)
+            if sp.product_id not in cheapest_cost or c < cheapest_cost[sp.product_id]:
+                cheapest_cost[sp.product_id] = c
+
         num_boms = min(15, len(products))
         sample_prods = random.sample(products, num_boms)
         bom_product_ids: set[int] = set()
@@ -285,11 +293,8 @@ class Command(BaseCommand):
         bom_component_map: dict[
             int, list[tuple[int, int]]
         ] = {}  # product_id → [(comp_id, qty)]
+        bom_products_to_reprice: list[tuple] = []  # (prod, material_cost, prod_cost)
         for prod in sample_prods:
-            bom = BillOfMaterials.objects.create(
-                product=prod,
-                production_cost=Decimal(str(round(random.uniform(5, 50), 2))),
-            )
             bom_product_ids.add(prod.pk)
             components = [
                 p for p in products if p.pk not in bom_product_ids and p != prod
@@ -297,13 +302,60 @@ class Command(BaseCommand):
             n_comps = random.randint(2, min(4, len(components)))
             chosen = random.sample(components, n_comps)
             comp_list = []
+            material_cost = Decimal("0")
             for comp in chosen:
-                qty = random.randint(1, 5)
-                bom_items_to_create.append(BOMItem(bom=bom, product=comp, quantity=qty))
+                qty = random.randint(1, 3)
+                bom_items_to_create.append(
+                    BOMItem(bom=None, product=comp, quantity=qty)
+                )  # type: ignore[arg-type]
                 comp_list.append((comp.pk, qty))
+                unit = Decimal(str(cheapest_cost.get(comp.pk, 10.0)))
+                material_cost += unit * qty
             bom_component_map[prod.pk] = comp_list
+            # production_cost = 10-25% of material cost (labour + overhead)
+            prod_cost = round(float(material_cost) * random.uniform(0.10, 0.25), 2)
+            bom_products_to_reprice.append((prod, float(material_cost), prod_cost))
+
+        # Create BOMs and back-fill the FK on queued BOMItems
+        bom_idx = 0
+        for prod, material_cost, prod_cost in bom_products_to_reprice:
+            bom = BillOfMaterials.objects.create(
+                product=prod,
+                production_cost=Decimal(str(prod_cost)),
+            )
+            n_items = len(bom_component_map[prod.pk])
+            for i in range(n_items):
+                bom_items_to_create[bom_idx + i].bom = bom
+            bom_idx += n_items
+
+            # Set sale_price so margin is 20-40% above total cost
+            total_cost = material_cost + prod_cost
+            margin = random.uniform(1.20, 1.40)
+            prod.sale_price = Decimal(str(round(total_cost * margin, 2)))
+            prod.catalogue_item = True
+
         BOMItem.objects.bulk_create(bom_items_to_create, batch_size=BATCH_SIZE)
         bom_products = [p for p in products if p.pk in bom_product_ids]
+
+        # Persist repriced BOM products
+        if bom_products:
+            Product.objects.bulk_update(
+                bom_products, ["sale_price", "catalogue_item"], batch_size=BATCH_SIZE
+            )
+
+        # Update customer prices for BOM products to stay consistent
+        bom_prod_sale = {
+            p.pk: float(p.sale_price) for p in bom_products if p.sale_price
+        }
+        cp_updates = []
+        for cp in CustomerProduct.objects.filter(product_id__in=bom_prod_sale):
+            base = bom_prod_sale[cp.product_id]
+            cp.price = Decimal(str(round(base * random.uniform(0.90, 1.10), 2)))
+            cp_updates.append(cp)
+        if cp_updates:
+            CustomerProduct.objects.bulk_update(
+                cp_updates, ["price"], batch_size=BATCH_SIZE
+            )
 
         # ── 6. Plan all daily data in memory ─────────────────────
         self._log("Planning daily orders and ledger entries...")
@@ -341,15 +393,20 @@ class Command(BaseCommand):
                     continue
                 # ship_by_date: 3-30 days from order date
                 ship_by = (current + timedelta(days=random.randint(3, 30))).date()
+                ship_by_passed = ship_by < now.date()
                 lines = []
                 for _ in range(random.randint(1, 4)):
                     cp = random.choice(cp_list)
                     qty = random.randint(1, 20)
                     pid = cp.product_id
                     current_stock = inv_quantities.get(pid, 0)
-                    # Historical orders mostly complete; recent ones more open
-                    days_ago = (now - current).days
-                    complete_chance = 0.85 if days_ago > 30 else 0.3
+                    # If ship_by has passed, almost always complete (few overdue)
+                    if ship_by_passed:
+                        complete_chance = 0.97
+                    elif (now - current).days > 14:
+                        complete_chance = 0.7
+                    else:
+                        complete_chance = 0.2
                     if current_stock >= qty and random.random() < complete_chance:
                         complete = True
                     else:
@@ -367,12 +424,18 @@ class Command(BaseCommand):
                 if not sp_list:
                     continue
                 due = (current + timedelta(days=random.randint(7, 45))).date()
+                due_passed = due < now.date()
                 po_lines: list[tuple] = []
                 for _ in range(random.randint(1, 4)):
                     sp = random.choice(sp_list)
                     qty = random.randint(5, 100)
-                    days_ago = (now - current).days
-                    complete_chance = 0.9 if days_ago > 30 else 0.2
+                    # If due date has passed, almost always complete
+                    if due_passed:
+                        complete_chance = 0.97
+                    elif (now - current).days > 14:
+                        complete_chance = 0.7
+                    else:
+                        complete_chance = 0.2
                     complete = random.random() < complete_chance
                     received = qty if complete else random.randint(0, qty - 1)
                     store_confirmed = complete and random.random() < 0.95
@@ -387,11 +450,16 @@ class Command(BaseCommand):
                 if bom_products:
                     prod_product = random.choice(bom_products)
                     due = (current + timedelta(days=random.randint(5, 30))).date()
+                    due_passed = due < now.date()
                     qty = random.randint(5, 50)
-                    days_ago = (now - current).days
-                    if days_ago > 30:
+                    # If due date passed, almost always fully received
+                    if due_passed:
                         received = (
-                            qty if random.random() < 0.7 else random.randint(0, qty)
+                            qty if random.random() < 0.95 else random.randint(0, qty)
+                        )
+                    elif (now - current).days > 14:
+                        received = (
+                            qty if random.random() < 0.6 else random.randint(0, qty)
                         )
                     else:
                         received = random.randint(0, qty // 2)
