@@ -4,7 +4,6 @@ import logging
 from typing import Any
 
 from django.db import transaction
-from django.db.models import F
 from django.utils import timezone
 
 from inventory.models import Inventory, InventoryLedger, InventoryLocation
@@ -21,11 +20,17 @@ def complete_sales_line(line) -> None:
     This is only used for full-line completion; partial shipments are handled
     separately by the shipment view.
     """
+    from django.core.exceptions import ValidationError
+    from django.utils.translation import gettext_lazy as _
+
     from sales.models import SalesLedger
 
-    Inventory.objects.select_for_update().filter(product=line.product.product).update(
-        quantity=F("quantity") - line.quantity, last_updated=timezone.now()
-    )
+    inv = Inventory.objects.select_for_update().get(product=line.product.product)
+    if inv.quantity < line.quantity:
+        raise ValidationError(_("Not enough resources to complete transaction."))
+    inv.quantity -= line.quantity
+    inv.last_updated = timezone.now()
+    inv.save(update_fields=["quantity", "last_updated"])
 
     try:
         line.value = line.product.price * line.quantity

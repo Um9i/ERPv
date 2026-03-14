@@ -4,6 +4,7 @@ import logging
 from collections.abc import Iterable
 from typing import Any
 
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import F, Sum
@@ -63,10 +64,13 @@ def apply_inventory_adjustment(
     adjustment.full_clean()
     adjustment.save_base()
 
-    # update on-hand stock
-    Inventory.objects.select_for_update().filter(product=product).update(
-        quantity=F("quantity") + adjustment.quantity, last_updated=timezone.now()
-    )
+    # update on-hand stock (check under lock to prevent race conditions)
+    inv = Inventory.objects.select_for_update().get(product=product)
+    if inv.quantity + adjustment.quantity < 0:
+        raise ValidationError("Not enough resources to complete transaction.")
+    inv.quantity += adjustment.quantity
+    inv.last_updated = timezone.now()
+    inv.save(update_fields=["quantity", "last_updated"])
 
     # ledger entry
     InventoryLedger.objects.create(
