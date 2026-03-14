@@ -381,7 +381,7 @@ class Command(BaseCommand):
             weekday = current.weekday()
             is_weekend = weekday >= 5
             so_count = random.randint(0, 1) if is_weekend else random.randint(1, 5)
-            po_count = 0 if is_weekend else random.randint(0, 4)
+            po_count = 0 if is_weekend else random.randint(0, 2)
             prod_count = 0 if is_weekend else random.randint(0, 2)
 
             # ── Purchase orders FIRST (stock flows in) ───────────
@@ -399,7 +399,7 @@ class Command(BaseCommand):
                 po_lines: list[tuple] = []
                 for _ in range(random.randint(1, 4)):
                     sp = random.choice(sp_list)
-                    qty = random.randint(10, 100)
+                    qty = random.randint(5, 30)
                     if order_complete is True:
                         complete = True
                     elif order_complete is False:
@@ -466,7 +466,7 @@ class Command(BaseCommand):
                 line_specs = []
                 for _ in range(random.randint(1, 4)):
                     cp = random.choice(cp_list)
-                    qty = random.randint(1, 20)
+                    qty = random.randint(2, 25)
                     line_specs.append((cp, qty))
 
                 if order_complete is True:
@@ -483,7 +483,7 @@ class Command(BaseCommand):
                                     restock_sp = sp_obj
                                     break
                             if restock_sp:
-                                restock_qty = shortfall + random.randint(5, 20)
+                                restock_qty = shortfall
                                 restock_due = (
                                     current - timedelta(days=random.randint(1, 5))
                                 ).date()
