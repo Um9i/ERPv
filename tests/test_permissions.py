@@ -139,7 +139,6 @@ class TestStaffOnlyViews:
 
     STAFF_ONLY_URLS = [
         "/config/company/",
-        "/config/paired/",
     ]
 
     @pytest.mark.django_db

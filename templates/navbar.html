@@ -3,32 +3,65 @@
         <a class="navbar-brand app-navbar-brand" href="{% url 'home' %}">
             <i class="bi bi-box-seam me-2"></i>ERPv
         </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
-                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+        <div class="d-flex align-items-center ms-auto order-lg-last">
+            <!-- Desktop search (inline, left of bell) -->
+            <form class="d-none d-lg-flex me-3" action="{% url 'global-search' %}" method="get" role="search">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text navbar-search-icon"><i class="bi bi-search"></i></span>
+                    <input type="search" name="q" class="form-control navbar-search-input" placeholder="Search…"
+                           aria-label="Search" value="{{ request.GET.q|default:'' }}" autocomplete="off">
+                </div>
+            </form>
+            {% if user.is_authenticated %}
+            <a href="{% url 'config:notification-list' %}" class="nav-link position-relative navbar-icon-link" title="Notifications">
+                <i class="bi bi-bell fs-5"></i>
+                {% if unread_notification_count %}
+                    <span class="position-absolute top-1 start-105 translate-middle badge rounded-pill bg-danger">
+                        {{ unread_notification_count }}
+                    </span>
+                {% endif %}
+            </a>
+            {% endif %}
+            <button class="navbar-toggler ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+                    aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        </div>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                <!-- add more links here if needed -->
-            </ul>
-            <!-- sidebar links for small screens -->
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0 d-md-none">
+            <!-- Mobile search -->
+            <form class="d-lg-none my-2" action="{% url 'global-search' %}" method="get" role="search">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text navbar-search-icon"><i class="bi bi-search"></i></span>
+                    <input type="search" name="q" class="form-control navbar-search-input" placeholder="Search…"
+                           aria-label="Search" value="{{ request.GET.q|default:'' }}" autocomplete="off">
+                </div>
+            </form>
+            <!-- Sidebar links for small screens -->
+            <ul class="navbar-nav mb-2 mb-lg-0 d-lg-none">
                 {% include "includes/sidebar_links.html" %}
-            </ul>
-            <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-center">
-                {% if user.is_authenticated %}
-                <li class="nav-item me-2">
-                    <a href="{% url 'config:notification-list' %}" class="nav-link position-relative" title="Notifications">
-                        <i class="bi bi-bell fs-5"></i>
-                        {% if unread_notification_count %}
-                            <span class="position-absolute top-1 start-105 translate-middle badge rounded-pill bg-danger">
-                                {{ unread_notification_count }}
-                            </span>
-                        {% endif %}
+                {% if user.is_staff %}
+                <li class="nav-item">
+                    <a href="{% url 'config:company-config' %}" class="nav-link sidebar-link{% if request.resolver_match.app_name == 'config' %} active{% endif %}">
+                        <span class="sidebar-icon sidebar-icon--rose"><i class="bi bi-sliders" aria-hidden="true"></i></span>
+                        <span class="sidebar-label">Settings</span>
                     </a>
                 </li>
                 {% endif %}
             </ul>
+            {% if user.is_authenticated %}
+            <div class="d-lg-none border-top border-secondary pt-2 mt-2">
+                <div class="d-flex align-items-center px-2 py-1 text-light">
+                    <i class="bi bi-person-circle me-2"></i>
+                    <span class="small">{{ user.username }}</span>
+                    <form method="post" action="{% url 'logout' %}" class="ms-auto">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-light" title="Sign out">
+                            <i class="bi bi-power"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </nav>

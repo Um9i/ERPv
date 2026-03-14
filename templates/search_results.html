@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% load currency_tags %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-header-icon page-header-icon--green"><i class="bi bi-search"></i></div>
+        <div>
+            <h1 class="page-title">Search Results</h1>
+            {% if q %}<p class="text-muted mb-0">Showing results for "<strong>{{ q }}</strong>"</p>{% endif %}
+        </div>
+    </div>
+</div>
+
+{% if not q %}
+<div class="panel mt-3">
+    <div class="panel-body text-center py-5 text-muted">
+        <i class="bi bi-search fs-1 d-block mb-2"></i>
+        <p class="mb-0">Enter a search term in the navbar to find products, orders, suppliers, and more.</p>
+    </div>
+</div>
+{% else %}
+
+{% if not has_results %}
+<div class="panel mt-3">
+    <div class="panel-body text-center py-5 text-muted">
+        <i class="bi bi-emoji-frown fs-1 d-block mb-2"></i>
+        <p class="mb-0">No results found for "<strong>{{ q }}</strong>".</p>
+    </div>
+</div>
+{% else %}
+
+{# ── Products ────────────────────────────────────────────────────────── #}
+{% if products %}
+<div class="panel mt-3">
+    <div class="panel-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-box-seam text-success me-2"></i>Products ({{ products|length }})</span>
+        <a href="{% url 'inventory:inventory-list' %}?q={{ q }}" class="btn btn-sm btn-outline-secondary">View all</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3">Product</th>
+                    <th class="text-end">On Hand</th>
+                    <th class="text-end pe-3">Sale Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in products %}
+                <tr>
+                    <td class="ps-3"><a href="{% url 'inventory:inventory-detail' inv.pk %}">{{ inv.product.name }}</a></td>
+                    <td class="text-end">{{ inv.quantity }}</td>
+                    <td class="text-end pe-3">{{ inv.product.sale_price|currency }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{# ── Suppliers ───────────────────────────────────────────────────────── #}
+{% if suppliers %}
+<div class="panel mt-3">
+    <div class="panel-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-people-fill text-primary me-2"></i>Suppliers ({{ suppliers|length }})</span>
+        <a href="{% url 'procurement:supplier-list' %}?q={{ q }}" class="btn btn-sm btn-outline-secondary">View all</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3">Name</th>
+                    <th>Email</th>
+                    <th class="pe-3">Phone</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for supplier in suppliers %}
+                <tr>
+                    <td class="ps-3"><a href="{% url 'procurement:supplier-detail' supplier.pk %}">{{ supplier.name }}</a></td>
+                    <td>{{ supplier.email|default:"—" }}</td>
+                    <td class="pe-3">{{ supplier.phone|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{# ── Customers ───────────────────────────────────────────────────────── #}
+{% if customers %}
+<div class="panel mt-3">
+    <div class="panel-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-people text-indigo me-2"></i>Customers ({{ customers|length }})</span>
+        <a href="{% url 'sales:customer-list' %}?q={{ q }}" class="btn btn-sm btn-outline-secondary">View all</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3">Name</th>
+                    <th>Email</th>
+                    <th class="pe-3">Phone</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for customer in customers %}
+                <tr>
+                    <td class="ps-3"><a href="{% url 'sales:customer-detail' customer.pk %}">{{ customer.name }}</a></td>
+                    <td>{{ customer.email|default:"—" }}</td>
+                    <td class="pe-3">{{ customer.phone|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{# ── Purchase Orders ────────────────────────────────────────────────── #}
+{% if purchase_orders %}
+<div class="panel mt-3">
+    <div class="panel-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-cart-plus text-primary me-2"></i>Purchase Orders ({{ purchase_orders|length }})</span>
+        <a href="{% url 'procurement:purchase-order-list' %}?q={{ q }}&status=" class="btn btn-sm btn-outline-secondary">View all</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3">Order</th>
+                    <th>Supplier</th>
+                    <th>Status</th>
+                    <th class="text-end pe-3">Due</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for po in purchase_orders %}
+                <tr>
+                    <td class="ps-3"><a href="{% url 'procurement:purchase-order-detail' po.pk %}">{{ po }}</a></td>
+                    <td>{{ po.supplier }}</td>
+                    <td>
+                        {% if po.status == "Closed" %}
+                        <span class="badge bg-success">Closed</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">Open</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end pe-3">{{ po.due_date|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{# ── Sales Orders ────────────────────────────────────────────────────── #}
+{% if sales_orders %}
+<div class="panel mt-3">
+    <div class="panel-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-cart4 text-indigo me-2"></i>Sales Orders ({{ sales_orders|length }})</span>
+        <a href="{% url 'sales:sales-order-list' %}?q={{ q }}&status=" class="btn btn-sm btn-outline-secondary">View all</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3">Order</th>
+                    <th>Customer</th>
+                    <th>Status</th>
+                    <th class="text-end pe-3">Ship By</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for so in sales_orders %}
+                <tr>
+                    <td class="ps-3"><a href="{% url 'sales:sales-order-detail' so.pk %}">{{ so }}</a></td>
+                    <td>{{ so.customer }}</td>
+                    <td>
+                        {% if so.status == "Closed" %}
+                        <span class="badge bg-success">Closed</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">Open</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end pe-3">{{ so.ship_by_date|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{# ── Production Jobs ────────────────────────────────────────────────── #}
+{% if production_jobs %}
+<div class="panel mt-3">
+    <div class="panel-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-gear-fill text-warning me-2"></i>Production Jobs ({{ production_jobs|length }})</span>
+        <a href="{% url 'production:production-list' %}?q={{ q }}" class="btn btn-sm btn-outline-secondary">View all</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3">Job</th>
+                    <th>Product</th>
+                    <th class="text-end">Qty</th>
+                    <th class="text-end pe-3">Due</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in production_jobs %}
+                <tr>
+                    <td class="ps-3"><a href="{% url 'production:production-detail' job.pk %}">{{ job }}</a></td>
+                    <td>{{ job.product.name }}</td>
+                    <td class="text-end">{{ job.quantity }}</td>
+                    <td class="text-end pe-3">{{ job.due_date|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{# ── BOMs ────────────────────────────────────────────────────────────── #}
+{% if boms %}
+<div class="panel mt-3">
+    <div class="panel-header d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-diagram-3 text-dark me-2"></i>Bills of Materials ({{ boms|length }})</span>
+        <a href="{% url 'production:bom-list' %}?q={{ q }}" class="btn btn-sm btn-outline-secondary">View all</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3">Product</th>
+                    <th class="text-end pe-3">Production Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for bom in boms %}
+                <tr>
+                    <td class="ps-3"><a href="{% url 'production:bom-detail' bom.pk %}">{{ bom.product.name }}</a></td>
+                    <td class="text-end pe-3">{{ bom.production_cost|currency }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endif %}{# has_results #}
+{% endif %}{# q #}
+{% endblock %}

@@ -12,20 +12,6 @@
 <a href="{% url 'dashboards:production-schedule' %}"><i class="bi bi-gear"></i>Production Schedule</a>
 {% endblock %}
 
-{% block dashboard_search %}
-<div class="list-filter mt-3">
-  <form method="get" action="{% url 'production:production-list' %}">
-    <div class="input-group">
-      <span class="input-group-text bg-light border-end-0">
-        <i class="bi bi-search text-muted"></i>
-      </span>
-      <input type="search" name="q" class="form-control border-start-0" placeholder="Search production jobs…" autocomplete="off">
-      <button type="submit" class="btn btn-primary">Search</button>
-    </div>
-  </form>
-</div>
-{% endblock %}
-
 {% block dashboard_metrics %}
 {% include "dashboards/_production_metrics.html" %}
 {% endblock %}

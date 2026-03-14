@@ -88,28 +88,14 @@ class CompanyApiView(View):
         )
 
 
-class PairedInstanceListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
-    model = PairedInstance
-    template_name = "config/paired_instance_list.html"
-    context_object_name = "instances"
-
-    def test_func(self):
-        return self.request.user.is_staff
-
-    def get_queryset(self):
-        return PairedInstance.objects.select_related("supplier", "customer").all()
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx["new_our_key"] = self.request.session.pop("new_paired_key", None)
-        return ctx
+_INTEGRATIONS_URL = reverse_lazy("config:company-config")
 
 
 class PairedInstanceCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     model = PairedInstance
     form_class = PairedInstanceForm
     template_name = "config/paired_instance_form.html"
-    success_url = reverse_lazy("config:paired-instance-list")
+    success_url = _INTEGRATIONS_URL
 
     def test_func(self):
         return self.request.user.is_staff
@@ -136,7 +122,7 @@ class PairedInstanceUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateVi
     model = PairedInstance
     form_class = PairedInstanceForm
     template_name = "config/paired_instance_form.html"
-    success_url = reverse_lazy("config:paired-instance-list")
+    success_url = _INTEGRATIONS_URL
 
     def test_func(self):
         return self.request.user.is_staff
@@ -150,7 +136,7 @@ class PairedInstanceUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateVi
 class PairedInstanceDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = PairedInstance
     template_name = "config/paired_instance_delete.html"
-    success_url = reverse_lazy("config:paired-instance-list")
+    success_url = _INTEGRATIONS_URL
 
     def test_func(self):
         return self.request.user.is_staff
@@ -176,7 +162,7 @@ class PairedInstanceCompleteView(LoginRequiredMixin, UserPassesTestMixin, View):
             messages.success(
                 request, f'Pairing with "{instance.name}" is now complete.'
             )
-            return redirect(reverse_lazy("config:paired-instance-list"))
+            return redirect(_INTEGRATIONS_URL)
         return self._render(request, instance, form)
 
     def _render(self, request, instance, form):
@@ -204,7 +190,7 @@ class ImportAsCustomerView(LoginRequiredMixin, UserPassesTestMixin, View):
             messages.error(
                 request, "Pairing is not complete \u2014 enter their API key first."
             )
-            return redirect(reverse_lazy("config:paired-instance-list"))
+            return redirect(_INTEGRATIONS_URL)
         try:
             resp = httpx.get(
                 f"{instance.url.rstrip('/')}/config/api/company/",
@@ -215,7 +201,7 @@ class ImportAsCustomerView(LoginRequiredMixin, UserPassesTestMixin, View):
             data = resp.json()
         except (httpx.HTTPStatusError, httpx.RequestError) as exc:
             messages.error(request, f"Could not fetch data from {instance.name}: {exc}")
-            return redirect(reverse_lazy("config:paired-instance-list"))
+            return redirect(_INTEGRATIONS_URL)
         params = {f: data.get(f, "") for f in PARTNER_PREFILL_FIELDS}
         remote_name = data.get("name", "").strip()
 
@@ -230,7 +216,7 @@ class ImportAsCustomerView(LoginRequiredMixin, UserPassesTestMixin, View):
                     request,
                     f'Linked existing customer "{existing.name}" to {instance.name}.',
                 )
-                return redirect(reverse_lazy("config:paired-instance-list"))
+                return redirect(_INTEGRATIONS_URL)
 
         self.request.session["link_customer_to_paired"] = pk
         return redirect(f"{reverse_lazy('sales:customer-create')}?{urlencode(params)}")
@@ -248,7 +234,7 @@ class ImportAsSupplierView(LoginRequiredMixin, UserPassesTestMixin, View):
             messages.error(
                 request, "Pairing is not complete \u2014 enter their API key first."
             )
-            return redirect(reverse_lazy("config:paired-instance-list"))
+            return redirect(_INTEGRATIONS_URL)
         try:
             resp = httpx.get(
                 f"{instance.url.rstrip('/')}/config/api/company/",
@@ -259,7 +245,7 @@ class ImportAsSupplierView(LoginRequiredMixin, UserPassesTestMixin, View):
             data = resp.json()
         except (httpx.HTTPStatusError, httpx.RequestError) as exc:
             messages.error(request, f"Could not fetch data from {instance.name}: {exc}")
-            return redirect(reverse_lazy("config:paired-instance-list"))
+            return redirect(_INTEGRATIONS_URL)
         params = {f: data.get(f, "") for f in PARTNER_PREFILL_FIELDS}
         remote_name = data.get("name", "").strip()
 
@@ -312,7 +298,7 @@ class ImportCatalogueProductView(LoginRequiredMixin, UserPassesTestMixin, View):
 
         if instance.status == "pending":
             messages.error(request, f'"{instance.name}" is not yet active.')
-            return redirect(reverse_lazy("config:paired-instance-list"))
+            return redirect(_INTEGRATIONS_URL)
 
         name = request.POST.get("name", "").strip()
         description = request.POST.get("description", "").strip()
@@ -487,7 +473,7 @@ class BrowseCatalogueView(LoginRequiredMixin, UserPassesTestMixin, View):
                 request,
                 f'"{instance.name}" is not yet active \u2014 enter their API key first.',
             )
-            return redirect(reverse_lazy("config:paired-instance-list"))
+            return redirect(_INTEGRATIONS_URL)
         catalogue = None
         error = None
         try:

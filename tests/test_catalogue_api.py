@@ -147,7 +147,7 @@ class BrowseCatalogueViewTest(TestCase):
             "config:paired-instance-browse-catalogue", args=[self.pending_instance.pk]
         )
         response = self.client.get(url)
-        self.assertRedirects(response, reverse("config:paired-instance-list"))
+        self.assertRedirects(response, reverse("config:company-config"))
 
     @patch("config.views.httpx.get")
     def test_browse_catalogue_success(self, mock_get):

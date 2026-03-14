@@ -38,9 +38,10 @@ def paired_with_product(product):
 
 
 @pytest.mark.django_db
-def test_price_change_notifies_both_customer_product_and_supplier_product(
+def test_price_change_notifies_supplier_linked_instance(
     client, staff_user, product, paired_with_product
 ):
+    """When the paired instance has a supplier link, only customer_product is sent."""
     client.force_login(staff_user)
     with (
         patch(
@@ -60,7 +61,7 @@ def test_price_change_notifies_both_customer_product_and_supplier_product(
             },
         )
         mock_cp.assert_called_once_with(paired_with_product, "Widget", Decimal("15.00"))
-        mock_sp.assert_called_once_with(paired_with_product, "Widget", Decimal("15.00"))
+        mock_sp.assert_not_called()
 
 
 @pytest.mark.django_db

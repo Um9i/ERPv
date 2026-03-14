@@ -35,9 +35,6 @@ urlpatterns = [
     ),
     # ── Paired instances ─────────────────────────────────────────────
     path(
-        "paired/", views.PairedInstanceListView.as_view(), name="paired-instance-list"
-    ),
-    path(
         "paired/create/",
         views.PairedInstanceCreateView.as_view(),
         name="paired-instance-create",

@@ -115,6 +115,32 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 1.1rem !important;
     color: var(--color-primary);
 }
+.navbar-search-icon.input-group-text {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-right: 0 !important;
+    color: rgba(255,255,255,0.4);
+    padding: 0.25rem 0.5rem;
+}
+.navbar-search-input.form-control {
+    background: rgba(255,255,255,0.06) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-left: 0 !important;
+    color: #fff;
+    min-width: 180px;
+}
+.navbar-search-input.form-control::placeholder { color: rgba(255,255,255,0.35); }
+.navbar-search-input.form-control:focus {
+    background: rgba(255,255,255,0.1) !important;
+    color: #fff;
+    border-color: rgba(255,255,255,0.2) !important;
+    box-shadow: none !important;
+}
+.input-group:focus-within .navbar-search-icon.input-group-text { border-color: rgba(255,255,255,0.2) !important; }
+.navbar-icon-link {
+    color: rgba(255,255,255,0.8) !important;
+    padding: 0.25rem 0.5rem;
+}
 .nav-user-badge {
     color: var(--color-text-light);
     font-size: 0.85rem;

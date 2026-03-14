@@ -68,7 +68,7 @@ class ImportCatalogueProductViewTest(TestCase):
             pending_url,
             {**self.post_data, "supplier_id": str(self.supplier.pk)},
         )
-        self.assertRedirects(response, reverse("config:paired-instance-list"))
+        self.assertRedirects(response, reverse("config:company-config"))
         messages = list(response.wsgi_request._messages)
         self.assertTrue(any(m.tags == "error" for m in messages))
 

@@ -20,7 +20,7 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import TemplateView
 
-from main.views import HealthCheckView
+from main.views import GlobalSearchView, HealthCheckView
 
 admin.site.site_title = "ERPv 0.0.1"
 admin.site.site_header = "ERPv"
@@ -33,6 +33,7 @@ urlpatterns = (
         path("accounts/", include("django_registration.backends.one_step.urls")),
         path("accounts/", include("django.contrib.auth.urls")),
         path("", TemplateView.as_view(template_name="home.html"), name="home"),
+        path("search/", GlobalSearchView.as_view(), name="global-search"),
         path("inventory/", include("inventory.urls", namespace="inventory")),
         path("procurement/", include("procurement.urls", namespace="procurement")),
         path("sales/", include("sales.urls", namespace="sales")),

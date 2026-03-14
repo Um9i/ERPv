@@ -275,6 +275,11 @@
                       {% endif %}
                       <li><hr class="dropdown-divider"></li>
                       <li>
+                        <a class="dropdown-item" href="{% url 'config:paired-instance-edit' inst.pk %}">
+                          <i class="bi bi-pencil me-2"></i>Edit
+                        </a>
+                      </li>
+                      <li>
                         <a class="dropdown-item text-danger" href="{% url 'config:paired-instance-delete' inst.pk %}">
                           <i class="bi bi-trash me-2"></i>Delete
                         </a>

@@ -101,28 +101,6 @@ class CompanyApiViewTest(TestCase):
 
 
 @pytest.mark.integration
-class PairedInstanceListViewTest(TestCase):
-    @classmethod
-    def setUpTestData(cls):
-        cls.staff_user = User.objects.create_user("staffuser", is_staff=True)
-        cls.regular_user = User.objects.create_user("regularuser", is_staff=False)
-
-    def test_list_view_redirects_unauthenticated(self):
-        response = self.client.get(reverse("config:paired-instance-list"))
-        self.assertNotEqual(response.status_code, 200)
-
-    def test_list_view_redirects_non_staff(self):
-        self.client.force_login(self.regular_user)
-        response = self.client.get(reverse("config:paired-instance-list"))
-        self.assertNotEqual(response.status_code, 200)
-
-    def test_list_view_accessible_by_staff(self):
-        self.client.force_login(self.staff_user)
-        response = self.client.get(reverse("config:paired-instance-list"))
-        self.assertEqual(response.status_code, 200)
-
-
-@pytest.mark.integration
 class CompletePairingViewTest(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -138,7 +116,7 @@ class CompletePairingViewTest(TestCase):
             reverse("config:paired-instance-complete", args=[self.instance.pk]),
             {"api_key": "newly-received-key"},
         )
-        self.assertRedirects(response, reverse("config:paired-instance-list"))
+        self.assertRedirects(response, reverse("config:company-config"))
         self.instance.refresh_from_db()
         self.assertEqual(self.instance.api_key, "newly-received-key")
 
@@ -168,11 +146,11 @@ class ImportGuardTest(TestCase):
         response = self.client.get(
             reverse("config:import-as-customer", args=[self.pending_instance.pk])
         )
-        self.assertRedirects(response, reverse("config:paired-instance-list"))
+        self.assertRedirects(response, reverse("config:company-config"))
 
     def test_import_supplier_blocked_when_api_key_blank(self):
         self.client.force_login(self.staff_user)
         response = self.client.get(
             reverse("config:import-as-supplier", args=[self.pending_instance.pk])
         )
-        self.assertRedirects(response, reverse("config:paired-instance-list"))
+        self.assertRedirects(response, reverse("config:company-config"))

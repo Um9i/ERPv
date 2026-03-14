@@ -5,4 +5,4 @@
   Their API key will be revoked and they will no longer be able to call your company API.
   This action cannot be undone.
 {% endblock %}
-{% block delete_cancel_url %}{% url 'config:paired-instance-list' %}{% endblock %}
+{% block delete_cancel_url %}{% url 'config:company-config' %}#integrations{% endblock %}
