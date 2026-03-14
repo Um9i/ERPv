@@ -583,9 +583,11 @@ class Command(BaseCommand):
         inv_updates = []
         for inv in Inventory.objects.all():
             target = inv_quantities.get(inv.product_id)
-            if target is not None and inv.quantity != target:
-                inv.quantity = target
-                inv_updates.append(inv)
+            if target is not None:
+                clamped = max(target, 0)
+                if inv.quantity != clamped:
+                    inv.quantity = clamped
+                    inv_updates.append(inv)
         if inv_updates:
             Inventory.objects.bulk_update(
                 inv_updates, ["quantity"], batch_size=BATCH_SIZE
