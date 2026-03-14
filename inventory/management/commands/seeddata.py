@@ -10,7 +10,14 @@ from django.db.models import F, OuterRef, Subquery, Sum
 from django.utils import timezone
 from faker import Faker
 
-from inventory.models import Inventory, InventoryLedger
+from finance.services import refresh_finance_dashboard_cache
+from inventory.models import (
+    Inventory,
+    InventoryLedger,
+    InventoryLocation,
+    Location,
+    ProductionAllocated,
+)
 from main.factories import CustomerFactory, ProductFactory, SupplierFactory
 from procurement.models import (
     PurchaseLedger,
@@ -19,7 +26,7 @@ from procurement.models import (
     SupplierContact,
     SupplierProduct,
 )
-from production.models import BillOfMaterials, BOMItem, Production
+from production.models import BillOfMaterials, BOMItem, Production, ProductionLedger
 from sales.models import (
     CustomerContact,
     CustomerProduct,
@@ -32,6 +39,20 @@ fake = Faker()
 
 BATCH_SIZE = 500
 
+# Warehouse location hierarchy
+WAREHOUSE_STRUCTURE: dict[str, dict[str, list[str]]] = {
+    "Warehouse A": {
+        "Receiving": ["Bay R1", "Bay R2"],
+        "Zone 1": ["Aisle 1-A", "Aisle 1-B", "Aisle 1-C"],
+        "Zone 2": ["Aisle 2-A", "Aisle 2-B", "Aisle 2-C"],
+        "Shipping": ["Bay S1", "Bay S2"],
+    },
+    "Warehouse B": {
+        "Zone 1": ["Bin B1-1", "Bin B1-2", "Bin B1-3"],
+        "Zone 2": ["Bin B2-1", "Bin B2-2"],
+    },
+}
+
 
 class Command(BaseCommand):
     help = "Seed the database with generated data (optimized for speed)."
@@ -40,8 +61,8 @@ class Command(BaseCommand):
         parser.add_argument(
             "--years",
             type=int,
-            default=2,
-            help="Number of years of history to generate (default 2)",
+            default=1,
+            help="Number of years of history to generate (max 1, default 1)",
         )
         parser.add_argument(
             "--customers",
@@ -63,7 +84,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        years = options["years"]
+        years = min(options["years"], 1)
         num_customers = options["customers"]
         num_suppliers = options["suppliers"]
         num_products = options["products"]
@@ -73,7 +94,7 @@ class Command(BaseCommand):
         total_days = (now - start_date).days
 
         self.stdout.write(
-            f"Seeding {years} years ({total_days} days) from {start_date.date()}..."
+            f"Seeding {years} year ({total_days} days) from {start_date.date()}..."
         )
         t0 = time.monotonic()
 
@@ -90,12 +111,40 @@ class Command(BaseCommand):
         self.stdout.write(f"  {msg}")
 
     # ------------------------------------------------------------------
+    def _create_locations(self) -> list[Location]:
+        """Create a realistic warehouse location hierarchy."""
+        self._log("Creating warehouse locations...")
+        leaf_locations: list[Location] = []
+        for wh_name, zones in WAREHOUSE_STRUCTURE.items():
+            wh = Location.objects.create(name=wh_name)
+            for zone_name, bins in zones.items():
+                zone = Location.objects.create(name=zone_name, parent=wh)
+                for bin_name in bins:
+                    loc = Location.objects.create(name=bin_name, parent=zone)
+                    leaf_locations.append(loc)
+        return leaf_locations
+
+    # ------------------------------------------------------------------
     def _seed(
         self, start_date, now, total_days, num_customers, num_suppliers, num_products
     ):
-        # ── 1. Base entities (small counts – factories are fine) ──
+        # ── 1. Warehouse locations ───────────────────────────────
+        leaf_locations = self._create_locations()
+
+        # ── 2. Base entities ─────────────────────────────────────
         self._log("Creating products...")
         products = ProductFactory.create_batch(num_products)
+
+        # Set sale_price and catalogue_item on ~60% of products
+        catalogue_products = random.sample(products, int(len(products) * 0.6))
+        for prod in catalogue_products:
+            prod.sale_price = Decimal(str(round(random.uniform(10, 600), 2)))
+            prod.catalogue_item = True
+        from inventory.models import Product
+
+        Product.objects.bulk_update(
+            catalogue_products, ["sale_price", "catalogue_item"], batch_size=BATCH_SIZE
+        )
 
         self._log("Creating customers...")
         customers = CustomerFactory.create_batch(num_customers)
@@ -103,7 +152,7 @@ class Command(BaseCommand):
         self._log("Creating suppliers...")
         suppliers = SupplierFactory.create_batch(num_suppliers)
 
-        # ── 1b. Create contacts for customers and suppliers ────
+        # ── 2b. Create contacts for customers and suppliers ──────
         self._log("Creating customer contacts...")
         cc_objs = []
         for cust in customers:
@@ -142,29 +191,35 @@ class Command(BaseCommand):
                 )
         SupplierContact.objects.bulk_create(sc_objs, batch_size=BATCH_SIZE)
 
-        # ── 2. Link products ↔ customers / suppliers (bulk) ──────
+        # ── 3. Link products ↔ customers / suppliers ─────────────
         self._log("Linking customer ↔ product relationships...")
         cp_objs = []
         for cust in customers:
             n = random.randint(3, min(10, len(products)))
             for prod in random.sample(products, n):
+                base = (
+                    float(prod.sale_price)
+                    if prod.sale_price
+                    else random.uniform(10, 500)
+                )
+                # Customer price varies ±15% from base
+                price = round(base * random.uniform(0.85, 1.15), 2)
                 cp_objs.append(
                     CustomerProduct(
                         customer=cust,
                         product=prod,
-                        price=Decimal(str(round(random.uniform(5, 500), 2))),
+                        price=Decimal(str(price)),
                     )
                 )
         CustomerProduct.objects.bulk_create(cp_objs, batch_size=BATCH_SIZE)
 
-        # In-memory lookup: customer_id → [CustomerProduct, ...]
-        cust_prod_map = defaultdict(list)
+        cust_prod_map: dict[int, list[CustomerProduct]] = defaultdict(list)
         for cp in CustomerProduct.objects.select_related("customer", "product"):
             cust_prod_map[cp.customer_id].append(cp)
 
         self._log("Linking supplier ↔ product relationships...")
         sp_objs = []
-        seen_sp = set()
+        seen_sp: set[tuple[int, int]] = set()
         for supp in suppliers:
             n = random.randint(3, min(10, len(products)))
             for prod in random.sample(products, n):
@@ -172,52 +227,93 @@ class Command(BaseCommand):
                 if key in seen_sp:
                     continue
                 seen_sp.add(key)
+                base = (
+                    float(prod.sale_price) * 0.5
+                    if prod.sale_price
+                    else random.uniform(2, 200)
+                )
+                cost = round(base * random.uniform(0.8, 1.2), 2)
                 sp_objs.append(
                     SupplierProduct(
                         supplier=supp,
                         product=prod,
-                        cost=Decimal(str(round(random.uniform(1, 200), 2))),
+                        cost=Decimal(str(cost)),
                     )
                 )
         SupplierProduct.objects.bulk_create(sp_objs, batch_size=BATCH_SIZE)
 
-        supp_prod_map = defaultdict(list)
+        supp_prod_map: dict[int, list[SupplierProduct]] = defaultdict(list)
         for sp in SupplierProduct.objects.select_related("supplier", "product"):
             supp_prod_map[sp.supplier_id].append(sp)
 
-        # ── 3. Set random starting inventory quantities ──────────
-        # Product post_save signal already created Inventory rows via factories.
+        # ── 4. Set starting inventory and distribute to locations ─
         self._log("Setting initial inventory quantities...")
         inventories = list(Inventory.objects.all())
         for inv in inventories:
-            inv.quantity = random.randint(0, 200)
+            inv.quantity = random.randint(20, 300)
         Inventory.objects.bulk_update(inventories, ["quantity"], batch_size=BATCH_SIZE)
 
-        # ── 4. Bills of materials ────────────────────────────────
+        self._log("Distributing inventory to warehouse locations...")
+        inv_loc_objs = []
+        for inv in inventories:
+            remaining = inv.quantity
+            if remaining == 0:
+                continue
+            # Spread across 1-4 random locations
+            locs = random.sample(
+                leaf_locations, min(random.randint(1, 4), len(leaf_locations))
+            )
+            for i, loc in enumerate(locs):
+                if i == len(locs) - 1:
+                    qty = remaining
+                else:
+                    qty = random.randint(1, max(1, remaining // len(locs)))
+                    remaining -= qty
+                if qty > 0:
+                    inv_loc_objs.append(
+                        InventoryLocation(inventory=inv, location=loc, quantity=qty)
+                    )
+        InventoryLocation.objects.bulk_create(inv_loc_objs, batch_size=BATCH_SIZE)
+
+        # ── 5. Bills of materials ────────────────────────────────
         self._log("Creating bills of materials...")
-        sample_prods = random.sample(products, min(10, len(products)))
-        bom_product_ids = set()
+        num_boms = min(15, len(products))
+        sample_prods = random.sample(products, num_boms)
+        bom_product_ids: set[int] = set()
         bom_items_to_create = []
+        # Track BOM structure in memory for production ledger cost calc
+        bom_component_map: dict[
+            int, list[tuple[int, int]]
+        ] = {}  # product_id → [(comp_id, qty)]
         for prod in sample_prods:
-            bom = BillOfMaterials.objects.create(product=prod)
+            bom = BillOfMaterials.objects.create(
+                product=prod,
+                production_cost=Decimal(str(round(random.uniform(5, 50), 2))),
+            )
             bom_product_ids.add(prod.pk)
-            components = [p for p in products if p != prod]
-            for comp in random.sample(components, min(2, len(components))):
-                bom_items_to_create.append(
-                    BOMItem(bom=bom, product=comp, quantity=random.randint(1, 5))
-                )
+            components = [
+                p for p in products if p.pk not in bom_product_ids and p != prod
+            ]
+            n_comps = random.randint(2, min(4, len(components)))
+            chosen = random.sample(components, n_comps)
+            comp_list = []
+            for comp in chosen:
+                qty = random.randint(1, 5)
+                bom_items_to_create.append(BOMItem(bom=bom, product=comp, quantity=qty))
+                comp_list.append((comp.pk, qty))
+            bom_component_map[prod.pk] = comp_list
         BOMItem.objects.bulk_create(bom_items_to_create, batch_size=BATCH_SIZE)
         bom_products = [p for p in products if p.pk in bom_product_ids]
 
-        # ── 5. Plan all daily data in memory (no DB queries) ─────
+        # ── 6. Plan all daily data in memory ─────────────────────
         self._log("Planning daily orders and ledger entries...")
 
-        so_descriptors = []  # [(customer, date, [(cp, qty, complete, shipped), ...])]
-        po_descriptors = []  # [(supplier, date, [(sp, qty, complete, received), ...])]
-        prod_job_list = []  # [(product, date)]
-        ledger_ops = []  # [(product_id, change, date)]
+        # Descriptors: (entity, date, ship/due_date, lines)
+        so_descriptors: list[tuple] = []
+        po_descriptors: list[tuple] = []
+        prod_job_list: list[tuple] = []
+        ledger_ops: list[tuple[int, int, object]] = []
 
-        # Track inventory quantities in Python for ledger simulation
         inv_quantities = {inv.product_id: inv.quantity for inv in inventories}
         all_product_ids = list(inv_quantities.keys())
 
@@ -230,65 +326,102 @@ class Command(BaseCommand):
             if day % report_every == 0:
                 self._log(f"  day {day}/{total_days} ({day * 100 // total_days}%)")
 
+            weekday = current.weekday()
+            is_weekend = weekday >= 5
+            # Fewer orders on weekends, more mid-week
+            so_count = random.randint(0, 1) if is_weekend else random.randint(1, 5)
+            po_count = 0 if is_weekend else random.randint(0, 3)
+            prod_count = 0 if is_weekend else random.randint(0, 2)
+
             # Sales orders
-            for _ in range(random.randint(0, 5)):
+            for _ in range(so_count):
                 cust = random.choice(customers)
                 cp_list = cust_prod_map.get(cust.pk, [])
                 if not cp_list:
                     continue
+                # ship_by_date: 3-30 days from order date
+                ship_by = (current + timedelta(days=random.randint(3, 30))).date()
                 lines = []
-                for _ in range(random.randint(1, 3)):
+                for _ in range(random.randint(1, 4)):
                     cp = random.choice(cp_list)
                     qty = random.randint(1, 20)
-                    # Only allow completion if we have enough stock
                     pid = cp.product_id
                     current_stock = inv_quantities.get(pid, 0)
-                    if current_stock >= qty:
-                        complete = random.choice([True, False])
+                    # Historical orders mostly complete; recent ones more open
+                    days_ago = (now - current).days
+                    complete_chance = 0.85 if days_ago > 30 else 0.3
+                    if current_stock >= qty and random.random() < complete_chance:
+                        complete = True
                     else:
                         complete = False
-                    shipped = random.randint(0, qty)
+                    shipped = qty if complete else random.randint(0, qty - 1)
                     if complete:
-                        # Track the inventory deduction from completed sales
                         inv_quantities[pid] = current_stock - qty
                     lines.append((cp, qty, complete, shipped))
-                so_descriptors.append((cust, current, lines))
+                so_descriptors.append((cust, current, ship_by, lines))
 
             # Purchase orders
-            for _ in range(random.randint(0, 3)):
+            for _ in range(po_count):
                 supp = random.choice(suppliers)
                 sp_list = supp_prod_map.get(supp.pk, [])
                 if not sp_list:
                     continue
-                po_lines: list[tuple[object, int, bool, int]] = []
-                for _ in range(random.randint(1, 3)):
+                due = (current + timedelta(days=random.randint(7, 45))).date()
+                po_lines: list[tuple] = []
+                for _ in range(random.randint(1, 4)):
                     sp = random.choice(sp_list)
-                    qty = random.randint(1, 50)
-                    complete = random.choice([True, False])
-                    received = random.randint(0, qty)
+                    qty = random.randint(5, 100)
+                    days_ago = (now - current).days
+                    complete_chance = 0.9 if days_ago > 30 else 0.2
+                    complete = random.random() < complete_chance
+                    received = qty if complete else random.randint(0, qty - 1)
+                    store_confirmed = complete and random.random() < 0.95
                     if complete:
-                        # Track the inventory addition from completed purchases
                         pid = sp.product_id
                         inv_quantities[pid] = inv_quantities.get(pid, 0) + qty
-                    po_lines.append((sp, qty, complete, received))
-                po_descriptors.append((supp, current, po_lines))
+                    po_lines.append((sp, qty, complete, received, store_confirmed))
+                po_descriptors.append((supp, current, due, po_lines))
 
-            # Production jobs (only products with BOMs)
-            for _ in range(random.randint(0, 2)):
+            # Production jobs
+            for _ in range(prod_count):
                 if bom_products:
-                    prod_job_list.append((random.choice(bom_products), current))
+                    prod_product = random.choice(bom_products)
+                    due = (current + timedelta(days=random.randint(5, 30))).date()
+                    qty = random.randint(5, 50)
+                    days_ago = (now - current).days
+                    if days_ago > 30:
+                        received = (
+                            qty if random.random() < 0.7 else random.randint(0, qty)
+                        )
+                    else:
+                        received = random.randint(0, qty // 2)
+                    complete = received >= qty
+                    allocated = True
+                    if complete:
+                        inv_quantities[prod_product.pk] = (
+                            inv_quantities.get(prod_product.pk, 0) + received
+                        )
+                        # Deduct components
+                        comps = bom_component_map.get(prod_product.pk, [])
+                        for comp_id, comp_qty in comps:
+                            deduction = comp_qty * received
+                            inv_quantities[comp_id] = max(
+                                inv_quantities.get(comp_id, 0) - deduction, 0
+                            )
+                    prod_job_list.append(
+                        (prod_product, current, due, qty, received, complete, allocated)
+                    )
 
-            # Inventory ledger entries (random adjustments)
-            sample_size = random.randint(0, 3)
+            # Inventory adjustments (small corrections)
+            sample_size = random.randint(0, 2)
             if sample_size > 0 and all_product_ids:
                 for pid in random.sample(
                     all_product_ids, min(sample_size, len(all_product_ids))
                 ):
-                    change = random.randint(-10, 10)
+                    change = random.randint(-5, 5)
                     if change == 0:
                         continue
                     current_qty = inv_quantities.get(pid, 0)
-                    # Clamp so stock never goes negative
                     new_qty = max(current_qty + change, 0)
                     actual_change = new_qty - current_qty
                     if actual_change == 0:
@@ -299,13 +432,12 @@ class Command(BaseCommand):
             current += timedelta(days=1)
 
         # ── Disable auto_now / auto_now_add on all date fields ───
-        # This must happen BEFORE constructing objects so that Django
-        # does not silently replace historical dates with now().
-        auto_date_fields = []
+        auto_date_fields: list[tuple] = []
         for model in (
             InventoryLedger,
             SalesLedger,
             PurchaseLedger,
+            ProductionLedger,
             SalesOrder,
             PurchaseOrder,
             Production,
@@ -326,12 +458,13 @@ class Command(BaseCommand):
                 prod_job_list,
                 ledger_ops,
                 inv_quantities,
+                bom_component_map,
             )
         finally:
             for field, attr, orig in auto_date_fields:
                 setattr(field, attr, orig)
 
-        # ── 10. Sync final inventory quantities ──────────────────
+        # ── Sync final inventory quantities ──────────────────────
         self._log("Syncing final inventory quantities...")
         inv_updates = []
         for inv in Inventory.objects.all():
@@ -344,9 +477,8 @@ class Command(BaseCommand):
                 inv_updates, ["quantity"], batch_size=BATCH_SIZE
             )
 
-        # ── 11. Rebuild cached totals (single pass) ──────────────
+        # ── Rebuild cached totals ────────────────────────────────
         self._log("Rebuilding cached order totals...")
-        # Sales order totals
         SalesOrder.objects.update(
             total_amount_cached=Subquery(
                 SalesOrderLine.objects.filter(sales_order=OuterRef("pk"))
@@ -358,7 +490,6 @@ class Command(BaseCommand):
         SalesOrder.objects.filter(total_amount_cached__isnull=True).update(
             total_amount_cached=Decimal("0.00")
         )
-        # Purchase order totals
         PurchaseOrder.objects.update(
             total_amount_cached=Subquery(
                 PurchaseOrderLine.objects.filter(purchase_order=OuterRef("pk"))
@@ -371,32 +502,61 @@ class Command(BaseCommand):
             total_amount_cached=Decimal("0.00")
         )
 
-        # Rebuild required_cached on inventory rows
+        # ── Rebuild inventory caches ─────────────────────────────
         self._log("Rebuilding inventory required cache...")
         for inv in Inventory.objects.all():
             inv.update_required_cached()
 
+        # ── Rebuild production allocations ───────────────────────
+        self._log("Rebuilding production allocations...")
+        ProductionAllocated.objects.all().update(quantity=0)
+        open_jobs = Production.objects.filter(
+            closed=False, bom_allocated=True
+        ).select_related("product")
+        for job in open_jobs:
+            comps = bom_component_map.get(job.product_id, [])
+            for comp_id, comp_qty in comps:
+                alloc_qty = comp_qty * job.quantity
+                ProductionAllocated.objects.filter(product_id=comp_id).update(
+                    quantity=F("quantity") + alloc_qty
+                )
+
+        # ── Refresh finance dashboard cache ──────────────────────
+        self._log("Refreshing finance dashboard cache...")
+        refresh_finance_dashboard_cache()
+
     # ------------------------------------------------------------------
     def _bulk_insert_all(
-        self, so_descriptors, po_descriptors, prod_job_list, ledger_ops, inv_quantities
+        self,
+        so_descriptors,
+        po_descriptors,
+        prod_job_list,
+        ledger_ops,
+        inv_quantities,
+        bom_component_map,
     ):
         """Create all orders, lines, and ledger entries with correct dates.
 
         Called AFTER auto_now / auto_now_add have been temporarily disabled
         so that every date field receives its historical value.
         """
-        # ── 6. Sales orders + lines ──────────────────────────────
+        # ── Sales orders + lines ─────────────────────────────────
         self._log(f"Creating {len(so_descriptors)} sales orders...")
         so_objs = [
-            SalesOrder(customer=cust, created_at=dt, updated_at=dt)
-            for cust, dt, _ in so_descriptors
+            SalesOrder(
+                customer=cust,
+                created_at=dt,
+                updated_at=dt,
+                ship_by_date=ship_by,
+            )
+            for cust, dt, ship_by, _ in so_descriptors
         ]
         SalesOrder.objects.bulk_create(so_objs, batch_size=BATCH_SIZE)
 
         sol_objs = []
         sales_ledger_objs = []
         sales_inv_ledger_objs = []
-        for so, (cust, dt, lines) in zip(so_objs, so_descriptors):
+        for so, (cust, dt, _ship_by, lines) in zip(so_objs, so_descriptors):
             for cp, qty, complete, shipped in lines:
                 value = cp.price * qty
                 sol_objs.append(
@@ -433,19 +593,24 @@ class Command(BaseCommand):
         self._log(f"Creating {len(sol_objs)} sales order lines...")
         SalesOrderLine.objects.bulk_create(sol_objs, batch_size=BATCH_SIZE)
 
-        # ── 7. Purchase orders + lines ───────────────────────────
+        # ── Purchase orders + lines ──────────────────────────────
         self._log(f"Creating {len(po_descriptors)} purchase orders...")
         po_objs = [
-            PurchaseOrder(supplier=supp, created_at=dt, updated_at=dt)
-            for supp, dt, _ in po_descriptors
+            PurchaseOrder(
+                supplier=supp,
+                created_at=dt,
+                updated_at=dt,
+                due_date=due,
+            )
+            for supp, dt, due, _ in po_descriptors
         ]
         PurchaseOrder.objects.bulk_create(po_objs, batch_size=BATCH_SIZE)
 
         pol_objs = []
         purchase_ledger_objs = []
         purchase_inv_ledger_objs = []
-        for po, (supp, dt, lines) in zip(po_objs, po_descriptors):
-            for sp, qty, complete, received in lines:
+        for po, (supp, dt, _due, lines) in zip(po_objs, po_descriptors):
+            for sp, qty, complete, received, store_confirmed in lines:
                 value = sp.cost * qty
                 pol_objs.append(
                     PurchaseOrderLine(
@@ -456,6 +621,8 @@ class Command(BaseCommand):
                         complete=complete,
                         closed=complete,
                         value=value,
+                        store_confirmed=store_confirmed,
+                        store_confirmed_at=dt if store_confirmed else None,
                     )
                 )
                 if complete:
@@ -481,26 +648,71 @@ class Command(BaseCommand):
         self._log(f"Creating {len(pol_objs)} purchase order lines...")
         PurchaseOrderLine.objects.bulk_create(pol_objs, batch_size=BATCH_SIZE)
 
-        # ── 8. Production jobs ───────────────────────────────────
+        # ── Production jobs + ledger ─────────────────────────────
         self._log(f"Creating {len(prod_job_list)} production jobs...")
-        Production.objects.bulk_create(
-            [
-                Production(
-                    product=prod,
-                    quantity=random.randint(1, 100),
-                    quantity_received=0,
-                    complete=False,
-                    closed=False,
-                    bom_allocated=False,
-                    created_at=dt,
-                    updated_at=dt,
-                )
-                for prod, dt in prod_job_list
-            ],
-            batch_size=BATCH_SIZE,
-        )
+        prod_objs = [
+            Production(
+                product=prod,
+                quantity=qty,
+                quantity_received=received,
+                complete=complete,
+                closed=complete,
+                bom_allocated=allocated,
+                bom_allocated_amount=qty if allocated else None,
+                due_date=due,
+                created_at=dt,
+                updated_at=dt,
+            )
+            for prod, dt, due, qty, received, complete, allocated in prod_job_list
+        ]
+        Production.objects.bulk_create(prod_objs, batch_size=BATCH_SIZE)
 
-        # ── 9. All ledger entries ────────────────────────────────
+        # Production ledger entries for completed jobs
+        prod_ledger_objs = []
+        prod_inv_ledger_objs = []
+        for job_obj, (prod, dt, _due, qty, received, complete, _alloc) in zip(
+            prod_objs, prod_job_list
+        ):
+            if received > 0:
+                unit_cost = float(prod.sale_price) * 0.4 if prod.sale_price else 10.0
+                prod_ledger_objs.append(
+                    ProductionLedger(
+                        product=prod,
+                        quantity=received,
+                        value=Decimal(str(round(unit_cost * received, 2))),
+                        date=dt,
+                        transaction_id=job_obj.pk,
+                    )
+                )
+                prod_inv_ledger_objs.append(
+                    InventoryLedger(
+                        product=prod,
+                        quantity=received,
+                        action=InventoryLedger.Action.PRODUCTION,
+                        transaction_id=job_obj.pk,
+                        date=dt,
+                    )
+                )
+                # Component deductions
+                comps = bom_component_map.get(prod.pk, [])
+                for comp_id, comp_qty in comps:
+                    prod_inv_ledger_objs.append(
+                        InventoryLedger(
+                            product_id=comp_id,
+                            quantity=-abs(comp_qty * received),
+                            action=InventoryLedger.Action.PRODUCTION,
+                            transaction_id=job_obj.pk,
+                            date=dt,
+                        )
+                    )
+
+        if prod_ledger_objs:
+            self._log(f"Creating {len(prod_ledger_objs)} production ledger entries...")
+            ProductionLedger.objects.bulk_create(
+                prod_ledger_objs, batch_size=BATCH_SIZE
+            )
+
+        # ── All inventory ledger entries ─────────────────────────
         all_inv_ledger = [
             InventoryLedger(
                 product_id=pid,
@@ -513,6 +725,7 @@ class Command(BaseCommand):
         ]
         all_inv_ledger.extend(sales_inv_ledger_objs)
         all_inv_ledger.extend(purchase_inv_ledger_objs)
+        all_inv_ledger.extend(prod_inv_ledger_objs)
         self._log(f"Creating {len(all_inv_ledger)} inventory ledger entries...")
         InventoryLedger.objects.bulk_create(all_inv_ledger, batch_size=BATCH_SIZE)
 
