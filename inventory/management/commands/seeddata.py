@@ -133,6 +133,20 @@ class Command(BaseCommand):
     def _seed(
         self, start_date, now, total_days, num_customers, num_suppliers, num_products
     ):
+        # ── Disconnect finance signals for the entire seed ────────
+        from django.db.models.signals import post_save
+
+        from finance.signals import _refresh_finance_cache
+
+        signal_connections = [
+            (post_save, _refresh_finance_cache, SalesLedger),
+            (post_save, _refresh_finance_cache, PurchaseLedger),
+            (post_save, _refresh_finance_cache, ProductionLedger),
+            (post_save, _refresh_finance_cache, Inventory),
+        ]
+        for signal, handler, sender in signal_connections:
+            signal.disconnect(handler, sender=sender)
+
         # ── 0. Flush existing seed data ──────────────────────────
         self._log("Clearing existing data...")
 
@@ -274,10 +288,6 @@ class Command(BaseCommand):
                 )
         SupplierProduct.objects.bulk_create(sp_objs, batch_size=BATCH_SIZE)
 
-        supp_prod_map: dict[int, list[SupplierProduct]] = defaultdict(list)
-        for sp in SupplierProduct.objects.select_related("supplier", "product"):
-            supp_prod_map[sp.supplier_id].append(sp)
-
         # ── 4. Set starting inventory and distribute to locations ─
         self._log("Setting initial inventory quantities...")
         inventories = list(Inventory.objects.all())
@@ -405,6 +415,16 @@ class Command(BaseCommand):
         initial_quantities = dict(inv_quantities)
         all_product_ids = list(inv_quantities.keys())
 
+        # Quick lookups for demand-driven supply chain
+        supplier_by_product: dict[int, SupplierProduct] = {}
+        for sp in sp_objs:
+            pid = sp.product_id
+            if pid not in supplier_by_product or float(sp.cost) < float(
+                supplier_by_product[pid].cost
+            ):
+                supplier_by_product[pid] = sp
+        bom_product_lookup = {p.pk: p for p in bom_products}
+
         current = start_date
         day = 0
         report_every = max(1, total_days // 10)
@@ -416,147 +436,209 @@ class Command(BaseCommand):
 
             weekday = current.weekday()
             is_weekend = weekday >= 5
+
+            # ── Sales orders drive the entire supply chain ───────
+            # Flow: SO placed → job created → PO for materials → PO
+            # received → job completed → SO shipped.
             so_count = random.randint(0, 1) if is_weekend else random.randint(1, 5)
-            po_count = 0 if is_weekend else random.randint(0, 2)
-            prod_count = 0 if is_weekend else random.randint(0, 2)
 
-            # ── Purchase orders FIRST (stock flows in) ───────────
-            for _ in range(po_count):
-                supp = random.choice(suppliers)
-                sp_list = supp_prod_map.get(supp.pk, [])
-                if not sp_list:
-                    continue
-                due = (current + timedelta(days=random.randint(7, 45))).date()
-                due_passed = due < now.date()
-                if due_passed:
-                    order_complete = random.random() < 0.97
-                else:
-                    order_complete = None
-                po_lines: list[tuple] = []
-                for _ in range(random.randint(1, 4)):
-                    sp = random.choice(sp_list)
-                    qty = random.randint(5, 30)
-                    if order_complete is True:
-                        complete = True
-                    elif order_complete is False:
-                        complete = False
-                    else:
-                        chance = 0.7 if (now - current).days > 14 else 0.2
-                        complete = random.random() < chance
-                    received = qty if complete else random.randint(0, qty - 1)
-                    store_confirmed = complete and random.random() < 0.95
-                    if complete:
-                        pid = sp.product_id
-                        inv_quantities[pid] = inv_quantities.get(pid, 0) + qty
-                    po_lines.append((sp, qty, complete, received, store_confirmed))
-                po_descriptors.append((supp, current, due, po_lines))
-
-            # ── Production jobs ──────────────────────────────────
-            for _ in range(prod_count):
-                if bom_products:
-                    prod_product = random.choice(bom_products)
-                    due = (current + timedelta(days=random.randint(5, 30))).date()
-                    due_passed = due < now.date()
-                    qty = random.randint(5, 50)
-                    if due_passed:
-                        if random.random() < 0.97:
-                            received = qty
-                        else:
-                            received = random.randint(0, qty - 1)
-                    elif (now - current).days > 14:
-                        received = (
-                            qty if random.random() < 0.6 else random.randint(0, qty)
-                        )
-                    else:
-                        received = random.randint(0, qty // 2)
-                    # Cap received to what components can actually support
-                    comps = bom_component_map.get(prod_product.pk, [])
-                    if comps and received > 0:
-                        max_producible = min(
-                            inv_quantities.get(comp_id, 0) // comp_qty
-                            for comp_id, comp_qty in comps
-                        )
-                        received = min(received, max(max_producible, 0))
-                    complete = received >= qty
-                    allocated = True
-                    if received > 0:
-                        inv_quantities[prod_product.pk] = (
-                            inv_quantities.get(prod_product.pk, 0) + received
-                        )
-                        for comp_id, comp_qty in comps:
-                            deduction = comp_qty * received
-                            inv_quantities[comp_id] = (
-                                inv_quantities.get(comp_id, 0) - deduction
-                            )
-                    prod_job_list.append(
-                        (prod_product, current, due, qty, received, complete, allocated)
-                    )
-
-            # ── Sales orders AFTER (stock flows out) ─────────────
             for _ in range(so_count):
                 cust = random.choice(customers)
                 cp_list = cust_prod_map.get(cust.pk, [])
                 if not cp_list:
                     continue
-                ship_by = (current + timedelta(days=random.randint(3, 30))).date()
+                ship_by = (current + timedelta(days=random.randint(7, 30))).date()
                 ship_by_passed = ship_by < now.date()
                 if ship_by_passed:
                     order_complete = random.random() < 0.97
                 else:
                     order_complete = None
-                lines = []
-                # Collect stock needs for past-due orders first
+
                 line_specs = []
                 for _ in range(random.randint(1, 4)):
                     cp = random.choice(cp_list)
                     qty = random.randint(2, 25)
                     line_specs.append((cp, qty))
 
+                # ── Fulfillment: build the supply chain backward ─
                 if order_complete is True:
-                    # Aggregate total demand per product across all lines
-                    # before checking shortfall, to handle duplicate products.
                     demand_by_product: dict[int, int] = defaultdict(int)
                     for cp, qty in line_specs:
                         demand_by_product[cp.product_id] += qty
                     for pid, total_needed in demand_by_product.items():
                         shortfall = total_needed - inv_quantities.get(pid, 0)
-                        if shortfall > 0:
-                            # Find a supplier for this product
-                            restock_sp = None
-                            for sp_obj in sp_objs:
-                                if sp_obj.product_id == pid:
-                                    restock_sp = sp_obj
-                                    break
-                            if restock_sp:
-                                restock_qty = shortfall
-                                restock_due = (
-                                    current - timedelta(days=random.randint(1, 5))
+                        if shortfall <= 0:
+                            continue
+                        if pid in bom_product_ids:
+                            # BOM product → production job + POs for
+                            # components (the realistic supply chain).
+                            prod_product = bom_product_lookup[pid]
+                            job_qty = shortfall
+                            job_date = current + timedelta(days=random.randint(1, 3))
+                            job_due = max(
+                                ship_by - timedelta(days=random.randint(1, 3)),
+                                (current + timedelta(days=2)).date(),
+                            )
+                            comps = bom_component_map.get(pid, [])
+                            for comp_id, comp_qty in comps:
+                                comp_needed = comp_qty * job_qty
+                                comp_have = inv_quantities.get(comp_id, 0)
+                                if comp_have < comp_needed:
+                                    comp_short = comp_needed - comp_have
+                                    sp = supplier_by_product.get(comp_id)
+                                    if sp:
+                                        po_date = current
+                                        po_due = (
+                                            current
+                                            + timedelta(days=random.randint(5, 14))
+                                        ).date()
+                                        po_descriptors.append(
+                                            (
+                                                sp.supplier,
+                                                po_date,
+                                                po_due,
+                                                [
+                                                    (
+                                                        sp,
+                                                        comp_short,
+                                                        True,
+                                                        comp_short,
+                                                        True,
+                                                    )
+                                                ],
+                                            )
+                                        )
+                                    inv_quantities[comp_id] = comp_have + comp_short
+                            # Run the production job (completed)
+                            for comp_id, comp_qty in comps:
+                                inv_quantities[comp_id] = (
+                                    inv_quantities.get(comp_id, 0) - comp_qty * job_qty
+                                )
+                            inv_quantities[pid] = inv_quantities.get(pid, 0) + job_qty
+                            prod_job_list.append(
+                                (
+                                    prod_product,
+                                    job_date,
+                                    job_due,
+                                    job_qty,
+                                    job_qty,
+                                    True,
+                                    True,
+                                )
+                            )
+                        else:
+                            # Regular product → PO for restocking
+                            sp = supplier_by_product.get(pid)
+                            if sp:
+                                po_date = current - timedelta(
+                                    days=random.randint(3, 10)
+                                )
+                                po_due = (
+                                    current - timedelta(days=random.randint(0, 2))
                                 ).date()
                                 po_descriptors.append(
                                     (
-                                        restock_sp.supplier,
-                                        current - timedelta(days=random.randint(7, 14)),
-                                        restock_due,
+                                        sp.supplier,
+                                        po_date,
+                                        po_due,
                                         [
                                             (
-                                                restock_sp,
-                                                restock_qty,
+                                                sp,
+                                                shortfall,
                                                 True,
-                                                restock_qty,
+                                                shortfall,
                                                 True,
                                             )
                                         ],
                                     )
                                 )
-                                inv_quantities[pid] = (
-                                    inv_quantities.get(pid, 0) + restock_qty
-                                )
-                            else:
-                                # No supplier — just inject stock
-                                inv_quantities[pid] = (
-                                    inv_quantities.get(pid, 0) + shortfall
-                                )
+                            inv_quantities[pid] = inv_quantities.get(pid, 0) + shortfall
 
+                elif order_complete is None:
+                    # Future order – sometimes trigger supply-chain
+                    # pipeline (in-progress jobs awaiting materials).
+                    for cp, qty in line_specs:
+                        pid = cp.product_id
+                        if pid not in bom_product_ids:
+                            continue
+                        if random.random() > 0.3:
+                            continue
+                        current_stock = inv_quantities.get(pid, 0)
+                        if current_stock >= qty:
+                            continue
+                        prod_product = bom_product_lookup[pid]
+                        job_qty = qty - current_stock
+                        job_date = current + timedelta(days=random.randint(1, 3))
+                        job_due = max(
+                            ship_by - timedelta(days=random.randint(1, 3)),
+                            (current + timedelta(days=3)).date(),
+                        )
+                        # POs for components (may not be received yet)
+                        comps = bom_component_map.get(pid, [])
+                        for comp_id, comp_qty in comps:
+                            comp_needed = comp_qty * job_qty
+                            comp_have = inv_quantities.get(comp_id, 0)
+                            if comp_have < comp_needed:
+                                comp_short = comp_needed - comp_have
+                                sp = supplier_by_product.get(comp_id)
+                                if sp:
+                                    po_date = current
+                                    po_due = (
+                                        current + timedelta(days=random.randint(7, 21))
+                                    ).date()
+                                    po_due_passed = po_due < now.date()
+                                    rcvd = comp_short if po_due_passed else 0
+                                    po_descriptors.append(
+                                        (
+                                            sp.supplier,
+                                            po_date,
+                                            po_due,
+                                            [
+                                                (
+                                                    sp,
+                                                    comp_short,
+                                                    po_due_passed,
+                                                    rcvd,
+                                                    po_due_passed,
+                                                )
+                                            ],
+                                        )
+                                    )
+                                    if po_due_passed:
+                                        inv_quantities[comp_id] = comp_have + comp_short
+                        # Complete the job only if components are ready
+                        max_producible = max(
+                            min(
+                                (
+                                    inv_quantities.get(cid, 0) // cqty
+                                    for cid, cqty in comps
+                                ),
+                                default=0,
+                            ),
+                            0,
+                        )
+                        received = min(job_qty, max_producible)
+                        complete = received >= job_qty
+                        if received > 0:
+                            for comp_id, comp_qty in comps:
+                                inv_quantities[comp_id] = (
+                                    inv_quantities.get(comp_id, 0) - comp_qty * received
+                                )
+                            inv_quantities[pid] = inv_quantities.get(pid, 0) + received
+                        prod_job_list.append(
+                            (
+                                prod_product,
+                                job_date,
+                                job_due,
+                                job_qty,
+                                received,
+                                complete,
+                                True,
+                            )
+                        )
+
+                # ── Build SO lines (shipping) ────────────────────
+                lines = []
                 for cp, qty in line_specs:
                     pid = cp.product_id
                     current_stock = inv_quantities.get(pid, 0)
@@ -572,6 +654,8 @@ class Command(BaseCommand):
                         inv_quantities[pid] = current_stock - qty
                     lines.append((cp, qty, complete, shipped))
                 so_descriptors.append((cust, current, ship_by, lines))
+
+            # ── Small daily inventory adjustments ────────────────
             sample_size = random.randint(0, 2)
             if sample_size > 0 and all_product_ids:
                 for pid in random.sample(
@@ -713,7 +797,9 @@ class Command(BaseCommand):
                     quantity=F("quantity") + alloc_qty
                 )
 
-        # ── Refresh finance dashboard cache ──────────────────────
+        # ── Reconnect signals and refresh finance dashboard cache ─
+        for signal, handler, sender in signal_connections:
+            signal.connect(handler, sender=sender)
         self._log("Refreshing finance dashboard cache...")
         refresh_finance_dashboard_cache()
 
