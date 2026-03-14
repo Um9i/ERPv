@@ -210,11 +210,15 @@ class TestProduction:
         from django.contrib.auth.models import User
         from django.urls import reverse
 
+        from procurement.models import Supplier, SupplierProduct
         from production.models import BillOfMaterials
 
-        # create two extra component products
+        # create two extra component products with a supplier so they are sourceable
         comp1 = product.__class__.objects.create(name="comp1")
         comp2 = product.__class__.objects.create(name="comp2")
+        sup = Supplier.objects.create(name="comp supplier")
+        SupplierProduct.objects.create(supplier=sup, product=comp1, cost=1)
+        SupplierProduct.objects.create(supplier=sup, product=comp2, cost=1)
 
         user = User.objects.create_user(username="bomuser2")
         client.force_login(user)
@@ -294,9 +298,18 @@ class TestProduction:
         from django.contrib.auth.models import User
         from django.urls import reverse
 
+        from procurement.models import Supplier, SupplierProduct
+
         # current bom fixture has two components; we'll change one and add a third
         existing = list(bom.bom_items.all())
         comp_new = product.__class__.objects.create(name="comp new")
+        sup = Supplier.objects.create(name="comp supplier")
+        SupplierProduct.objects.create(supplier=sup, product=comp_new, cost=1)
+        # existing components also need a supplier to pass form queryset filter
+        for itm in existing:
+            SupplierProduct.objects.get_or_create(
+                supplier=sup, product=itm.product, defaults={"cost": 1}
+            )
 
         user = User.objects.create_user(username="bomuser3")
         client.force_login(user)
@@ -410,13 +423,16 @@ class TestProduction:
         from django.urls import reverse
 
         from inventory.models import Product as InvProduct
+        from procurement.models import Supplier, SupplierProduct
         from production.models import BillOfMaterials, BOMItem
 
         # must be logged in because middleware enforces auth
         user = User.objects.create_user(username="test")
         client.force_login(user)
-        # create bom — must include at least one component
+        # create bom — must include at least one component (with a supplier)
         comp = InvProduct.objects.create(name="component1")
+        sup = Supplier.objects.create(name="comp supplier")
+        SupplierProduct.objects.create(supplier=sup, product=comp, cost=1)
         url = reverse("production:bom-create")
         data = {
             "product": product.pk,

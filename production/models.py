@@ -61,6 +61,8 @@ class BOMItem(models.Model):
         return visited
 
     def clean(self):
+        if not self.product_id or not self.bom_id:
+            return
         # Don't allow a products bill of materials to contain itself.
         if self.bom.product == self.product:
             raise ValidationError(_("BOM inceptions are not advisable."))
@@ -79,6 +81,21 @@ class BOMItem(models.Model):
                     "product": self.product.name,
                     "parent": self.bom.product.name,
                 },
+            )
+
+        # A BOM item must be sourceable: either procurable (has supplier
+        # products) or producible (has its own bill of materials).
+        from procurement.models import SupplierProduct
+
+        has_supplier = SupplierProduct.objects.filter(product=self.product).exists()
+        has_bom = BillOfMaterials.objects.filter(product=self.product).exists()
+        if not has_supplier and not has_bom:
+            raise ValidationError(
+                _(
+                    "%(product)s cannot be added as a BOM item because it has no "
+                    "supplier and no bill of materials."
+                ),
+                params={"product": self.product.name},
             )
 
 

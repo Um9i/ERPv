@@ -297,7 +297,9 @@ class Command(BaseCommand):
         for prod in sample_prods:
             bom_product_ids.add(prod.pk)
             components = [
-                p for p in products if p.pk not in bom_product_ids and p != prod
+                p
+                for p in products
+                if p.pk not in bom_product_ids and p != prod and p.pk in cheapest_cost
             ]
             n_comps = random.randint(2, min(4, len(components)))
             chosen = random.sample(components, n_comps)
