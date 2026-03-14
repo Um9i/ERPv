@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 def _notify_all_users(*, category, level, title, message, link):
     """Create a notification for every active user (skipping duplicates)."""
     already_notified = set(
-        Notification.objects.filter(title=title, is_read=False).values_list(
-            "user_id", flat=True
-        )
+        Notification.objects.filter(
+            title=title, message=message, is_read=False
+        ).values_list("user_id", flat=True)
     )
     users = User.objects.filter(is_active=True).exclude(pk__in=already_notified)
     Notification.objects.bulk_create(
