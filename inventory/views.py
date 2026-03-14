@@ -92,13 +92,19 @@ class ProductUpdateView(LoginRequiredMixin, UpdateView):
 
             failed = []
             for pi in paired_instances:
-                ok1 = _notify_remote_customer_product(
-                    pi, product.name, product.sale_price
-                )
-                ok2 = _notify_remote_supplier_product_cost(
-                    pi, product.name, product.sale_price
-                )
-                if not ok1 or not ok2:
+                if pi.customer:
+                    # Remote is our customer – tell them their supplier cost changed
+                    ok = _notify_remote_supplier_product_cost(
+                        pi, product.name, product.sale_price
+                    )
+                elif pi.supplier:
+                    # Remote is our supplier – tell them their customer pricing changed
+                    ok = _notify_remote_customer_product(
+                        pi, product.name, product.sale_price
+                    )
+                else:
+                    ok = True
+                if not ok:
                     failed.append(pi.name)
 
             if failed:
