@@ -124,14 +124,21 @@ jobs:
       - run: npx tsc
 
       - name: Run unit tests
-        run: pytest -m unit
+        run: pytest -m unit --no-cov
         env:
           DJANGO_SETTINGS_MODULE: main.settings
           DEBUG: "True"
           SECRETKEY: "ci-test-key"
 
       - name: Run integration tests
-        run: pytest -m integration
+        run: pytest -m integration --no-cov
+        env:
+          DJANGO_SETTINGS_MODULE: main.settings
+          DEBUG: "True"
+          SECRETKEY: "ci-test-key"
+
+      - name: Coverage (full suite)
+        run: pytest --cov=. --cov-report=term-missing --cov-fail-under=85
         env:
           DJANGO_SETTINGS_MODULE: main.settings
           DEBUG: "True"
