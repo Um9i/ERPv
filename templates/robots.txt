@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /accounts/
+Disallow: /inventory/
+Disallow: /sales/
+Disallow: /procurement/
+Disallow: /production/
+Disallow: /finance/
+Disallow: /config/
+Disallow: /dashboards/
+Sitemap: https://um9i.dev/sitemap.xml

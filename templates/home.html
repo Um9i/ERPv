@@ -1,9 +1,37 @@
 {% extends "base.html" %}
 
 {% block head %}
-  <title>ERPv – Comprehensive ERP for Inventory, Sales, Procurement</title>
+  <title>ERPv – Open-Source ERP for Inventory, Sales & Procurement</title>
   <meta name="description" content="ERPv is a lean, professional-grade ERP platform. Track inventory across warehouse locations, manage sales and purchase orders, and optimise production with BOM-driven work orders.">
   <meta name="keywords" content="ERP, inventory management, warehouse locations, sales orders, procurement, production, bill of materials">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://um9i.dev/" />
+  <meta property="og:title" content="ERPv – Open-Source ERP for Inventory, Sales & Procurement" />
+  <meta property="og:description" content="A professional-grade open-source ERP for inventory, procurement, sales, production and finance — self-hosted and Docker-ready." />
+  <meta property="og:image" content="https://um9i.dev/static/img/social-preview.png" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="ERPv – Open-Source ERP" />
+  <meta name="twitter:description" content="Self-hosted ERP for inventory, sales, procurement, production and finance. Open source and Docker-ready." />
+  <meta name="twitter:image" content="https://um9i.dev/static/img/social-preview.png" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "ERPv",
+    "url": "https://um9i.dev/",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Linux, Docker",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "description": "Open-source ERP system for inventory, procurement, sales, production and finance.",
+    "license": "https://github.com/Um9i/ERPv/blob/main/LICENSE"
+  }
+  </script>
 {% endblock %}
 {% load static %}
 {% block content %}
