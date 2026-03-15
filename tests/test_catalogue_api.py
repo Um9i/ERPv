@@ -133,7 +133,8 @@ class BrowseCatalogueViewTest(TestCase):
         response = self.client.get(url)
         self.assertNotEqual(response.status_code, 200)
 
-    def test_browse_catalogue_staff_only(self):
+    def test_browse_catalogue_requires_permission(self):
+        self.regular_user.user_permissions.clear()
         self.client.force_login(self.regular_user)
         url = reverse(
             "config:paired-instance-browse-catalogue", args=[self.active_instance.pk]

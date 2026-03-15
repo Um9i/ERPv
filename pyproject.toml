@@ -59,6 +59,26 @@ dev = [
     "ruff>=0.15",
 ]
 
+[tool.coverage.run]
+omit = [
+    "config/management/commands/runngrok.py",
+    "*/migrations/*",
+    "manage.py",
+    "main/settings.py",
+    "main/wsgi.py",
+    "main/asgi.py",
+]
+
+[tool.coverage.report]
+omit = [
+    "config/management/commands/runngrok.py",
+    "*/migrations/*",
+    "manage.py",
+    "main/settings.py",
+    "main/wsgi.py",
+    "main/asgi.py",
+]
+
 [tool.ruff]
 exclude = ["migrations", "htmlcov", "staticfiles"]
 

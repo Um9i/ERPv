@@ -50,7 +50,8 @@ class ImportCatalogueProductViewTest(TestCase):
         self.assertNotEqual(response.status_code, 200)
         self.assertFalse(Product.objects.filter(name="Remote Widget").exists())
 
-    def test_import_view_is_staff_only(self):
+    def test_import_view_requires_permission(self):
+        self.regular_user.user_permissions.clear()
         self.client.force_login(self.regular_user)
         response = self.client.post(self.import_url, self.post_data)
         self.assertNotEqual(response.status_code, 200)

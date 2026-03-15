@@ -19,11 +19,68 @@ from sales.models import (
 
 _FAST_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
+_ERP_PERMISSION_CODENAMES = [
+    "manage_company",
+    "manage_pairing",
+    "manage_webhooks",
+    "manage_products",
+    "manage_stock",
+    "manage_locations",
+    "manage_suppliers",
+    "manage_purchase_orders",
+    "manage_customers",
+    "manage_sales_orders",
+    "manage_bom",
+    "manage_production",
+]
+
 
 @pytest.fixture(autouse=True)
 def _fast_password_hasher(settings):
     """Use MD5 instead of PBKDF2 so create_user() is near-instant."""
     settings.PASSWORD_HASHERS = _FAST_HASHERS
+
+
+def _grant_erp_permissions_on_create(sender, instance, created, **kwargs):
+    """post_save handler that auto-grants all ERP permissions to new users."""
+    if created:
+        from django.contrib.auth.models import Permission
+
+        perms = Permission.objects.filter(codename__in=_ERP_PERMISSION_CODENAMES)
+        instance.user_permissions.add(*perms)
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _connect_erp_permission_signal():
+    """Connect auto-grant signal for the entire test session.
+
+    Session scope ensures the signal is active during Django TestCase
+    ``setUpTestData`` calls, not just during individual test functions.
+    """
+    from django.contrib.auth import get_user_model
+    from django.db.models.signals import post_save
+
+    User = get_user_model()
+    post_save.connect(_grant_erp_permissions_on_create, sender=User)
+    yield
+    post_save.disconnect(_grant_erp_permissions_on_create, sender=User)
+
+
+@pytest.fixture(autouse=True)
+def _skip_auto_permissions_if_marked(request):
+    """Temporarily disconnect the auto-grant signal for tests marked
+    ``@pytest.mark.no_auto_permissions``."""
+    if "no_auto_permissions" not in request.keywords:
+        yield
+        return
+
+    from django.contrib.auth import get_user_model
+    from django.db.models.signals import post_save
+
+    User = get_user_model()
+    post_save.disconnect(_grant_erp_permissions_on_create, sender=User)
+    yield
+    post_save.connect(_grant_erp_permissions_on_create, sender=User)
 
 
 def _create_product_with_deps(name, quantity=0):

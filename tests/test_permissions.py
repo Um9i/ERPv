@@ -44,7 +44,27 @@ def normal_client(normal_user):
 
 @pytest.fixture
 def staff_user(db):
-    return User.objects.create_user(username="staffuser", is_staff=True)
+    from django.contrib.auth.models import Permission
+
+    user = User.objects.create_user(username="staffuser", is_staff=True)
+    perms = Permission.objects.filter(
+        codename__in=[
+            "manage_company",
+            "manage_pairing",
+            "manage_webhooks",
+            "manage_products",
+            "manage_stock",
+            "manage_locations",
+            "manage_suppliers",
+            "manage_purchase_orders",
+            "manage_customers",
+            "manage_sales_orders",
+            "manage_bom",
+            "manage_production",
+        ]
+    )
+    user.user_permissions.add(*perms)
+    return user
 
 
 @pytest.fixture
@@ -134,8 +154,9 @@ class TestAuthenticatedAccess:
 # ── Staff-only views ─────────────────────────────────────────────────────
 
 
+@pytest.mark.no_auto_permissions
 class TestStaffOnlyViews:
-    """Views with UserPassesTestMixin(is_staff) reject non-staff users."""
+    """Views with PermissionRequiredMixin reject users without permissions."""
 
     STAFF_ONLY_URLS = [
         "/config/company/",
