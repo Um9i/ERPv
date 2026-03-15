@@ -101,7 +101,7 @@
 
     <!-- Card 4 -->
     <rect x="900" y="420" width="200" height="90" rx="12" fill="url(#cardGlow)" stroke="#1e293b" stroke-width="1"/>
-    <text x="1000" y="458" text-anchor="middle" font-family="system-ui, sans-serif" font-size="30" fill="url(#accent)" font-weight="700">500+</text>
+    <text x="1000" y="458" text-anchor="middle" font-family="system-ui, sans-serif" font-size="30" fill="url(#accent)" font-weight="700">650+</text>
     <text x="1000" y="486" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#64748b" font-weight="500" letter-spacing="1.5">TESTS PASSING</text>
   </g>
 

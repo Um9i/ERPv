@@ -8,7 +8,7 @@
 
 [![Python 3.14](https://img.shields.io/badge/python-3.14-blue.svg)](https://www.python.org/downloads/)
 [![Django 6.0](https://img.shields.io/badge/django-6.0-green.svg)](https://www.djangoproject.com/)
-[![Tests](https://img.shields.io/badge/tests-659%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-650%2B%20passing-brightgreen.svg)](#testing)
 [![Coverage](https://img.shields.io/badge/coverage-86%25-brightgreen.svg)](#testing)
 [![Linting: ruff](https://img.shields.io/badge/linting-ruff-261230.svg)](https://github.com/astral-sh/ruff)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -69,7 +69,7 @@ ERPv is a full-featured ERP web application designed for small-to-medium manufac
 | QR Codes | python-qrcode |
 | Static Files | WhiteNoise |
 | Server | Gunicorn |
-| Testing | pytest, pytest-xdist, factory_boy — 659 tests, 86% coverage |
+| Testing | pytest, pytest-xdist, factory_boy — 650+ tests, 86% coverage |
 | Code Quality | ruff, mypy, bandit, pip-audit, pre-commit |
 
 ## Quick Start
@@ -125,7 +125,7 @@ Without it, the app falls back to a local SQLite file — fine for development.
 Tests run with pytest and include coverage reporting:
 
 ```bash
-pytest                        # run all 659 tests
+pytest                        # run all 650+ tests
 pytest -m unit                # unit tests only
 pytest -m integration         # integration tests only
 pytest -m e2e                 # end-to-end workflow tests
