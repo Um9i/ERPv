@@ -1,6 +1,8 @@
 <div align="center">
 
-# ERPv
+<p align="center">
+  <img src="docs/social-preview.png" alt="Social Preview" width="100%">
+</p>
 
 **A modern, open-source ERP built with Django — covering everything from purchase orders to production, shipping to finance.**
 
