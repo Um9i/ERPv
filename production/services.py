@@ -12,9 +12,10 @@ from inventory.models import (
     InventoryLedger,
     InventoryLocation,
     Location,
+    Product,
     ProductionAllocated,
 )
-from production.models import BillOfMaterials, Production, ProductionLedger
+from production.models import BillOfMaterials, BOMItem, Production, ProductionLedger
 
 logger = logging.getLogger(__name__)
 
@@ -210,41 +211,152 @@ def pending_jobs_by_product(product_ids: Iterable[int]) -> dict[int, int]:
     return {row["product_id"]: int(row["total"] or 0) for row in job_vals}
 
 
-def build_bom_tree(product, quantity=1, visited=None, _inv_cache=None):
-    """Recursively build a serialisable BOM tree with stock state."""
-    if visited is None:
-        visited = set()
-    if product.pk in visited:
-        return None  # circular reference guard
-    visited = visited | {product.pk}
+def _collect_bom_data(root_product_id: int) -> dict:
+    """Pre-fetch all BOM-related data for a product tree in bulk.
 
-    # on first call, pre-fetch all inventory into a cache
-    if _inv_cache is None:
-        _inv_cache = dict(Inventory.objects.values_list("product_id", "quantity"))
+    Returns a dict with:
+      - all_ids: set of all product IDs in the tree
+      - edges: dict mapping parent_product_id -> [(child_product_id, qty)]
+      - names: dict mapping product_id -> name
+      - inv: dict mapping product_id -> on-hand quantity
+    """
+    from collections import defaultdict
 
-    stock = _inv_cache.get(product.pk, 0)
+    # Iteratively collect all product IDs in the BOM tree
+    all_ids: set[int] = set()
+    frontier = {root_product_id}
+    while frontier:
+        all_ids |= frontier
+        children = set(
+            BOMItem.objects.filter(bom__product_id__in=frontier).values_list(
+                "product_id", flat=True
+            )
+        )
+        frontier = children - all_ids
 
-    node = {
-        "id": product.pk,
-        "name": product.name,
-        "quantity": quantity,
-        "stock": stock,
-        "sufficient": stock >= quantity,
-        "children": [],
+    # Bulk-load BOM edges: parent_product_id -> [(child_product_id, qty)]
+    edges: dict[int, list[tuple[int, int]]] = defaultdict(list)
+    for parent_id, child_id, qty in BOMItem.objects.filter(
+        bom__product_id__in=all_ids
+    ).values_list("bom__product_id", "product_id", "quantity"):
+        edges[parent_id].append((child_id, qty))
+
+    # Bulk-load product names
+    names: dict[int, str] = dict(
+        Product.objects.filter(pk__in=all_ids).values_list("pk", "name")
+    )
+
+    # Bulk-load inventory quantities
+    inv: dict[int, int] = dict(Inventory.objects.values_list("product_id", "quantity"))
+
+    return {
+        "all_ids": all_ids,
+        "edges": edges,
+        "names": names,
+        "inv": inv,
     }
 
-    try:
-        bom = product.billofmaterials
-        for item in bom.bom_items.select_related("product").all():
-            child = build_bom_tree(
-                item.product,
-                quantity=item.quantity * quantity,
-                visited=visited,
-                _inv_cache=_inv_cache,
-            )
+
+def compute_unit_cost(product_id: int, bom_data: dict | None = None):
+    """Compute unit cost for a product using pre-fetched BOM data.
+
+    If *bom_data* is ``None`` it will be collected from scratch, but
+    callers should pass the result of ``_collect_bom_data()`` when the
+    tree has already been loaded for ``build_bom_tree()``.
+    """
+    from django.db.models import Min
+
+    from procurement.models import SupplierProduct
+
+    if bom_data is None:
+        bom_data = _collect_bom_data(product_id)
+
+    all_ids = bom_data["all_ids"]
+    children_map = bom_data["edges"]
+
+    # If root has no BOM edges, it's a raw material — use cheapest supplier
+    if product_id not in children_map:
+        first = (
+            SupplierProduct.objects.filter(product_id=product_id)
+            .order_by("cost")
+            .values_list("cost", flat=True)
+            .first()
+        )
+        return first if first is not None else 0
+
+    # Bulk-load cheapest supplier cost per product
+    supplier_costs = dict(
+        SupplierProduct.objects.filter(product_id__in=all_ids)
+        .values("product_id")
+        .annotate(min_cost=Min("cost"))
+        .values_list("product_id", "min_cost")
+    )
+
+    # Bulk-load production costs per BOM
+    prod_costs = dict(
+        BillOfMaterials.objects.filter(product_id__in=all_ids).values_list(
+            "product_id", "production_cost"
+        )
+    )
+
+    # Bottom-up cost computation
+    bom_pids = set(prod_costs.keys())
+    costs = {
+        pid: supplier_costs[pid]
+        for pid in all_ids
+        if pid in supplier_costs and pid not in bom_pids
+    }
+    changed = True
+    while changed:
+        changed = False
+        for pid in all_ids:
+            if pid in costs:
+                continue
+            if pid not in children_map:
+                costs[pid] = 0
+                changed = True
+            elif all(cid in costs for cid, _ in children_map[pid]):
+                component_cost = sum(qty * costs[cid] for cid, qty in children_map[pid])
+                costs[pid] = component_cost + (prod_costs.get(pid) or 0)
+                changed = True
+
+    return costs.get(product_id, 0)
+
+
+def build_bom_tree(product, quantity=1, bom_data=None):
+    """Build a serialisable BOM tree with stock state.
+
+    Pre-fetches all BOM edges and product names in bulk so the entire
+    tree is constructed with a fixed number of queries regardless of depth.
+
+    Pass *bom_data* (from ``_collect_bom_data``) to avoid re-querying when
+    the caller has already loaded the data for ``compute_unit_cost()``.
+    """
+    if bom_data is None:
+        bom_data = _collect_bom_data(product.pk)
+
+    edges = bom_data["edges"]
+    names = bom_data["names"]
+    inv = bom_data["inv"]
+
+    def _build(pid, qty, visited):
+        if pid in visited:
+            return None
+        visited = visited | {pid}
+
+        stock = inv.get(pid, 0)
+        node = {
+            "id": pid,
+            "name": names.get(pid, ""),
+            "quantity": qty,
+            "stock": stock,
+            "sufficient": stock >= qty,
+            "children": [],
+        }
+        for child_id, child_qty in edges.get(pid, []):
+            child = _build(child_id, child_qty * qty, visited)
             if child:
                 node["children"].append(child)
-    except product.__class__.billofmaterials.RelatedObjectDoesNotExist:
-        pass
+        return node
 
-    return node
+    return _build(product.pk, quantity, frozenset())

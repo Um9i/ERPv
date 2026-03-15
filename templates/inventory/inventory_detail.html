@@ -112,11 +112,11 @@
         <button type="button" role="tab" class="nav-link {% if request.GET.tab == 'stock' %}active{% endif %}"
                 data-bs-toggle="tab" data-bs-target="#tab-stock">
             Stock Locations
-            {% if inventory.stock_locations.exists %}
+            {% if stock_locations_count %}
             <span class="badge bg-secondary ms-1"
                   data-bs-toggle="tooltip"
-                  title="{{ inventory.stock_locations.count }} location{% if inventory.stock_locations.count != 1 %}s{% endif %} assigned">
-                {{ inventory.stock_locations.count }}
+                  title="{{ stock_locations_count }} location{% if stock_locations_count != 1 %}s{% endif %} assigned">
+                {{ stock_locations_count }}
             </span>
             {% endif %}
         </button>
@@ -277,7 +277,7 @@
                     </a>
                 </div>
             </div>
-            {% if inventory.stock_locations.exists %}
+            {% if stock_locations_list %}
             <div class="table-responsive mt-2">
                 <table class="table table-sm align-middle mb-0">
                     <thead>
@@ -289,7 +289,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for sl in inventory.stock_locations.all %}
+                        {% for sl in stock_locations_list %}
                         <tr>
                             <td><i class="bi bi-inbox me-2 text-muted"></i>{{ sl.location }}</td>
                             <td class="text-end fw-semibold">{{ sl.quantity }}</td>

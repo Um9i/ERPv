@@ -1,7 +1,8 @@
 from datetime import date, timedelta
 
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count
+from django.db.models import Count, Exists, F, OuterRef, Subquery, Sum
+from django.db.models.functions import Greatest
 from django.utils.decorators import method_decorator
 from django.views.decorators.vary import vary_on_headers
 from django.views.generic import TemplateView
@@ -41,6 +42,27 @@ class ShippingScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
         context["next_date"] = current + timedelta(days=1)
         context["week_start"] = current - timedelta(days=current.weekday())
 
+        # Subquery annotations so status / remaining_total don't fire per-row
+        from sales.models import SalesOrderLine
+
+        _open_lines_exists = Exists(
+            SalesOrderLine.objects.filter(
+                sales_order=OuterRef("pk"),
+                complete=False,
+            ).exclude(quantity_shipped__gte=F("quantity"))
+        )
+        _remaining_sub = Subquery(
+            SalesOrderLine.objects.filter(sales_order=OuterRef("pk"))
+            .values("sales_order")
+            .annotate(
+                val=Sum(
+                    F("product__price")
+                    * Greatest(F("quantity") - F("quantity_shipped"), 0)
+                )
+            )
+            .values("val")[:1]
+        )
+
         # orders due on this date (exclude closed orders)
         context["orders"] = (
             SalesOrder.objects.filter(
@@ -48,7 +70,11 @@ class ShippingScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
                 sales_order_lines__complete=False,
             )
             .select_related("customer")
-            .prefetch_related("sales_order_lines__product__product", "pick_lists")
+            .prefetch_related("pick_lists")
+            .annotate(
+                _has_open_lines=_open_lines_exists,
+                _remaining_total=_remaining_sub,
+            )
             .distinct()
         )
 
@@ -83,6 +109,10 @@ class ShippingScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
             )
             .select_related("customer")
             .prefetch_related("pick_lists")
+            .annotate(
+                _has_open_lines=_open_lines_exists,
+                _remaining_total=_remaining_sub,
+            )
             .distinct()
         )
 

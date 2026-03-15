@@ -184,10 +184,13 @@ class BOMDetailView(LoginRequiredMixin, DetailView):
     template_name = "production/bom_detail.html"
     context_object_name = "bom"
 
+    def get_queryset(self):
+        return BillOfMaterials.objects.select_related("product")
+
     def get_context_data(self, **kwargs):
         from django.core.paginator import Paginator
 
-        from .services import build_bom_tree
+        from .services import _collect_bom_data, build_bom_tree, compute_unit_cost
 
         context = super().get_context_data(**kwargs)
         bom = self.object
@@ -196,9 +199,12 @@ class BOMDetailView(LoginRequiredMixin, DetailView):
         page = self.request.GET.get("page")
         paginator = Paginator(items, 10)
         context["bom_items"] = paginator.get_page(page)
-        context["bom_tree"] = build_bom_tree(product)
 
-        unit_cost = product.unit_cost
+        # Pre-fetch BOM data once, share between tree and cost computation
+        bom_data = _collect_bom_data(product.pk)
+        context["bom_tree"] = build_bom_tree(product, bom_data=bom_data)
+
+        unit_cost = compute_unit_cost(product.pk, bom_data=bom_data)
         sale_price = product.effective_sale_price
         component_cost = float(unit_cost) - float(bom.production_cost or 0)
         context["component_cost"] = component_cost
@@ -432,6 +438,9 @@ class ProductionDetailView(LoginRequiredMixin, DetailView):
     template_name = "production/production_detail.html"
     context_object_name = "production"
 
+    def get_queryset(self):
+        return Production.objects.select_related("product")
+
     def post(self, request, *args, **kwargs):
         from django.contrib import messages
 
@@ -480,14 +489,25 @@ class ProductionDetailView(LoginRequiredMixin, DetailView):
         context["today"] = timezone.now().date()
         context["today_plus_7"] = timezone.now().date() + timedelta(days=7)
 
+        # Bulk-fetch inventory for all components (quantity + pk) to avoid N+1
         components = []
+        max_receivable = 0
+        inv_map: dict[int, int] = {}
+        inv_pk_map: dict[int, int] = {}
         if bom_items:
-            # bulk-fetch inventory for all components to avoid N+1 queries
             component_products = [item.product for item in bom_items]
-            inv_map = {
-                inv.product_id: inv.quantity
-                for inv in Inventory.objects.filter(product__in=component_products)
-            }
+            for inv in Inventory.objects.filter(product__in=component_products):
+                inv_map[inv.product_id] = inv.quantity
+                inv_pk_map[inv.product_id] = inv.pk
+
+            # Compute max_receivable from already-fetched inventory
+            cap = job.remaining
+            for item in bom_items:
+                stock = inv_map.get(item.product_id, 0)
+                if item.quantity > 0:
+                    cap = min(cap, stock // item.quantity)
+            max_receivable = cap
+
             for item in bom_items:
                 stock = inv_map.get(item.product_id, 0)
                 required = item.quantity * job.quantity
@@ -502,16 +522,23 @@ class ProductionDetailView(LoginRequiredMixin, DetailView):
                         "stock": stock,
                         "shortfall": shortfall,
                         "ok": shortfall == 0,
+                        "inventory_pk": inv_pk_map.get(item.product_id),
                     }
                 )
         context["components"] = components
         context["any_shortage"] = any(not c["ok"] for c in components)
+        context["max_receivable"] = max_receivable
+        context["materials_available_for_remaining"] = max_receivable >= job.remaining
 
-        from .services import build_bom_tree
+        from .services import _collect_bom_data, build_bom_tree, compute_unit_cost
 
-        context["bom_tree"] = build_bom_tree(job.product, quantity=job.remaining)
+        # Pre-fetch BOM data once, share between tree and cost computation
+        bom_data = _collect_bom_data(job.product_id)
+        context["bom_tree"] = build_bom_tree(
+            job.product, quantity=job.remaining, bom_data=bom_data
+        )
 
-        unit_cost = job.product.unit_cost
+        unit_cost = compute_unit_cost(job.product_id, bom_data=bom_data)
         sale_price = job.product.effective_sale_price
 
         total_cost = unit_cost * job.quantity
@@ -544,7 +571,6 @@ class ProductionDetailView(LoginRequiredMixin, DetailView):
                 "projected_margin_pct": projected_margin_pct,
             }
         )
-        context["max_receivable"] = job.max_receivable
         if "receive_form" not in kwargs:
             context["receive_form"] = ProductionReceiveForm(instance=job)
         else:

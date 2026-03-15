@@ -366,7 +366,9 @@ class SalesOrderCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateVi
         if customer_id:
             try:
                 customer_obj = Customer.objects.get(pk=customer_id)
-                allowed = CustomerProduct.objects.filter(customer=customer_obj)
+                allowed = CustomerProduct.objects.filter(
+                    customer=customer_obj
+                ).select_related("product")
             except Customer.DoesNotExist:
                 allowed = CustomerProduct.objects.none()
             for f in context["lines_formset"]:

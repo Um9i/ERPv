@@ -122,18 +122,25 @@ def get_inventory_detail_context(
     product = inventory.product
     ctx: dict[str, Any] = {}
 
+    # ── Fetch all ledger entries once, reuse for pagination + chart ──
+    all_ledger_entries = list(
+        product.inventory_ledger.select_related("location")
+        .all()
+        .order_by("-date")
+        .values_list("pk", "quantity", "date")
+    )
+
     # ── Ledger pagination ──
-    ledger_list = product.inventory_ledger.all().order_by("-date")
+    ledger_list = (
+        product.inventory_ledger.select_related("location").all().order_by("-date")
+    )
     paginator = Paginator(ledger_list, 10)
     ledger_page = paginator.get_page(page)
 
     # ── Running balance anchored to current stock ──
-    all_entries_desc = list(
-        product.inventory_ledger.all().order_by("-date").values_list("pk", "quantity")
-    )
     balance_map: dict[int, int] = {}
     running = inventory.quantity
-    for pk, qty in all_entries_desc:
+    for pk, qty, _ in all_ledger_entries:
         balance_map[pk] = running
         running -= qty
 
@@ -142,14 +149,12 @@ def get_inventory_detail_context(
     ctx["ledger"] = ledger_page
 
     # ── Chart history anchored to real stock ──
-    all_entries_asc = list(
-        product.inventory_ledger.all().order_by("date").values_list("quantity", "date")
-    )
     opening_balance = running  # leftover from desc walk
     history = []
     raw_dates = []
     total = opening_balance
-    for qty, dt in all_entries_asc:
+    # walk in ascending order (reverse the desc list)
+    for _, qty, dt in reversed(all_ledger_entries):
         total += qty
         raw_dates.append(dt)
         history.append(total)

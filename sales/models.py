@@ -125,6 +125,11 @@ class SalesOrder(SoftDeleteMixin, AuditMixin, models.Model):
 
     @property
     def status(self):
+        # Prefer annotation injected by the view to avoid a per-row query.
+        has_open = getattr(self, "_has_open_lines", None)
+        if has_open is not None:
+            return "Open" if has_open else "Closed"
+
         from django.db.models import F
 
         if (
@@ -150,6 +155,13 @@ class SalesOrder(SoftDeleteMixin, AuditMixin, models.Model):
 
     @property
     def remaining_total(self):
+        # Prefer annotation injected by the view to avoid a per-row query.
+        if hasattr(self, "_remaining_total"):
+            val = self._remaining_total
+            if val is None:
+                return Decimal("0.00")
+            return Decimal(val).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
         total = self.sales_order_lines.aggregate(
             total=Sum(
                 F("product__price") * Greatest(F("quantity") - F("quantity_shipped"), 0)

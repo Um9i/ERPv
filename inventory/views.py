@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.db import models
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
@@ -167,7 +168,16 @@ class InventoryDetailView(LoginRequiredMixin, DetailView):
     context_object_name = "inventory"
 
     def get_queryset(self):
-        return Inventory.objects.all().select_related("product")
+        return (
+            Inventory.objects.all()
+            .select_related("product")
+            .prefetch_related(
+                models.Prefetch(
+                    "stock_locations",
+                    queryset=InventoryLocation.objects.select_related("location"),
+                )
+            )
+        )
 
     def get_context_data(self, **kwargs):
         from .services import get_inventory_detail_context
@@ -175,6 +185,11 @@ class InventoryDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         page = self.request.GET.get("page")
         context.update(get_inventory_detail_context(self.object, page=page))
+        # Expose pre-fetched stock locations so the template doesn't hit
+        # .exists() / .count() / .all separately.
+        stock_locs = list(self.object.stock_locations.all())
+        context["stock_locations_list"] = stock_locs
+        context["stock_locations_count"] = len(stock_locs)
         return context
 
 

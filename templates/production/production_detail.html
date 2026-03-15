@@ -139,9 +139,13 @@
                 {% for c in components %}
                 <tr {% if not c.ok %}class="table-danger"{% endif %}>
                     <td>
-                        <a href="{% url 'inventory:inventory-detail' c.product.product_inventory.pk %}">
+                        {% if c.inventory_pk %}
+                        <a href="{% url 'inventory:inventory-detail' c.inventory_pk %}">
                             {{ c.product.name }}
                         </a>
+                        {% else %}
+                            {{ c.product.name }}
+                        {% endif %}
                     </td>
                     <td class="text-center">{{ c.per_unit }}</td>
                     <td class="text-center">{{ c.required_remaining }}</td>
@@ -194,7 +198,7 @@
             {% endif %}
 
             {% if max_receivable > 0 %}
-            {% if not production.materials_available_for_remaining %}
+            {% if not materials_available_for_remaining %}
             <div class="alert alert-warning py-2 mb-3">
                 <i class="bi bi-exclamation-triangle me-1"></i>
                 Only enough materials to receive <strong>{{ max_receivable }}</strong> of {{ production.remaining }} remaining units.

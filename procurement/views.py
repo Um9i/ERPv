@@ -566,9 +566,12 @@ class PurchaseOrderCreateView(LoginRequiredMixin, PermissionRequiredMixin, Creat
         if supplier_id:
             try:
                 supplier_obj = Supplier.objects.get(pk=supplier_id)
-                allowed = SupplierProduct.objects.filter(supplier=supplier_obj)
+                allowed = SupplierProduct.objects.filter(
+                    supplier=supplier_obj
+                ).select_related("product")
             except Supplier.DoesNotExist:
                 allowed = SupplierProduct.objects.none()
+                supplier_obj = None
             for f in context["lines_formset"]:
                 f.fields["product"].queryset = allowed
 
@@ -582,10 +585,7 @@ class PurchaseOrderCreateView(LoginRequiredMixin, PermissionRequiredMixin, Creat
         context["supplier_known"] = bool(supplier_id)
         context["has_suppliers"] = Supplier.objects.exists()
         if supplier_id:
-            try:
-                context["supplier_name"] = Supplier.objects.get(pk=supplier_id).name
-            except Supplier.DoesNotExist:
-                context["supplier_name"] = ""
+            context["supplier_name"] = supplier_obj.name if supplier_obj else ""
 
         return context
 
