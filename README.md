@@ -8,7 +8,8 @@
 
 [![Python 3.14](https://img.shields.io/badge/python-3.14-blue.svg)](https://www.python.org/downloads/)
 [![Django 6.0](https://img.shields.io/badge/django-6.0-green.svg)](https://www.djangoproject.com/)
-[![Tests](https://img.shields.io/badge/tests-500%2B%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-659%20passing-brightgreen.svg)](#testing)
+[![Coverage](https://img.shields.io/badge/coverage-86%25-brightgreen.svg)](#testing)
 [![Linting: ruff](https://img.shields.io/badge/linting-ruff-261230.svg)](https://github.com/astral-sh/ruff)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -55,6 +56,8 @@ ERPv is a full-featured ERP web application designed for small-to-medium manufac
 
 🔔 **Notifications** — In-app notification centre with a navbar bell badge, low stock alerts, overdue order warnings, and order status change notifications. Optional email delivery of alert digests. Run `check_notifications` periodically for proactive alerts.
 
+🔒 **Security & Reliability** — Rate limiting on all API endpoints and login, granular role-based permissions with 12 custom permissions across all modules, soft deletes for critical models (Product, Supplier, PurchaseOrder, Customer, SalesOrder, Production), Sentry integration for production error tracking, and webhook delivery retry with exponential backoff.
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -66,7 +69,7 @@ ERPv is a full-featured ERP web application designed for small-to-medium manufac
 | QR Codes | python-qrcode |
 | Static Files | WhiteNoise |
 | Server | Gunicorn |
-| Testing | pytest, pytest-xdist, factory_boy — 500+ tests |
+| Testing | pytest, pytest-xdist, factory_boy — 659 tests, 86% coverage |
 | Code Quality | ruff, mypy, bandit, pip-audit, pre-commit |
 
 ## Quick Start
@@ -122,14 +125,14 @@ Without it, the app falls back to a local SQLite file — fine for development.
 Tests run with pytest and include coverage reporting:
 
 ```bash
-pytest                        # run all 500+ tests
-pytest -m unit                # unit tests only (~134 tests)
-pytest -m integration         # integration tests only (~337 tests)
+pytest                        # run all 659 tests
+pytest -m unit                # unit tests only
+pytest -m integration         # integration tests only
 pytest -m e2e                 # end-to-end workflow tests
 pytest -m "integration and not e2e"  # integration without e2e
 ```
 
-Coverage reports are generated in `htmlcov/`.
+Coverage reports are generated in `htmlcov/`. CI enforces an **85% coverage threshold** — the current suite achieves ~87%.
 
 ### Code Quality
 
