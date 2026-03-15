@@ -3,7 +3,7 @@ import hmac
 import logging
 
 from django import forms
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db.models import F
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
@@ -46,10 +46,11 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
-class SupplierCreateView(LoginRequiredMixin, CreateView):
+class SupplierCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = Supplier
     template_name = "procurement/supplier_form.html"
     form_class = SupplierForm
+    permission_required = "procurement.manage_suppliers"
 
     def get_initial(self):
         initial = super().get_initial()
@@ -84,17 +85,19 @@ class SupplierCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy("procurement:supplier-detail", args=[self.object.pk])
 
 
-class SupplierUpdateView(LoginRequiredMixin, UpdateView):
+class SupplierUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = Supplier
     template_name = "procurement/supplier_form.html"
     form_class = SupplierForm
     success_url = reverse_lazy("procurement:supplier-list")
+    permission_required = "procurement.manage_suppliers"
 
 
-class SupplierDeleteView(LoginRequiredMixin, DeleteView):
+class SupplierDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     model = Supplier
     template_name = "procurement/supplier_confirm_delete.html"
     success_url = reverse_lazy("procurement:supplier-list")
+    permission_required = "procurement.manage_suppliers"
 
 
 class SupplierListView(LoginRequiredMixin, ListView):
@@ -184,11 +187,14 @@ class SupplierDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class SupplierContactCreateView(LoginRequiredMixin, CreateView):
+class SupplierContactCreateView(
+    LoginRequiredMixin, PermissionRequiredMixin, CreateView
+):
     model = SupplierContact
     template_name = "procurement/supplier_contact_form.html"
     form_class = SupplierContactForm
     success_url = reverse_lazy("procurement:supplier-list")
+    permission_required = "procurement.manage_suppliers"
 
     def get_initial(self):
         initial = super().get_initial()
@@ -211,10 +217,13 @@ class SupplierContactCreateView(LoginRequiredMixin, CreateView):
         )
 
 
-class SupplierContactUpdateView(LoginRequiredMixin, UpdateView):
+class SupplierContactUpdateView(
+    LoginRequiredMixin, PermissionRequiredMixin, UpdateView
+):
     model = SupplierContact
     template_name = "procurement/supplier_contact_form.html"
     form_class = SupplierContactForm
+    permission_required = "procurement.manage_suppliers"
 
     def get_success_url(self):
         return reverse_lazy(
@@ -222,9 +231,12 @@ class SupplierContactUpdateView(LoginRequiredMixin, UpdateView):
         )
 
 
-class SupplierContactDeleteView(LoginRequiredMixin, DeleteView):
+class SupplierContactDeleteView(
+    LoginRequiredMixin, PermissionRequiredMixin, DeleteView
+):
     model = SupplierContact
     template_name = "procurement/supplier_contact_confirm_delete.html"
+    permission_required = "procurement.manage_suppliers"
 
     def get_success_url(self):
         return reverse_lazy(
@@ -232,11 +244,14 @@ class SupplierContactDeleteView(LoginRequiredMixin, DeleteView):
         )
 
 
-class SupplierProductCreateView(LoginRequiredMixin, CreateView):
+class SupplierProductCreateView(
+    LoginRequiredMixin, PermissionRequiredMixin, CreateView
+):
     model = SupplierProduct
     template_name = "procurement/supplier_product_form.html"
     form_class = SupplierProductForm
     success_url = reverse_lazy("procurement:supplier-list")
+    permission_required = "procurement.manage_suppliers"
 
     def get_initial(self):
         initial = super().get_initial()
@@ -260,11 +275,14 @@ class SupplierProductCreateView(LoginRequiredMixin, CreateView):
         )
 
 
-class SupplierProductUpdateView(LoginRequiredMixin, UpdateView):
+class SupplierProductUpdateView(
+    LoginRequiredMixin, PermissionRequiredMixin, UpdateView
+):
     model = SupplierProduct
     template_name = "procurement/supplier_product_form.html"
     form_class = SupplierProductForm
     success_url = reverse_lazy("procurement:supplier-list")
+    permission_required = "procurement.manage_suppliers"
 
     def form_valid(self, form):
         from main.audit import log_field_changes
@@ -279,10 +297,13 @@ class SupplierProductUpdateView(LoginRequiredMixin, UpdateView):
         )
 
 
-class SupplierProductDeleteView(LoginRequiredMixin, DeleteView):
+class SupplierProductDeleteView(
+    LoginRequiredMixin, PermissionRequiredMixin, DeleteView
+):
     model = SupplierProduct
     template_name = "procurement/supplier_product_confirm_delete.html"
     success_url = reverse_lazy("procurement:supplier-list")
+    permission_required = "procurement.manage_suppliers"
 
     def get_success_url(self):
         # after deleting a supplier product return to that supplier's detail
@@ -364,10 +385,11 @@ class SupplierProductCheckView(LoginRequiredMixin, View):
         return JsonResponse({"exists": qs.exists()})
 
 
-class PurchaseOrderDeleteView(LoginRequiredMixin, DeleteView):
+class PurchaseOrderDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     model = PurchaseOrder
     template_name = "procurement/purchase_order_confirm_delete.html"
     success_url = reverse_lazy("procurement:supplier-list")
+    permission_required = "procurement.manage_purchase_orders"
 
 
 class ProcurementDashboardView(LoginRequiredMixin, TemplateView):
@@ -475,11 +497,12 @@ class ProcurementDashboardView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class PurchaseOrderCreateView(LoginRequiredMixin, CreateView):
+class PurchaseOrderCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = PurchaseOrder
     template_name = "procurement/purchase_order_form.html"
     form_class = PurchaseOrderForm
     success_url = reverse_lazy("procurement:supplier-list")
+    permission_required = "procurement.manage_purchase_orders"
 
     def get_initial(self):
         initial = super().get_initial()
@@ -1114,9 +1137,12 @@ class PurchaseOrderFromTemplateView(LoginRequiredMixin, View):
         return redirect(f"{url}?{'&'.join(params)}")
 
 
-class PurchaseOrderTemplateDeleteView(LoginRequiredMixin, DeleteView):
+class PurchaseOrderTemplateDeleteView(
+    LoginRequiredMixin, PermissionRequiredMixin, DeleteView
+):
     model = PurchaseOrderTemplate
     success_url = reverse_lazy("procurement:po-template-list")
+    permission_required = "procurement.manage_purchase_orders"
 
     def get(self, request, *args, **kwargs):
         # skip confirmation page, just delete on GET redirect

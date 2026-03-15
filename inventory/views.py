@@ -3,7 +3,7 @@ import logging
 from decimal import Decimal
 
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
@@ -19,6 +19,7 @@ from django.views.generic import (
     TemplateView,
     UpdateView,
 )
+from django_ratelimit.decorators import ratelimit
 
 from config.models import PairedInstance
 from config.notifications import (
@@ -47,21 +48,23 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
-class ProductCreateView(LoginRequiredMixin, CreateView):
+class ProductCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = Product
     template_name = "inventory/product_form.html"
     form_class = ProductForm
     success_url = reverse_lazy("inventory:inventory-list")
+    permission_required = "inventory.manage_products"
 
     def get_success_url(self):
         assert self.object is not None
         return reverse_lazy("inventory:inventory-detail", args=[self.object.pk])
 
 
-class ProductUpdateView(LoginRequiredMixin, UpdateView):
+class ProductUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = Product
     template_name = "inventory/product_form.html"
     form_class = ProductForm
+    permission_required = "inventory.manage_products"
 
     def form_valid(self, form):
         old_price = (
@@ -123,10 +126,11 @@ class ProductUpdateView(LoginRequiredMixin, UpdateView):
         return reverse_lazy("inventory:inventory-detail", args=[self.object.pk])
 
 
-class ProductDeleteView(LoginRequiredMixin, DeleteView):
+class ProductDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     model = Product
     template_name = "inventory/product_confirm_delete.html"
     success_url = reverse_lazy("inventory:inventory-list")
+    permission_required = "inventory.manage_products"
 
 
 class InventoryListView(LoginRequiredMixin, ListView):
@@ -174,11 +178,14 @@ class InventoryDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class InventoryAdjustCreateView(LoginRequiredMixin, CreateView):
+class InventoryAdjustCreateView(
+    LoginRequiredMixin, PermissionRequiredMixin, CreateView
+):
     model = InventoryAdjust
     template_name = "inventory/inventory_adjust_form.html"
     form_class = InventoryAdjustForm
     success_url = reverse_lazy("inventory:inventory-list")
+    permission_required = "inventory.manage_stock"
 
     def get_inventory(self):
         return Inventory.objects.select_related("product").get(pk=self.kwargs.get("pk"))
@@ -584,11 +591,12 @@ class LocationListView(LoginRequiredMixin, ListView):
         )
 
 
-class LocationCreateView(LoginRequiredMixin, CreateView):
+class LocationCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = Location
     form_class = LocationForm
     template_name = "inventory/location_form.html"
     success_url = reverse_lazy("inventory:location-list")
+    permission_required = "inventory.manage_locations"
 
     def get_initial(self):
         initial = super().get_initial()
@@ -598,26 +606,31 @@ class LocationCreateView(LoginRequiredMixin, CreateView):
         return initial
 
 
-class LocationUpdateView(LoginRequiredMixin, UpdateView):
+class LocationUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = Location
     form_class = LocationForm
     template_name = "inventory/location_form.html"
     success_url = reverse_lazy("inventory:location-list")
+    permission_required = "inventory.manage_locations"
 
 
-class LocationDeleteView(LoginRequiredMixin, DeleteView):
+class LocationDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     model = Location
     template_name = "inventory/location_confirm_delete.html"
     success_url = reverse_lazy("inventory:location-list")
+    permission_required = "inventory.manage_locations"
 
 
 # ── Stock location assignment ──────────────────────────────────
 
 
-class InventoryLocationCreateView(LoginRequiredMixin, CreateView):
+class InventoryLocationCreateView(
+    LoginRequiredMixin, PermissionRequiredMixin, CreateView
+):
     model = InventoryLocation
     form_class = InventoryLocationForm
     template_name = "inventory/inventory_location_form.html"
+    permission_required = "inventory.manage_stock"
 
     def get_inventory(self):
         return Inventory.objects.select_related("product").get(pk=self.kwargs["pk"])
@@ -640,10 +653,13 @@ class InventoryLocationCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class InventoryLocationUpdateView(LoginRequiredMixin, UpdateView):
+class InventoryLocationUpdateView(
+    LoginRequiredMixin, PermissionRequiredMixin, UpdateView
+):
     model = InventoryLocation
     form_class = InventoryLocationForm
     template_name = "inventory/inventory_location_form.html"
+    permission_required = "inventory.manage_stock"
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -661,9 +677,12 @@ class InventoryLocationUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class InventoryLocationDeleteView(LoginRequiredMixin, DeleteView):
+class InventoryLocationDeleteView(
+    LoginRequiredMixin, PermissionRequiredMixin, DeleteView
+):
     model = InventoryLocation
     template_name = "inventory/inventory_location_confirm_delete.html"
+    permission_required = "inventory.manage_stock"
 
     def get_success_url(self):
         return reverse_lazy(
@@ -671,10 +690,11 @@ class InventoryLocationDeleteView(LoginRequiredMixin, DeleteView):
         )
 
 
-class StockTransferCreateView(LoginRequiredMixin, CreateView):
+class StockTransferCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = StockTransfer
     form_class = StockTransferForm
     template_name = "inventory/stock_transfer_form.html"
+    permission_required = "inventory.manage_stock"
 
     def get_inventory(self):
         return Inventory.objects.select_related("product").get(pk=self.kwargs["pk"])
@@ -705,6 +725,9 @@ class StockTransferCreateView(LoginRequiredMixin, CreateView):
 
 
 @method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(
+    ratelimit(key="ip", rate="60/m", method="GET", block=True), name="dispatch"
+)
 class CatalogueApiView(View):
     """Public endpoint — returns catalogue products to paired instances."""
 

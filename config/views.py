@@ -3,7 +3,7 @@ from urllib.parse import urlencode
 
 import httpx
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
@@ -12,6 +12,7 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import CreateView, DeleteView, ListView
 from django.views.generic.edit import UpdateView
+from django_ratelimit.decorators import ratelimit
 
 from main.constants import PARTNER_PREFILL_FIELDS
 
@@ -33,14 +34,12 @@ from .notifications import _notify_remote_customer, _notify_remote_customer_prod
 logger = logging.getLogger(__name__)
 
 
-class CompanyConfigView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+class CompanyConfigView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = CompanyConfig
     form_class = CompanyConfigForm
     template_name = "config/company_config.html"
     success_url = reverse_lazy("config:company-config")
-
-    def test_func(self):
-        return self.request.user.is_staff
+    permission_required = "config.manage_company"
 
     def get_object(self, queryset=None):
         obj, _ = CompanyConfig.objects.get_or_create(pk=1, defaults={"name": "ERPv"})
@@ -60,6 +59,9 @@ class CompanyConfigView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 
 
 @method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(
+    ratelimit(key="ip", rate="60/m", method="GET", block=True), name="dispatch"
+)
 class CompanyApiView(View):
     """Machine-to-machine endpoint — returns company info to paired instances."""
 
@@ -91,14 +93,12 @@ class CompanyApiView(View):
 _INTEGRATIONS_URL = reverse_lazy("config:company-config")
 
 
-class PairedInstanceCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+class PairedInstanceCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = PairedInstance
     form_class = PairedInstanceForm
     template_name = "config/paired_instance_form.html"
     success_url = _INTEGRATIONS_URL
-
-    def test_func(self):
-        return self.request.user.is_staff
+    permission_required = "config.manage_pairing"
 
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -118,14 +118,12 @@ class PairedInstanceCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateVi
         return response
 
 
-class PairedInstanceUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+class PairedInstanceUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = PairedInstance
     form_class = PairedInstanceForm
     template_name = "config/paired_instance_form.html"
     success_url = _INTEGRATIONS_URL
-
-    def test_func(self):
-        return self.request.user.is_staff
+    permission_required = "config.manage_pairing"
 
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -133,20 +131,17 @@ class PairedInstanceUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateVi
         return response
 
 
-class PairedInstanceDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+class PairedInstanceDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     model = PairedInstance
     template_name = "config/paired_instance_delete.html"
     success_url = _INTEGRATIONS_URL
-
-    def test_func(self):
-        return self.request.user.is_staff
+    permission_required = "config.manage_pairing"
 
 
-class PairedInstanceCompleteView(LoginRequiredMixin, UserPassesTestMixin, View):
+class PairedInstanceCompleteView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """Phase 2 — enter the remote api_key once the partner has shared it."""
 
-    def test_func(self):
-        return self.request.user.is_staff
+    permission_required = "config.manage_pairing"
 
     def get(self, request, pk, *args, **kwargs):
         instance = get_object_or_404(PairedInstance, pk=pk)
@@ -178,11 +173,10 @@ class PairedInstanceCompleteView(LoginRequiredMixin, UserPassesTestMixin, View):
         )
 
 
-class ImportAsCustomerView(LoginRequiredMixin, UserPassesTestMixin, View):
+class ImportAsCustomerView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """Fetch remote company data and redirect to Customer create form pre-filled."""
 
-    def test_func(self):
-        return self.request.user.is_staff
+    permission_required = "config.manage_pairing"
 
     def get(self, request, pk, *args, **kwargs):
         instance = get_object_or_404(PairedInstance, pk=pk)
@@ -222,11 +216,10 @@ class ImportAsCustomerView(LoginRequiredMixin, UserPassesTestMixin, View):
         return redirect(f"{reverse_lazy('sales:customer-create')}?{urlencode(params)}")
 
 
-class ImportAsSupplierView(LoginRequiredMixin, UserPassesTestMixin, View):
+class ImportAsSupplierView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """Fetch remote company data and redirect to Supplier create form pre-filled."""
 
-    def test_func(self):
-        return self.request.user.is_staff
+    permission_required = "config.manage_pairing"
 
     def get(self, request, pk, *args, **kwargs):
         instance = get_object_or_404(PairedInstance, pk=pk)
@@ -279,11 +272,10 @@ class ImportAsSupplierView(LoginRequiredMixin, UserPassesTestMixin, View):
         )
 
 
-class ImportCatalogueProductView(LoginRequiredMixin, UserPassesTestMixin, View):
+class ImportCatalogueProductView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """POST-only: import a remote catalogue item as a local Product + SupplierProduct."""
 
-    def test_func(self):
-        return self.request.user.is_staff
+    permission_required = "config.manage_pairing"
 
     def post(self, request, pk, *args, **kwargs):
         from decimal import Decimal, InvalidOperation
@@ -354,6 +346,9 @@ class ImportCatalogueProductView(LoginRequiredMixin, UserPassesTestMixin, View):
 
 
 @method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(
+    ratelimit(key="ip", rate="30/m", method="POST", block=True), name="dispatch"
+)
 class NotifyCustomerView(View):
     """Inbound: remote tells us to create/link them as a Customer here."""
 
@@ -405,6 +400,9 @@ class NotifyCustomerView(View):
 
 
 @method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(
+    ratelimit(key="ip", rate="30/m", method="POST", block=True), name="dispatch"
+)
 class NotifyCustomerProductView(View):
     """Inbound: remote tells us to create/link a CustomerProduct here."""
 
@@ -458,11 +456,10 @@ class NotifyCustomerProductView(View):
         return JsonResponse({"status": "ok", "created": created})
 
 
-class BrowseCatalogueView(LoginRequiredMixin, UserPassesTestMixin, View):
+class BrowseCatalogueView(LoginRequiredMixin, PermissionRequiredMixin, View):
     """Fetch and display the remote catalogue from a paired instance."""
 
-    def test_func(self):
-        return self.request.user.is_staff
+    permission_required = "config.manage_pairing"
 
     def get(self, request, pk, *args, **kwargs):
         from django.shortcuts import render
@@ -547,13 +544,11 @@ class NotificationMarkAllReadView(LoginRequiredMixin, View):
 # ── Webhook views ───────────────────────────────────────────────────
 
 
-class WebhookEndpointListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+class WebhookEndpointListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = WebhookEndpoint
     template_name = "config/webhook_list.html"
     context_object_name = "endpoints"
-
-    def test_func(self):
-        return self.request.user.is_staff
+    permission_required = "config.manage_webhooks"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -561,14 +556,14 @@ class WebhookEndpointListView(LoginRequiredMixin, UserPassesTestMixin, ListView)
         return ctx
 
 
-class WebhookEndpointCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+class WebhookEndpointCreateView(
+    LoginRequiredMixin, PermissionRequiredMixin, CreateView
+):
     model = WebhookEndpoint
     form_class = WebhookEndpointForm
     template_name = "config/webhook_form.html"
     success_url = reverse_lazy("config:webhook-list")
-
-    def test_func(self):
-        return self.request.user.is_staff
+    permission_required = "config.manage_webhooks"
 
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -588,37 +583,35 @@ class WebhookEndpointCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateV
         return response
 
 
-class WebhookEndpointUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+class WebhookEndpointUpdateView(
+    LoginRequiredMixin, PermissionRequiredMixin, UpdateView
+):
     model = WebhookEndpoint
     form_class = WebhookEndpointForm
     template_name = "config/webhook_form.html"
     success_url = reverse_lazy("config:webhook-list")
-
-    def test_func(self):
-        return self.request.user.is_staff
+    permission_required = "config.manage_webhooks"
 
     def form_valid(self, form):
         messages.success(self.request, f'Webhook "{self.object.name}" updated.')
         return super().form_valid(form)
 
 
-class WebhookEndpointDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+class WebhookEndpointDeleteView(
+    LoginRequiredMixin, PermissionRequiredMixin, DeleteView
+):
     model = WebhookEndpoint
     template_name = "config/webhook_delete.html"
     success_url = reverse_lazy("config:webhook-list")
-
-    def test_func(self):
-        return self.request.user.is_staff
+    permission_required = "config.manage_webhooks"
 
 
-class WebhookDeliveryListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+class WebhookDeliveryListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = WebhookDelivery
     template_name = "config/webhook_deliveries.html"
     context_object_name = "deliveries"
     paginate_by = 50
-
-    def test_func(self):
-        return self.request.user.is_staff
+    permission_required = "config.manage_webhooks"
 
     def get_queryset(self):
         return (

@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from inventory.models import Inventory, Product, ProductionAllocated
-from main.mixins import AuditMixin
+from main.mixins import AuditMixin, SoftDeleteMixin
 
 
 class BillOfMaterials(models.Model):
@@ -21,6 +21,10 @@ class BillOfMaterials(models.Model):
         verbose_name_plural = "Bill of Materials Configuration"
         indexes = [
             models.Index(fields=["product"]),
+        ]
+        permissions = [
+            ("manage_bom", "Can create, edit, and delete bills of materials"),
+            ("manage_production", "Can create and manage production jobs"),
         ]
 
     def __str__(self):
@@ -99,7 +103,7 @@ class BOMItem(models.Model):
             )
 
 
-class Production(AuditMixin, models.Model):
+class Production(SoftDeleteMixin, AuditMixin, models.Model):
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name="product_jobs"
     )

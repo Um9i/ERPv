@@ -24,6 +24,11 @@ class CompanyConfig(AddressMixin, models.Model):
 
     class Meta:
         verbose_name = "Company Configuration"
+        permissions = [
+            ("manage_company", "Can manage company configuration"),
+            ("manage_pairing", "Can manage paired instances"),
+            ("manage_webhooks", "Can manage webhook endpoints"),
+        ]
 
     def __str__(self):
         return self.name or "Company Configuration"

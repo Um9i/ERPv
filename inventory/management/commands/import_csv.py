@@ -117,7 +117,7 @@ class Command(BaseCommand):
                                 value = value.lower() in ("1", "true", "yes")
                         defaults[field] = value
 
-                existing = model_cls.objects.filter(name__iexact=name).first()  # type: ignore[attr-defined]
+                existing = model_cls.objects.filter(name__iexact=name).first()  # type: ignore[attr-defined, misc]
                 if existing:
                     if update:
                         for k, v in defaults.items():
@@ -127,7 +127,7 @@ class Command(BaseCommand):
                     else:
                         skipped += 1
                 else:
-                    obj = model_cls(name=name, **defaults)
+                    obj = model_cls(name=name, **defaults)  # type: ignore[misc]
                     obj.full_clean()
                     obj.save()
                     created += 1

@@ -9,10 +9,10 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from inventory.models import Product
-from main.mixins import AddressMixin, AuditMixin
+from main.mixins import AddressMixin, AuditMixin, SoftDeleteMixin
 
 
-class Supplier(AddressMixin, models.Model):
+class Supplier(SoftDeleteMixin, AddressMixin, models.Model):
     name = models.CharField(max_length=256, unique=True)
     phone = models.CharField(max_length=64, blank=True)
     email = models.CharField(max_length=128, blank=True)
@@ -26,6 +26,13 @@ class Supplier(AddressMixin, models.Model):
         verbose_name_plural = "Supplier Management"
         constraints = [
             models.UniqueConstraint(Lower("name"), name="supplier_name_ci_unique"),
+        ]
+        permissions = [
+            ("manage_suppliers", "Can create, edit, and delete suppliers"),
+            (
+                "manage_purchase_orders",
+                "Can create, receive, and close purchase orders",
+            ),
         ]
 
 
@@ -83,7 +90,7 @@ class SupplierProduct(models.Model):
         return total or 0
 
 
-class PurchaseOrder(AuditMixin, models.Model):
+class PurchaseOrder(SoftDeleteMixin, AuditMixin, models.Model):
     supplier = models.ForeignKey(
         Supplier, on_delete=models.CASCADE, related_name="supplier_purchase_orders"
     )

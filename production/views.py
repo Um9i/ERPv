@@ -1,7 +1,7 @@
 import logging
 
 from django import forms
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db.models import F, Q
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponseNotAllowed, JsonResponse
@@ -36,10 +36,11 @@ logger = logging.getLogger(__name__)
 # ----- BOM views -----
 
 
-class BOMCreateView(LoginRequiredMixin, CreateView):
+class BOMCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = BillOfMaterials
     template_name = "production/bom_form.html"
     form_class = BillOfMaterialsForm
+    permission_required = "production.manage_bom"
     # we'll redirect to the detail once created
 
     def get_success_url(self):
@@ -108,10 +109,11 @@ class BOMCreateView(LoginRequiredMixin, CreateView):
             return self.form_invalid(form)
 
 
-class BOMUpdateView(LoginRequiredMixin, UpdateView):
+class BOMUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = BillOfMaterials
     template_name = "production/bom_form.html"
     form_class = BillOfMaterialsForm
+    permission_required = "production.manage_bom"
 
     def get_success_url(self):
         return reverse_lazy("production:bom-detail", args=[self.object.pk])
@@ -151,10 +153,11 @@ class BOMUpdateView(LoginRequiredMixin, UpdateView):
             return self.form_invalid(form)
 
 
-class BOMDeleteView(LoginRequiredMixin, DeleteView):
+class BOMDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     model = BillOfMaterials
     template_name = "production/bom_confirm_delete.html"
     success_url = reverse_lazy("production:bom-list")
+    permission_required = "production.manage_bom"
 
 
 class BOMListView(LoginRequiredMixin, ListView):
@@ -208,11 +211,12 @@ class BOMDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class BOMItemCreateView(LoginRequiredMixin, CreateView):
+class BOMItemCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = BOMItem
     template_name = "production/bom_item_form.html"
     form_class = BOMItemForm
     success_url = reverse_lazy("production:bom-list")
+    permission_required = "production.manage_bom"
 
     def get_initial(self):
         initial = super().get_initial()
@@ -233,18 +237,20 @@ class BOMItemCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy("production:bom-detail", args=[self.object.bom.pk])
 
 
-class BOMItemUpdateView(LoginRequiredMixin, UpdateView):
+class BOMItemUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = BOMItem
     template_name = "production/bom_item_form.html"
     form_class = BOMItemForm
+    permission_required = "production.manage_bom"
 
     def get_success_url(self):
         return reverse_lazy("production:bom-detail", args=[self.object.bom.pk])
 
 
-class BOMItemDeleteView(LoginRequiredMixin, DeleteView):
+class BOMItemDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     model = BOMItem
     template_name = "production/bom_item_confirm_delete.html"
+    permission_required = "production.manage_bom"
 
     def get_success_url(self):
         return reverse_lazy("production:bom-detail", args=[self.object.bom.pk])
@@ -253,11 +259,12 @@ class BOMItemDeleteView(LoginRequiredMixin, DeleteView):
 # ----- Production job views -----
 
 
-class ProductionCreateView(LoginRequiredMixin, CreateView):
+class ProductionCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = Production
     template_name = "production/production_form.html"
     form_class = ProductionForm
     success_url = reverse_lazy("production:production-list")
+    permission_required = "production.manage_production"
 
     def get_initial(self):
         initial = super().get_initial()
@@ -289,11 +296,12 @@ class ProductionCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class ProductionUpdateView(LoginRequiredMixin, UpdateView):
+class ProductionUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = Production
     template_name = "production/production_form.html"
     form_class = ProductionUpdateForm
     success_url = reverse_lazy("production:production-list")
+    permission_required = "production.manage_production"
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)

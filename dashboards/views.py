@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count
 from django.utils.decorators import method_decorator
 from django.views.decorators.vary import vary_on_headers
 from django.views.generic import TemplateView
@@ -51,27 +52,27 @@ class ShippingScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
             .distinct()
         )
 
-        # week overview
+        # week overview – single query instead of 7 individual counts
         week_start = context["week_start"]
         week_dates = [week_start + timedelta(days=i) for i in range(7)]
-        week_data = []
-        for d in week_dates:
-            count = (
-                SalesOrder.objects.filter(
-                    ship_by_date=d,
-                    sales_order_lines__complete=False,
-                )
-                .distinct()
-                .count()
+        counts_qs = (
+            SalesOrder.objects.filter(
+                ship_by_date__in=week_dates,
+                sales_order_lines__complete=False,
             )
-            week_data.append(
-                {
-                    "date": d,
-                    "count": count,
-                    "is_today": d == today,
-                    "is_current": d == current,
-                }
-            )
+            .values("ship_by_date")
+            .annotate(cnt=Count("id", distinct=True))
+        )
+        counts_by_date = {row["ship_by_date"]: row["cnt"] for row in counts_qs}
+        week_data = [
+            {
+                "date": d,
+                "count": counts_by_date.get(d, 0),
+                "is_today": d == today,
+                "is_current": d == current,
+            }
+            for d in week_dates
+        ]
         context["week_data"] = week_data
 
         # overdue orders
@@ -124,27 +125,27 @@ class DeliveryScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
             .distinct()
         )
 
-        # week overview
+        # week overview – single query instead of 7 individual counts
         week_start = context["week_start"]
         week_dates = [week_start + timedelta(days=i) for i in range(7)]
-        week_data = []
-        for d in week_dates:
-            count = (
-                PurchaseOrder.objects.filter(
-                    due_date=d,
-                    purchase_order_lines__complete=False,
-                )
-                .distinct()
-                .count()
+        counts_qs = (
+            PurchaseOrder.objects.filter(
+                due_date__in=week_dates,
+                purchase_order_lines__complete=False,
             )
-            week_data.append(
-                {
-                    "date": d,
-                    "count": count,
-                    "is_today": d == today,
-                    "is_current": d == current,
-                }
-            )
+            .values("due_date")
+            .annotate(cnt=Count("id", distinct=True))
+        )
+        counts_by_date = {row["due_date"]: row["cnt"] for row in counts_qs}
+        week_data = [
+            {
+                "date": d,
+                "count": counts_by_date.get(d, 0),
+                "is_today": d == today,
+                "is_current": d == current,
+            }
+            for d in week_dates
+        ]
         context["week_data"] = week_data
 
         # overdue orders
@@ -191,23 +192,27 @@ class ProductionScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView)
             closed=False,
         ).select_related("product")
 
-        # week overview
+        # week overview – single query instead of 7 individual counts
         week_start = context["week_start"]
         week_dates = [week_start + timedelta(days=i) for i in range(7)]
-        week_data = []
-        for d in week_dates:
-            count = Production.objects.filter(
-                due_date=d,
+        counts_qs = (
+            Production.objects.filter(
+                due_date__in=week_dates,
                 closed=False,
-            ).count()
-            week_data.append(
-                {
-                    "date": d,
-                    "count": count,
-                    "is_today": d == today,
-                    "is_current": d == current,
-                }
             )
+            .values("due_date")
+            .annotate(cnt=Count("id"))
+        )
+        counts_by_date = {row["due_date"]: row["cnt"] for row in counts_qs}
+        week_data = [
+            {
+                "date": d,
+                "count": counts_by_date.get(d, 0),
+                "is_today": d == today,
+                "is_current": d == current,
+            }
+            for d in week_dates
+        ]
         context["week_data"] = week_data
 
         # overdue jobs

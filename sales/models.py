@@ -15,10 +15,10 @@ from inventory.models import (
     Location,
     Product,
 )
-from main.mixins import AddressMixin, AuditMixin
+from main.mixins import AddressMixin, AuditMixin, SoftDeleteMixin
 
 
-class Customer(AddressMixin, models.Model):
+class Customer(SoftDeleteMixin, AddressMixin, models.Model):
     name = models.CharField(max_length=256, unique=True)
     phone = models.CharField(max_length=64, blank=True)
     email = models.CharField(max_length=128, blank=True)
@@ -32,6 +32,10 @@ class Customer(AddressMixin, models.Model):
         verbose_name_plural = "Customer Management"
         constraints = [
             models.UniqueConstraint(Lower("name"), name="customer_name_ci_unique"),
+        ]
+        permissions = [
+            ("manage_customers", "Can create, edit, and delete customers"),
+            ("manage_sales_orders", "Can create, ship, and close sales orders"),
         ]
 
 
@@ -86,7 +90,7 @@ class CustomerProduct(models.Model):
         return max(total or 0, 0)
 
 
-class SalesOrder(AuditMixin, models.Model):
+class SalesOrder(SoftDeleteMixin, AuditMixin, models.Model):
     customer = models.ForeignKey(
         Customer, on_delete=models.CASCADE, related_name="customer_sales_orders"
     )

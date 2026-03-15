@@ -80,3 +80,61 @@ class AddressMixin(models.Model):
     @property
     def address(self) -> str:  # noqa: D401
         return self.full_address
+
+
+class SoftDeleteQuerySet(models.QuerySet):
+    """QuerySet that excludes soft-deleted rows by default."""
+
+    def delete(self):
+        return self.update(is_deleted=True)
+
+    def hard_delete(self):
+        return super().delete()
+
+    def alive(self):
+        return self.filter(is_deleted=False)
+
+    def dead(self):
+        return self.filter(is_deleted=True)
+
+
+class SoftDeleteManager(models.Manager):
+    """Default manager that hides soft-deleted rows."""
+
+    def get_queryset(self):
+        return SoftDeleteQuerySet(self.model, using=self._db).alive()
+
+
+class AllObjectsManager(models.Manager):
+    """Manager that includes soft-deleted rows."""
+
+    def get_queryset(self):
+        return SoftDeleteQuerySet(self.model, using=self._db)
+
+
+class SoftDeleteMixin(models.Model):
+    """Abstract mixin providing soft-delete functionality.
+
+    Adds an ``is_deleted`` flag and replaces the default manager so that
+    deleted rows are hidden from normal queries.  Use ``all_objects`` to
+    include deleted rows.
+    """
+
+    is_deleted = models.BooleanField(default=False, editable=False, db_index=True)
+
+    objects = SoftDeleteManager()
+    all_objects = AllObjectsManager()
+
+    class Meta:
+        abstract = True
+
+    def delete(self, using=None, keep_parents=False):
+        self.is_deleted = True
+        self.save(update_fields=["is_deleted"])
+
+    def hard_delete(self, using=None, keep_parents=False):
+        super().delete(using=using, keep_parents=keep_parents)
+
+    def restore(self):
+        self.is_deleted = False
+        self.save(update_fields=["is_deleted"])

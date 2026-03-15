@@ -6,10 +6,10 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 
-from main.mixins import AuditMixin
+from main.mixins import AuditMixin, SoftDeleteMixin
 
 
-class Product(models.Model):
+class Product(SoftDeleteMixin, models.Model):
     name = models.CharField(max_length=256, unique=True)
     sku = models.CharField(
         max_length=64,
@@ -177,6 +177,11 @@ class Product(models.Model):
         verbose_name_plural = "Inventory Management"
         constraints = [
             models.UniqueConstraint(Lower("name"), name="product_name_ci_unique"),
+        ]
+        permissions = [
+            ("manage_products", "Can create, edit, and delete products"),
+            ("manage_stock", "Can adjust stock and transfer inventory"),
+            ("manage_locations", "Can create, edit, and delete locations"),
         ]
 
 

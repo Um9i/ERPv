@@ -3,7 +3,7 @@ import hmac
 import logging
 
 from django import forms
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import redirect
@@ -45,10 +45,11 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
-class CustomerCreateView(LoginRequiredMixin, CreateView):
+class CustomerCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = Customer
     template_name = "sales/customer_form.html"
     form_class = CustomerForm
+    permission_required = "sales.manage_customers"
 
     def get_initial(self):
         initial = super().get_initial()
@@ -73,17 +74,19 @@ class CustomerCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy("sales:customer-detail", args=[self.object.pk])
 
 
-class CustomerUpdateView(LoginRequiredMixin, UpdateView):
+class CustomerUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = Customer
     template_name = "sales/customer_form.html"
     form_class = CustomerForm
     success_url = reverse_lazy("sales:customer-list")
+    permission_required = "sales.manage_customers"
 
 
-class CustomerDeleteView(LoginRequiredMixin, DeleteView):
+class CustomerDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
     model = Customer
     template_name = "sales/customer_confirm_delete.html"
     success_url = reverse_lazy("sales:customer-list")
+    permission_required = "sales.manage_customers"
 
 
 class CustomerListView(LoginRequiredMixin, ListView):
@@ -163,11 +166,14 @@ class CustomerDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class CustomerContactCreateView(LoginRequiredMixin, CreateView):
+class CustomerContactCreateView(
+    LoginRequiredMixin, PermissionRequiredMixin, CreateView
+):
     model = CustomerContact
     template_name = "sales/customer_contact_form.html"
     form_class = CustomerContactForm
     success_url = reverse_lazy("sales:customer-list")
+    permission_required = "sales.manage_customers"
 
     def get_initial(self):
         initial = super().get_initial()
@@ -188,28 +194,37 @@ class CustomerContactCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
 
 
-class CustomerContactUpdateView(LoginRequiredMixin, UpdateView):
+class CustomerContactUpdateView(
+    LoginRequiredMixin, PermissionRequiredMixin, UpdateView
+):
     model = CustomerContact
     template_name = "sales/customer_contact_form.html"
     form_class = CustomerContactForm
+    permission_required = "sales.manage_customers"
 
     def get_success_url(self):
         return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
 
 
-class CustomerContactDeleteView(LoginRequiredMixin, DeleteView):
+class CustomerContactDeleteView(
+    LoginRequiredMixin, PermissionRequiredMixin, DeleteView
+):
     model = CustomerContact
     template_name = "sales/customer_contact_confirm_delete.html"
+    permission_required = "sales.manage_customers"
 
     def get_success_url(self):
         return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
 
 
-class CustomerProductCreateView(LoginRequiredMixin, CreateView):
+class CustomerProductCreateView(
+    LoginRequiredMixin, PermissionRequiredMixin, CreateView
+):
     model = CustomerProduct
     template_name = "sales/customer_product_form.html"
     form_class = CustomerProductForm
     success_url = reverse_lazy("sales:customer-list")
+    permission_required = "sales.manage_customers"
 
     def get_initial(self):
         initial = super().get_initial()
@@ -230,11 +245,14 @@ class CustomerProductCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
 
 
-class CustomerProductUpdateView(LoginRequiredMixin, UpdateView):
+class CustomerProductUpdateView(
+    LoginRequiredMixin, PermissionRequiredMixin, UpdateView
+):
     model = CustomerProduct
     template_name = "sales/customer_product_form.html"
     form_class = CustomerProductForm
     success_url = reverse_lazy("sales:customer-list")
+    permission_required = "sales.manage_customers"
 
     def form_valid(self, form):
         from main.audit import log_field_changes
@@ -246,10 +264,13 @@ class CustomerProductUpdateView(LoginRequiredMixin, UpdateView):
         return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
 
 
-class CustomerProductDeleteView(LoginRequiredMixin, DeleteView):
+class CustomerProductDeleteView(
+    LoginRequiredMixin, PermissionRequiredMixin, DeleteView
+):
     model = CustomerProduct
     template_name = "sales/customer_product_confirm_delete.html"
     success_url = reverse_lazy("sales:customer-list")
+    permission_required = "sales.manage_customers"
 
     def get_success_url(self):
         return reverse_lazy("sales:customer-detail", args=[self.object.customer.pk])
@@ -301,11 +322,12 @@ class CustomerProductIDsView(LoginRequiredMixin, DetailView):
         return JsonResponse({"product_ids": ids})
 
 
-class SalesOrderCreateView(LoginRequiredMixin, CreateView):
+class SalesOrderCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = SalesOrder
     template_name = "sales/sales_order_form.html"
     form_class = SalesOrderForm
     success_url = reverse_lazy("sales:customer-list")
+    permission_required = "sales.manage_sales_orders"
 
     def get_initial(self):
         initial = super().get_initial()
