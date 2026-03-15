@@ -21,6 +21,7 @@ from django.views.generic import (
 )
 
 from main.constants import PARTNER_PREFILL_FIELDS
+from main.utils import safe_redirect
 
 from .forms import (
     CustomerContactForm,
@@ -494,7 +495,7 @@ class SalesOrderListView(LoginRequiredMixin, ListView):
         action = request.POST.get("bulk_action", "")
         selected = request.POST.getlist("selected")
         if not selected or action not in ("close", "cancel"):
-            return redirect(request.get_full_path())
+            return safe_redirect(request.get_full_path())
         orders = SalesOrder.objects.filter(pk__in=selected)
         count = 0
         for so in orders:
@@ -510,7 +511,7 @@ class SalesOrderListView(LoginRequiredMixin, ListView):
         from django.contrib import messages
 
         messages.success(request, f"{count} order(s) closed.")
-        return redirect(request.get_full_path())
+        return safe_redirect(request.get_full_path())
 
 
 class SalesOrderDetailView(LoginRequiredMixin, DetailView):
@@ -527,14 +528,10 @@ class SalesOrderDetailView(LoginRequiredMixin, DetailView):
                 line.closed = True
                 line.save(update_fields=["complete", "closed"])
             self.object.save(update_fields=["updated_at"])
-            from django.shortcuts import redirect
-
-            return redirect(request.path)
+            return safe_redirect(request.path)
         if "update_ship_by_date" in request.POST:
-            from django.shortcuts import redirect
-
             if self.object.status == "Closed":
-                return redirect(request.path)
+                return safe_redirect(request.path)
             raw = request.POST.get("ship_by_date", "").strip()
             if raw:
                 from datetime import date as date_cls
@@ -543,7 +540,7 @@ class SalesOrderDetailView(LoginRequiredMixin, DetailView):
             else:
                 self.object.ship_by_date = None
             self.object.save(update_fields=["ship_by_date", "updated_at"])
-            return redirect(request.path)
+            return safe_redirect(request.path)
         return HttpResponseNotAllowed(["GET"])
 
     def get_context_data(self, **kwargs):
@@ -756,7 +753,7 @@ class PickConfirmView(LoginRequiredMixin, DetailView):
             except (PickListLine.DoesNotExist, ValueError):
                 if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                     return JsonResponse({"ok": False, "error": "Line not found."})
-                return redirect(request.path)
+                return safe_redirect(request.path)
             # Verify stock is still available
             from inventory.models import Inventory
 
@@ -776,7 +773,7 @@ class PickConfirmView(LoginRequiredMixin, DetailView):
                             "refresh": True,
                         }
                     )
-                return redirect(request.path)
+                return safe_redirect(request.path)
             line.confirmed = True
             line.confirmed_at = timezone.now()
             line.save(update_fields=["confirmed", "confirmed_at"])
@@ -788,7 +785,7 @@ class PickConfirmView(LoginRequiredMixin, DetailView):
                         "all_confirmed": self.object.all_confirmed,
                     }
                 )
-            return redirect(request.path)
+            return safe_redirect(request.path)
 
         # Barcode / QR scan
         if scan_value:
@@ -801,7 +798,7 @@ class PickConfirmView(LoginRequiredMixin, DetailView):
                     return JsonResponse(
                         {"ok": False, "error": f"No product matches scan: {scan_value}"}
                     )
-                return redirect(request.path)
+                return safe_redirect(request.path)
 
             # Find the first unconfirmed line for this product on this pick list
             line = (
@@ -821,7 +818,7 @@ class PickConfirmView(LoginRequiredMixin, DetailView):
                             "error": f"{product.name} has no unconfirmed lines on this pick list.",
                         }
                     )
-                return redirect(request.path)
+                return safe_redirect(request.path)
 
             # Verify stock is still available before confirming scan
             from inventory.models import Inventory as Inv
@@ -841,7 +838,7 @@ class PickConfirmView(LoginRequiredMixin, DetailView):
                             "refresh": True,
                         }
                     )
-                return redirect(request.path)
+                return safe_redirect(request.path)
             line.confirmed = True
             line.confirmed_at = timezone.now()
             line.save(update_fields=["confirmed", "confirmed_at"])
@@ -854,9 +851,9 @@ class PickConfirmView(LoginRequiredMixin, DetailView):
                         "all_confirmed": self.object.all_confirmed,
                     }
                 )
-            return redirect(request.path)
+            return safe_redirect(request.path)
 
-        return redirect(request.path)
+        return safe_redirect(request.path)
 
 
 class PickConfirmResetView(LoginRequiredMixin, View):

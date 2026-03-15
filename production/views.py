@@ -16,6 +16,8 @@ from django.views.generic import (
     UpdateView,
 )
 
+from main.utils import safe_redirect
+
 from .forms import (
     BillOfMaterialsForm,
     BOMItemForm,
@@ -434,7 +436,7 @@ class ProductionDetailView(LoginRequiredMixin, DetailView):
         if "complete_production" in request.POST:
             self.object.complete = True
             self.object.save()
-            return redirect(request.path)
+            return safe_redirect(request.path)
         if "receive_production" in request.POST:
             form = ProductionReceiveForm(request.POST, instance=self.object)
             if form.is_valid():
@@ -450,7 +452,7 @@ class ProductionDetailView(LoginRequiredMixin, DetailView):
                         self.object.save()
                 except Exception as e:
                     messages.error(request, str(e))
-                return redirect(request.path)
+                return safe_redirect(request.path)
             else:
                 context = self.get_context_data(receive_form=form)
                 return self.render_to_response(context)
@@ -582,7 +584,7 @@ class ProductionReceiveView(LoginRequiredMixin, DetailView):
             )
         except Exception as e:
             messages.error(request, str(e))
-            return redirect(request.path)
+            return safe_redirect(request.path)
 
         return redirect(self.get_success_url())
 

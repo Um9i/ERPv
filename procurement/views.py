@@ -22,6 +22,7 @@ from django.views.generic import (
 )
 
 from main.constants import PARTNER_PREFILL_FIELDS
+from main.utils import safe_redirect
 
 from .forms import (
     PurchaseOrderForm,
@@ -685,7 +686,7 @@ class PurchaseOrderListView(LoginRequiredMixin, ListView):
         action = request.POST.get("bulk_action", "")
         selected = request.POST.getlist("selected")
         if not selected or action not in ("close", "cancel"):
-            return redirect(request.get_full_path())
+            return safe_redirect(request.get_full_path())
         orders = PurchaseOrder.objects.filter(pk__in=selected)
         count = 0
         for po in orders:
@@ -701,7 +702,7 @@ class PurchaseOrderListView(LoginRequiredMixin, ListView):
         from django.contrib import messages
 
         messages.success(request, f"{count} order(s) closed.")
-        return redirect(request.get_full_path())
+        return safe_redirect(request.get_full_path())
 
 
 class PurchaseOrderDetailView(LoginRequiredMixin, DetailView):
@@ -739,14 +740,10 @@ class PurchaseOrderDetailView(LoginRequiredMixin, DetailView):
                 },
             )
             # simply reload the detail page
-            from django.shortcuts import redirect
-
-            return redirect(request.path)
+            return safe_redirect(request.path)
         if "update_due_date" in request.POST:
-            from django.shortcuts import redirect
-
             if self.object.status == "Closed":
-                return redirect(request.path)
+                return safe_redirect(request.path)
             raw = request.POST.get("due_date", "").strip()
             if raw:
                 from datetime import date as date_cls
@@ -755,7 +752,7 @@ class PurchaseOrderDetailView(LoginRequiredMixin, DetailView):
             else:
                 self.object.due_date = None
             self.object.save(update_fields=["due_date", "updated_at"])
-            return redirect(request.path)
+            return safe_redirect(request.path)
         # delegate other POSTs if we ever need them (none today)
         return HttpResponseNotAllowed(["GET"])
 
@@ -853,7 +850,7 @@ class StoreConfirmView(LoginRequiredMixin, DetailView):
             except (PurchaseOrderLine.DoesNotExist, ValueError):
                 if request.headers.get("X-Requested-With") == "XMLHttpRequest":
                     return JsonResponse({"ok": False, "error": "Line not found."})
-                return redirect(request.path)
+                return safe_redirect(request.path)
             line.store_confirmed = True
             line.store_confirmed_at = timezone.now()
             line.save(update_fields=["store_confirmed", "store_confirmed_at"])
@@ -865,7 +862,7 @@ class StoreConfirmView(LoginRequiredMixin, DetailView):
                         "all_confirmed": self.object.all_store_confirmed,
                     }
                 )
-            return redirect(request.path)
+            return safe_redirect(request.path)
 
         # Barcode / QR scan
         if scan_value:
@@ -878,7 +875,7 @@ class StoreConfirmView(LoginRequiredMixin, DetailView):
                     return JsonResponse(
                         {"ok": False, "error": f"No product matches scan: {scan_value}"}
                     )
-                return redirect(request.path)
+                return safe_redirect(request.path)
 
             # Find the first unconfirmed line for this product on this PO
             line = (
@@ -897,7 +894,7 @@ class StoreConfirmView(LoginRequiredMixin, DetailView):
                             "error": f"{product.name} has no unconfirmed lines on this order.",
                         }
                     )
-                return redirect(request.path)
+                return safe_redirect(request.path)
 
             line.store_confirmed = True
             line.store_confirmed_at = timezone.now()
@@ -911,9 +908,9 @@ class StoreConfirmView(LoginRequiredMixin, DetailView):
                         "all_confirmed": self.object.all_store_confirmed,
                     }
                 )
-            return redirect(request.path)
+            return safe_redirect(request.path)
 
-        return redirect(request.path)
+        return safe_redirect(request.path)
 
 
 class StoreConfirmResetView(LoginRequiredMixin, View):
