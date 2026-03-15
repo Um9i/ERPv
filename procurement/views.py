@@ -377,15 +377,10 @@ class ProcurementDashboardView(LoginRequiredMixin, TemplateView):
         from django.db.models import Count, Q
 
         context = super().get_context_data(**kwargs)
-        from django.utils import timezone
-
-        today = timezone.localdate()
         context["total_purchase_orders"] = PurchaseOrder.objects.count()
-        # orders due today or earlier
-        due_qs = PurchaseOrder.objects.filter(due_date__lte=today)
-        # how many of today's due POs are fully received (all lines complete)
+        # Total received: all POs where every line is complete
         context["orders_received"] = (
-            due_qs.annotate(
+            PurchaseOrder.objects.annotate(
                 total_lines=Count("purchase_order_lines"),
                 complete_lines=Count(
                     "purchase_order_lines",
@@ -395,9 +390,11 @@ class ProcurementDashboardView(LoginRequiredMixin, TemplateView):
             .filter(total_lines__gt=0, total_lines=F("complete_lines"))
             .count()
         )
-        # POs due today or earlier that still have open lines
+        # Pending receiving: all POs with at least one open line
         context["pending_receiving"] = (
-            due_qs.filter(purchase_order_lines__complete=False).distinct().count()
+            PurchaseOrder.objects.filter(purchase_order_lines__complete=False)
+            .distinct()
+            .count()
         )
         context["total_suppliers"] = Supplier.objects.count()
         # count products that have a live shortage, have a supplier, and are not

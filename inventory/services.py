@@ -237,6 +237,17 @@ def get_inventory_detail_context(
         location__isnull=False
     ).exists()
 
+    # ── BOM link ──
+    from production.models import BillOfMaterials
+
+    try:
+        ctx["bom"] = product.billofmaterials
+    except BillOfMaterials.DoesNotExist:
+        ctx["bom"] = None
+
+    # ── Purchasable (has at least one supplier) ──
+    ctx["has_supplier"] = product.product_suppliers.exists()
+
     # ── Chart data bundle for json_script ──
     ctx["chart_data"] = {
         "sales_pending": ctx["sales_pending"],

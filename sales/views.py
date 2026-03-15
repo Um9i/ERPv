@@ -615,25 +615,32 @@ class SalesDashboardView(LoginRequiredMixin, TemplateView):
     template_name = "sales/sales_dashboard.html"
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        from django.utils import timezone
+        from django.db.models import Count, F, Q
 
-        today = timezone.localdate()
+        context = super().get_context_data(**kwargs)
         context["total_orders"] = SalesOrder.objects.count()
-        # orders with ship_by_date today or earlier
-        due_qs = SalesOrder.objects.filter(ship_by_date__lte=today)
-        # how many of today's due SOs have had any shipment
+        # Total shipped: all SOs where every line is complete
         context["shipped_orders"] = (
-            due_qs.filter(sales_order_lines__quantity_shipped__gt=0).distinct().count()
+            SalesOrder.objects.annotate(
+                total_lines=Count("sales_order_lines"),
+                complete_lines=Count(
+                    "sales_order_lines",
+                    filter=Q(sales_order_lines__complete=True),
+                ),
+            )
+            .filter(total_lines__gt=0, total_lines=F("complete_lines"))
+            .count()
         )
-        # SOs due today or earlier with any open lines
+        # Pending shipping: all SOs with at least one open line
         pending_qs = (
-            due_qs.filter(sales_order_lines__complete=False)
+            SalesOrder.objects.filter(
+                sales_order_lines__complete=False,
+            )
             .distinct()
             .select_related("customer")
         )
         context["pending_shipping"] = pending_qs.count()
-        context["pending_orders_list"] = pending_qs[:10]
+        context["pending_orders_list"] = pending_qs.order_by("ship_by_date")[:10]
         context["total_customers"] = Customer.objects.count()
         due_total = context["shipped_orders"] + context["pending_shipping"]
         context["fulfillment_rate"] = (

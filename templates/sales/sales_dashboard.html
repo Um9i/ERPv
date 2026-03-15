@@ -21,13 +21,13 @@
 
   {# Total Orders #}
   <div class="col-lg-6 col-xl-3">
-    <a href="{{ orders_url }}" class="metric-card-link">
+    <a href="{% url 'sales:sales-order-list' %}?status=&q=" class="metric-card-link">
       <div class="metric-card">
         <div class="metric-card-icon metric-card-icon--dark">
           <i class="bi bi-cart4"></i>
         </div>
         <div class="metric-card-content">
-          <span class="metric-card-label">Total Orders</span>
+          <span class="metric-card-label">Total Sales Orders</span>
           <span class="metric-card-value">{{ total_orders|default:'—' }}</span>
         </div>
       </div>
@@ -36,13 +36,13 @@
 
   {# Shipped #}
   <div class="col-lg-6 col-xl-3">
-    <a href="{{ orders_url }}?status=shipped" class="metric-card-link">
+    <a href="{% url 'sales:sales-order-list' %}?status=closed&q=" class="metric-card-link">
       <div class="metric-card">
         <div class="metric-card-icon metric-card-icon--success">
           <i class="bi bi-truck"></i>
         </div>
         <div class="metric-card-content">
-          <span class="metric-card-label">Orders Shipped (Due Today)</span>
+          <span class="metric-card-label">Total Orders Shipped</span>
           <span class="metric-card-value">{{ shipped_orders|default:'0' }}</span>
         </div>
       </div>
@@ -51,13 +51,13 @@
 
   {# Pending shipping — warn if any #}
   <div class="col-lg-6 col-xl-3">
-    <a href="{{ orders_url }}?status=pending" class="metric-card-link">
+    <a href="{% url 'sales:sales-order-list' %}?status=open&q=" class="metric-card-link">
       <div class="metric-card {% if pending_shipping %}border-warning{% endif %}">
         <div class="metric-card-icon metric-card-icon--warning">
           <i class="bi bi-clock-history"></i>
         </div>
         <div class="metric-card-content w-100">
-          <span class="metric-card-label">Pending Shipping (Due Today)</span>
+          <span class="metric-card-label">Pending Shipping</span>
           <div class="d-flex align-items-baseline justify-content-between">
             <span class="metric-card-value {% if pending_shipping %}text-warning{% endif %}">{{ pending_shipping|default:'0' }}</span>
             {% if fulfillment_rate %}<span class="badge bg-success ms-1">{{ fulfillment_rate }}% done</span>{% endif %}
@@ -136,7 +136,7 @@
   {# Orders by status donut #}
   <div class="col-lg-5">
     <div class="panel h-100">
-      <div class="panel-header">Order Status (Due Today)</div>
+      <div class="panel-header">Order Status</div>
       <div class="panel-body d-flex flex-column align-items-center">
         <div style="max-width:200px;width:100%;">
           <canvas id="salesStatusChart" aria-label="Sales order status chart"></canvas>

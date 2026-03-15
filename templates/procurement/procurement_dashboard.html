@@ -23,7 +23,7 @@
 
   {# Total POs #}
   <div class="col-lg-6 col-xl-3">
-    <a href="{{ purchase_orders_url }}" class="metric-card-link">
+    <a href="{% url 'procurement:purchase-order-list' %}?status=&q=" class="metric-card-link">
       <div class="metric-card">
         <div class="metric-card-icon metric-card-icon--dark">
           <i class="bi bi-cart-plus"></i>
@@ -38,13 +38,13 @@
 
   {# Received #}
   <div class="col-lg-6 col-xl-3">
-    <a href="{{ purchase_orders_url }}?filter=received" class="metric-card-link">
+    <a href="{% url 'procurement:purchase-order-list' %}?status=closed&q=" class="metric-card-link">
       <div class="metric-card">
         <div class="metric-card-icon metric-card-icon--success">
           <i class="bi bi-check2-square"></i>
         </div>
         <div class="metric-card-content w-100">
-          <span class="metric-card-label">Orders Received (Due Today)</span>
+          <span class="metric-card-label">Total Orders Received</span>
           <div class="d-flex align-items-baseline justify-content-between">
             <span class="metric-card-value">{{ orders_received|default:'0' }}</span>
             {% if receipt_rate %}<span class="badge bg-success ms-1">{{ receipt_rate }}%</span>{% endif %}
@@ -67,7 +67,7 @@
           <i class="bi bi-clock-history"></i>
         </div>
         <div class="metric-card-content">
-          <span class="metric-card-label">Pending Receiving (Due Today)</span>
+          <span class="metric-card-label">Pending Receiving</span>
           <span class="metric-card-value {% if pending_receiving %}text-warning{% endif %}">{{ pending_receiving|default:'0' }}</span>
         </div>
       </div>
@@ -166,7 +166,7 @@
   {# PO status donut #}
   <div class="col-lg-5">
     <div class="panel h-100">
-      <div class="panel-header">Purchase Order Status (Due Today)</div>
+      <div class="panel-header">Purchase Order Status</div>
       <div class="panel-body d-flex flex-column align-items-center">
         <div style="max-width:200px;width:100%;">
           <canvas id="procurementStatusChart" aria-label="Purchase order status chart"></canvas>

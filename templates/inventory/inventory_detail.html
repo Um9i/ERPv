@@ -12,6 +12,16 @@
     <a class="btn btn-sm btn-outline-warning" href="{% url 'inventory:inventory-adjust' inventory.pk %}">
         <i class="bi bi-sliders me-1"></i>Adjust Quantity
     </a>
+    {% if bom %}
+    <a class="btn btn-sm btn-outline-info" href="{% url 'production:production-create' %}?bom={{ bom.pk }}">
+        <i class="bi bi-gear me-1"></i>Produce
+    </a>
+    {% endif %}
+    {% if has_supplier %}
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'procurement:purchase-order-create' %}?product={{ inventory.product.pk }}">
+        <i class="bi bi-cart-plus me-1"></i>Purchase
+    </a>
+    {% endif %}
 </div>
 {% endblock %}
 
@@ -181,6 +191,16 @@
                             <div class="text-muted small">Unallocated</div>
                             <div class="fw-semibold">{{ unallocated_qty }}</div>
                         </div>
+                        {% if bom %}
+                        <div class="col-6 col-md-4">
+                            <div class="text-muted small">Bill of Materials</div>
+                            <div class="fw-semibold">
+                                <a href="{% url 'production:bom-detail' bom.pk %}" class="text-decoration-none">
+                                    <span class="badge bg-info-subtle text-info"><i class="bi bi-diagram-3 me-1"></i>View BOM</span>
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
