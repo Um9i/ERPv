@@ -10,11 +10,30 @@
 [![Linting: ruff](https://img.shields.io/badge/linting-ruff-261230.svg)](https://github.com/astral-sh/ruff)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+[**Live Demo →**](https://um9i.dev/)
+
 </div>
 
 ---
 
 ERPv is a full-featured ERP web application designed for small-to-medium manufacturing and distribution businesses. It connects your inventory, procurement, production, sales, and finance workflows in a single system — with multi-site pairing, PDF invoices, and real-time dashboards out of the box.
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/production.png" alt="Production Management" width="100%">
+</p>
+<p align="center"><em>Production Management — BOM tracking, manufacturing jobs, and shortage analysis</em></p>
+
+<p align="center">
+  <img src="docs/screenshots/inventory.png" alt="Inventory Management" width="100%">
+</p>
+<p align="center"><em>Inventory Management — stock health, shortfall alerts, and warehouse overview</em></p>
+
+<p align="center">
+  <img src="docs/screenshots/finance.png" alt="Finance Overview" width="100%">
+</p>
+<p align="center"><em>Finance Overview — sales & purchase ledgers, profit tracking, and stock valuation</em></p>
 
 ## What's Inside
 
