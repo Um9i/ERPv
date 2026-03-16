@@ -41,8 +41,8 @@
         <div class="row align-items-center justify-content-center min-vh-50">
             <div class="col-lg-8 text-center">
                 <span class="hero-badge">Open-Source ERP Platform</span>
-                <h1 class="hero-title">Streamline your<br>business operations</h1>
-                <p class="hero-subtitle">A professional-grade ERP system engineered for inventory, procurement, sales, production and finance workflows &mdash; all in one place.</p>
+                <h1 class="hero-title">The first ERP that talks<br>to your supplier's ERP</h1>
+                <p class="hero-subtitle">Link your inventory, sales and procurement with your supply chain &mdash; purchase orders auto-create matching sales orders on your supplier's instance, with live price sync and full audit trails.</p>
                 <div class="hero-actions">
                     {% if request.user.is_authenticated %}
                     <a href="{% url 'inventory:inventory-dashboard' %}" class="btn btn-lg btn-hero-primary">Go to Dashboard</a>
@@ -75,6 +75,47 @@
             <div class="col-6 col-md-3">
                 <div class="metric-value">650+</div>
                 <div class="metric-label">Tests Passing</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Spotlight: Paired Instances -->
+<section class="spotlight-section" id="spotlight">
+    <div class="container">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6">
+                <span class="section-label">What makes ERPv different</span>
+                <h2 class="spotlight-title">Your ERP talks to<br>your supplier's ERP</h2>
+                <p class="spotlight-text">
+                    Most ERPs stop at your company's walls. ERPv doesn't. Pair two instances
+                    together and purchase orders raised on your side auto-create matching
+                    sales orders on your supplier's &mdash; no manual re-keying, no EDI middleware,
+                    no CSV imports.
+                </p>
+                <ul class="spotlight-list">
+                    <li><i class="bi bi-arrow-left-right"></i> POs automatically become SOs on the supplier's instance</li>
+                    <li><i class="bi bi-bell"></i> Price changes push live notifications across sites</li>
+                    <li><i class="bi bi-search"></i> Browse your supplier's catalogue and import products in one click</li>
+                    <li><i class="bi bi-shield-lock"></i> Secured with API-key auth and HMAC-signed webhooks</li>
+                </ul>
+            </div>
+            <div class="col-lg-6">
+                <div class="spotlight-visual">
+                    <div class="spotlight-node spotlight-node--left">
+                        <i class="bi bi-building"></i>
+                        <span>Your ERPv</span>
+                    </div>
+                    <div class="spotlight-connector">
+                        <span class="spotlight-connector-label">PO &rarr; SO</span>
+                        <div class="spotlight-connector-line"></div>
+                        <span class="spotlight-connector-label">Price sync</span>
+                    </div>
+                    <div class="spotlight-node spotlight-node--right">
+                        <i class="bi bi-building"></i>
+                        <span>Supplier ERPv</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -312,23 +353,6 @@
                         Professional invoices generated on demand from any sales
                         order using WeasyPrint. Rendered inline in the browser
                         or downloaded — no third-party service required.
-                    </p>
-                </div>
-            </div>
-
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon feature-icon--blue">
-                        <i class="bi bi-link-45deg"></i>
-                    </div>
-                    <h5 class="feature-title">Paired Instances</h5>
-                    <p class="feature-text">
-                        Connect multiple ERPv deployments with API-key
-                        authentication. Browse a remote catalogue, import
-                        products as supplier items, and receive automated
-                        price-update notifications across sites. Purchase
-                        orders auto-create matching sales orders on the
-                        supplier's instance.
                     </p>
                 </div>
             </div>
