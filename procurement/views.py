@@ -4,6 +4,7 @@ import logging
 
 from django import forms
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.db import models
 from django.db.models import F
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
@@ -730,6 +731,21 @@ class PurchaseOrderDetailView(LoginRequiredMixin, DetailView):
     template_name = "procurement/purchase_order_detail.html"
     context_object_name = "purchase_order"
 
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .select_related("supplier")
+            .prefetch_related(
+                models.Prefetch(
+                    "purchase_order_lines",
+                    queryset=PurchaseOrderLine.objects.select_related(
+                        "product__product"
+                    ),
+                )
+            )
+        )
+
     def post(self, request, *args, **kwargs):
         # support a manual "close order" action from the detail page.
         self.object = self.get_object()
@@ -779,11 +795,13 @@ class PurchaseOrderDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         purchase_order = self.object
-        context["lines"] = purchase_order.purchase_order_lines.select_related(
-            "product"
-        ).all()
-        # allow template to decide whether to render close button
-        context["can_close"] = purchase_order.status == "Open"
+        # Reuse prefetched lines; compute status once to avoid repeated
+        # .exists() queries in the model property.
+        lines = list(purchase_order.purchase_order_lines.all())
+        context["lines"] = lines
+        status = "Closed" if all(ln.complete for ln in lines) else "Open"
+        context["po_status"] = status
+        context["can_close"] = status == "Open"
         return context
 
 

@@ -6,7 +6,7 @@
 {% block card_body %}
 <p><strong>Supplier:</strong> <a href="{% url 'procurement:supplier-detail' purchase_order.supplier.pk %}">{{ purchase_order.supplier.name }}</a></p>
 <p><strong>Created At:</strong> {{ purchase_order.created_at }}</p>
-{% if purchase_order.status == "Closed" %}
+{% if po_status == "Closed" %}
 <p><strong>Due Date:</strong> {{ purchase_order.due_date|default:"—" }}</p>
 {% else %}
 <div class="mb-2 d-flex align-items-center gap-2">
@@ -19,11 +19,11 @@
 </div>
 {% endif %}
 <p><strong>Updated At:</strong> {{ purchase_order.updated_at }}</p>
-<p><strong>Status:</strong> {{ purchase_order.status }}</p>
+<p><strong>Status:</strong> {{ po_status }}</p>
 <p><strong>Total Order Value:</strong> {{ purchase_order.total_amount|currency }}</p>
 <p><strong>Open Order Value:</strong> {{ purchase_order.remaining_total|currency }}</p>
 
-{% if purchase_order.status != "Closed" %}
+{% if po_status != "Closed" %}
 <div class="d-flex gap-2 mb-3 d-print-none">
     <a href="{% url 'procurement:store-confirm' purchase_order.pk %}" class="btn btn-primary">
         <i class="bi bi-upc-scan me-1"></i>Scan to Store
@@ -75,7 +75,7 @@
         </tr>
     </thead>
     <tbody>
-        {% for line in purchase_order.purchase_order_lines.all %}
+        {% for line in lines %}
         <tr>
             <td>{{ line.product.product.name }}</td>
             <td>{{ line.quantity }}</td>

@@ -4,6 +4,7 @@ import logging
 
 from django import forms
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.db import models
 from django.forms.models import inlineformset_factory
 from django.http import HttpResponse, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import redirect
@@ -543,6 +544,19 @@ class SalesOrderDetailView(LoginRequiredMixin, DetailView):
     template_name = "sales/sales_order_detail.html"
     context_object_name = "sales_order"
 
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .select_related("customer")
+            .prefetch_related(
+                models.Prefetch(
+                    "sales_order_lines",
+                    queryset=SalesOrderLine.objects.select_related("product__product"),
+                )
+            )
+        )
+
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         if "close_order" in request.POST:
@@ -570,7 +584,13 @@ class SalesOrderDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         sales_order = self.object
-        context["lines"] = sales_order.sales_order_lines.select_related("product").all()
+        lines = list(sales_order.sales_order_lines.all())
+        context["lines"] = lines
+        has_open = any(
+            not ln.complete and ln.quantity_shipped < ln.quantity for ln in lines
+        )
+        context["so_status"] = "Open" if has_open else "Closed"
+        context["has_open_lines"] = has_open
         return context
 
 

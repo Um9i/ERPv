@@ -174,7 +174,9 @@ class InventoryDetailView(LoginRequiredMixin, DetailView):
             .prefetch_related(
                 models.Prefetch(
                     "stock_locations",
-                    queryset=InventoryLocation.objects.select_related("location"),
+                    queryset=InventoryLocation.objects.select_related(
+                        "location__parent__parent__parent"
+                    ),
                 )
             )
         )

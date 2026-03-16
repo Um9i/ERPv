@@ -124,15 +124,16 @@ def get_inventory_detail_context(
 
     # ── Fetch all ledger entries once, reuse for pagination + chart ──
     all_ledger_entries = list(
-        product.inventory_ledger.select_related("location")
-        .all()
+        product.inventory_ledger.all()
         .order_by("-date")
         .values_list("pk", "quantity", "date")
     )
 
     # ── Ledger pagination ──
     ledger_list = (
-        product.inventory_ledger.select_related("location").all().order_by("-date")
+        product.inventory_ledger.select_related("location__parent__parent__parent")
+        .all()
+        .order_by("-date")
     )
     paginator = Paginator(ledger_list, 10)
     ledger_page = paginator.get_page(page)

@@ -6,7 +6,7 @@
 {% block card_body %}
 <p><strong>Customer:</strong> <a href="{% url 'sales:customer-detail' sales_order.customer.pk %}">{{ sales_order.customer.name }}</a></p>
 <p><strong>Created At:</strong> {{ sales_order.created_at }}</p>
-{% if sales_order.status == "Closed" %}
+{% if so_status == "Closed" %}
 <p><strong>Ship By Date:</strong> {{ sales_order.ship_by_date|default:"—" }}</p>
 {% else %}
 <div class="mb-2 d-flex align-items-center gap-2">
@@ -19,14 +19,14 @@
 </div>
 {% endif %}
 <p><strong>Updated At:</strong> {{ sales_order.updated_at }}</p>
-<p><strong>Status:</strong> {{ sales_order.status }}</p>
+<p><strong>Status:</strong> {{ so_status }}</p>
 <p><strong>Total Order Value:</strong> {{ sales_order.total_amount|currency }}</p>
 <p><strong>Open Order Value:</strong> {{ sales_order.remaining_total|currency }}</p>
 <div class="mb-3">
     <a href="{% url 'sales:sales-order-invoice' sales_order.pk %}" class="btn btn-outline-primary" target="_blank"><i class="bi bi-file-earmark-pdf me-1"></i>Download Invoice</a>
 </div>
 
-{% if sales_order.has_open_lines %}
+{% if has_open_lines %}
 <div class="d-flex gap-2 mb-3 d-print-none">
     <a href="{% url 'sales:sales-order-ship' sales_order.pk %}" class="btn btn-success">
         <i class="bi bi-truck me-1"></i>Ship
@@ -51,7 +51,7 @@
         </tr>
     </thead>
     <tbody>
-        {% for line in sales_order.sales_order_lines.all %}
+        {% for line in lines %}
         <tr>
             <td>{{ line.product.product.name }}</td>
             <td>{{ line.quantity }}</td>
