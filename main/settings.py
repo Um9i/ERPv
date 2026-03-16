@@ -118,7 +118,7 @@ INSTALLED_APPS = [
 ]
 
 if DEBUG:
-    INSTALLED_APPS += ["debug_toolbar", "django_migration_linter", "silk"]
+    INSTALLED_APPS += ["debug_toolbar", "django_migration_linter"]  # , "silk"]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -136,7 +136,7 @@ MIDDLEWARE = [
 if DEBUG:
     MIDDLEWARE += [
         "debug_toolbar.middleware.DebugToolbarMiddleware",
-        "silk.middleware.SilkyMiddleware",
+        # "silk.middleware.SilkyMiddleware",
     ]
 
 ROOT_URLCONF = "main.urls"

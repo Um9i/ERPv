@@ -150,6 +150,11 @@ class PurchaseOrderLineForm(forms.ModelForm):
             "quantity": "Number of units to order (must be at least 1).",
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        qs = self.fields["product"].queryset
+        self.fields["product"].queryset = qs.select_related("product")
+
     def clean_quantity(self):
         qty = self.cleaned_data.get("quantity")
         if qty is not None and qty <= 0:
