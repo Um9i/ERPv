@@ -308,5 +308,8 @@
 </div>{# /tab-content #}
 
 <div id="config-page-data" {% if new_our_key %}data-initial-tab="integrations"{% endif %}></div>
+{% endblock %}
+
+{% block extra_js %}
 <script src="{% static 'js/company_config.js' %}"></script>
 {% endblock %}
