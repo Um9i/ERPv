@@ -10,7 +10,7 @@ django-stubs==5.2.9
 django-migration-linter==6.0.0
 
 # Testing
-coverage==7.13.4
+coverage==7.13.5
 factory_boy==3.3.3
 Faker==40.11.0
 pytest==9.0.2
