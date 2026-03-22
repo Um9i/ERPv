@@ -35,6 +35,8 @@ dependencies = [
     "whitenoise>=6.12",
     "zopfli>=0.4",
     "django-ratelimit>=4.1",
+    "djangorestframework>=3.17",
+    "drf-spectacular>=0.29",
     "sentry-sdk>=2.54",
 ]
 

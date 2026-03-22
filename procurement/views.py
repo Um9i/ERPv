@@ -1,5 +1,4 @@
 import csv
-import hmac
 import logging
 
 from django import forms
@@ -12,7 +11,6 @@ from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views import View
-from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -21,6 +19,11 @@ from django.views.generic import (
     TemplateView,
     UpdateView,
 )
+from django_ratelimit.decorators import ratelimit
+from drf_spectacular.utils import extend_schema
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from main.constants import PARTNER_PREFILL_FIELDS
 from main.utils import safe_redirect
@@ -42,6 +45,10 @@ from .models import (
     Supplier,
     SupplierContact,
     SupplierProduct,
+)
+from .serializers import (
+    NotifySupplierProductRequestSerializer,
+    NotifySupplierProductResponseSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -960,67 +967,55 @@ class StoreConfirmResetView(LoginRequiredMixin, View):
         return redirect("procurement:store-confirm", pk=po.pk)
 
 
-@method_decorator(csrf_exempt, name="dispatch")
-class NotifySupplierProductView(View):
+@method_decorator(
+    ratelimit(key="ip", rate="30/m", method="POST", block=True), name="dispatch"
+)
+class NotifySupplierProductView(APIView):
     """Inbound: remote tells us to update the cost of a SupplierProduct."""
 
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=NotifySupplierProductRequestSerializer,
+        responses=NotifySupplierProductResponseSerializer,
+        description="Updates the cost of a SupplierProduct from a remote paired supplier. Rate limit: 30 req/min.",
+        tags=["Pairing Notifications"],
+    )
     def post(self, request, *args, **kwargs):
-        import json
-        from decimal import Decimal, InvalidOperation
 
-        from config.models import PairedInstance
+        from config.models import Notification
+        from config.signals import _notify_all_users
 
-        auth = request.META.get("HTTP_AUTHORIZATION", "")
-        if not auth.startswith("Bearer "):
-            return JsonResponse({"error": "Unauthorized"}, status=401)
-        key = auth[len("Bearer ") :]
-        paired_instance = next(
-            (
-                pi
-                for pi in PairedInstance.objects.all()
-                if hmac.compare_digest(key, pi.our_key)
-            ),
-            None,
-        )
-        if paired_instance is None:
-            return JsonResponse({"error": "Unauthorized"}, status=401)
+        paired_instance = request.auth
 
         if not paired_instance.supplier:
-            return JsonResponse(
+            return Response(
                 {"error": "Supplier not linked to this paired instance"}, status=400
             )
 
-        try:
-            data = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
+        serializer = NotifySupplierProductRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({"error": serializer.errors}, status=400)
 
-        product_name = (data.get("product_name") or "").strip()
-        cost_raw = str(data.get("cost", "")).strip()
+        data = serializer.validated_data
+        product_name = data["product_name"].strip()
+        cost = data["cost"]
 
         if not product_name:
-            return JsonResponse({"error": "product_name is required"}, status=400)
-
-        try:
-            cost = Decimal(cost_raw)
-        except InvalidOperation:
-            return JsonResponse({"error": f"Invalid cost: {cost_raw!r}"}, status=400)
+            return Response({"error": "product_name is required"}, status=400)
 
         sp = SupplierProduct.objects.filter(
             supplier=paired_instance.supplier,
             product__name__iexact=product_name,
         ).first()
         if not sp:
-            return JsonResponse({"error": "SupplierProduct not found"}, status=400)
+            return Response({"error": "SupplierProduct not found"}, status=400)
 
         old_cost = sp.cost
         sp.cost = cost
         sp.save(update_fields=["cost"])
 
         if cost != old_cost:
-            from config.models import Notification
-            from config.signals import _notify_all_users
-
             product = sp.product
             _notify_all_users(
                 category=Notification.Category.PRICE_UPDATE,
@@ -1033,7 +1028,7 @@ class NotifySupplierProductView(View):
                 link=reverse_lazy("inventory:inventory-detail", args=[product.pk]),
             )
 
-        return JsonResponse({"status": "ok"})
+        return Response({"status": "ok"})
 
 
 class PurchaseOrderExportView(LoginRequiredMixin, View):

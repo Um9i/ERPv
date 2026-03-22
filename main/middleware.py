@@ -22,6 +22,7 @@ class LoginRequiredMiddleware:
         # allow any URL under accounts (login/logout/registration)
         self.exempt_prefixes = [
             "/accounts/",
+            "/api/",
             "/config/api/",
             "/healthz/",
             "/inventory/api/",

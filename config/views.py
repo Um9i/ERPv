@@ -4,15 +4,17 @@ from urllib.parse import urlencode
 import httpx
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views import View
-from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import CreateView, DeleteView, ListView
 from django.views.generic.edit import UpdateView
 from django_ratelimit.decorators import ratelimit
+from drf_spectacular.utils import extend_schema
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from main.constants import PARTNER_PREFILL_FIELDS
 
@@ -30,6 +32,13 @@ from .models import (
     WebhookEndpoint,
 )
 from .notifications import _notify_remote_customer, _notify_remote_customer_product
+from .serializers import (
+    CompanySerializer,
+    NotifyCustomerProductRequestSerializer,
+    NotifyCustomerProductResponseSerializer,
+    NotifyCustomerRequestSerializer,
+    NotifyCustomerResponseSerializer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -58,36 +67,23 @@ class CompanyConfigView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView)
         return super().form_valid(form)
 
 
-@method_decorator(csrf_exempt, name="dispatch")
 @method_decorator(
     ratelimit(key="ip", rate="60/m", method="GET", block=True), name="dispatch"
 )
-class CompanyApiView(View):
+class CompanyApiView(APIView):
     """Machine-to-machine endpoint — returns company info to paired instances."""
 
-    def get(self, request, *args, **kwargs):
-        from main.auth import verify_bearer_token
+    permission_classes = [IsAuthenticated]
 
-        err = verify_bearer_token(request, log_prefix="company_api")
-        if err:
-            return err
+    @extend_schema(
+        responses=CompanySerializer,
+        description="Returns company configuration for the local instance. Rate limit: 60 req/min.",
+        tags=["Company"],
+    )
+    def get(self, request, *args, **kwargs):
         company = CompanyConfig.get_or_default()
-        return JsonResponse(
-            {
-                "name": company.name,
-                "address_line_1": company.address_line_1,
-                "address_line_2": company.address_line_2,
-                "city": company.city,
-                "state": company.state,
-                "postal_code": company.postal_code,
-                "country": company.country,
-                "phone": company.phone,
-                "email": company.email,
-                "website": company.website,
-                "vat_number": company.vat_number,
-                "company_number": company.company_number,
-            }
-        )
+        serializer = CompanySerializer(company)
+        return Response(serializer.data)
 
 
 _INTEGRATIONS_URL = reverse_lazy("config:company-config")
@@ -345,35 +341,33 @@ class ImportCatalogueProductView(LoginRequiredMixin, PermissionRequiredMixin, Vi
         return redirect(browse_url)
 
 
-@method_decorator(csrf_exempt, name="dispatch")
 @method_decorator(
     ratelimit(key="ip", rate="30/m", method="POST", block=True), name="dispatch"
 )
-class NotifyCustomerView(View):
+class NotifyCustomerView(APIView):
     """Inbound: remote tells us to create/link them as a Customer here."""
 
-    def post(self, request, *args, **kwargs):
-        import json
+    permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        request=NotifyCustomerRequestSerializer,
+        responses=NotifyCustomerResponseSerializer,
+        description="Creates or links a Customer from a remote paired instance. Rate limit: 30 req/min.",
+        tags=["Pairing Notifications"],
+    )
+    def post(self, request, *args, **kwargs):
         from sales.models import Customer
 
-        auth = request.META.get("HTTP_AUTHORIZATION", "")
-        if not auth.startswith("Bearer "):
-            return JsonResponse({"error": "Unauthorized"}, status=401)
-        key = auth[len("Bearer ") :]
-        try:
-            paired_instance = PairedInstance.objects.get(our_key=key)
-        except PairedInstance.DoesNotExist:
-            return JsonResponse({"error": "Unauthorized"}, status=401)
+        paired_instance = request.auth
 
-        try:
-            data = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
+        serializer = NotifyCustomerRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({"error": serializer.errors}, status=400)
 
-        name = (data.get("name") or "").strip()
+        data = serializer.validated_data
+        name = data["name"].strip()
         if not name:
-            return JsonResponse({"error": "name is required"}, status=400)
+            return Response({"error": "name is required"}, status=400)
 
         existing = Customer.objects.filter(name__iexact=name).first()
         if existing:
@@ -396,53 +390,45 @@ class NotifyCustomerView(View):
 
         paired_instance.customer = customer
         paired_instance.save(update_fields=["customer"])
-        return JsonResponse({"status": "ok", "created": created})
+        return Response({"status": "ok", "created": created})
 
 
-@method_decorator(csrf_exempt, name="dispatch")
 @method_decorator(
     ratelimit(key="ip", rate="30/m", method="POST", block=True), name="dispatch"
 )
-class NotifyCustomerProductView(View):
+class NotifyCustomerProductView(APIView):
     """Inbound: remote tells us to create/link a CustomerProduct here."""
 
-    def post(self, request, *args, **kwargs):
-        import json
-        from decimal import Decimal, InvalidOperation
+    permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        request=NotifyCustomerProductRequestSerializer,
+        responses=NotifyCustomerProductResponseSerializer,
+        description="Creates or updates a CustomerProduct with pricing. Rate limit: 30 req/min.",
+        tags=["Pairing Notifications"],
+    )
+    def post(self, request, *args, **kwargs):
         from inventory.models import Product
         from sales.models import CustomerProduct
 
-        auth = request.META.get("HTTP_AUTHORIZATION", "")
-        if not auth.startswith("Bearer "):
-            return JsonResponse({"error": "Unauthorized"}, status=401)
-        key = auth[len("Bearer ") :]
-        try:
-            paired_instance = PairedInstance.objects.get(our_key=key)
-        except PairedInstance.DoesNotExist:
-            return JsonResponse({"error": "Unauthorized"}, status=401)
+        paired_instance = request.auth
 
         if not paired_instance.customer:
-            return JsonResponse(
+            return Response(
                 {"error": "Customer not linked to this paired instance"}, status=400
             )
 
-        try:
-            data = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
+        serializer = NotifyCustomerProductRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({"error": serializer.errors}, status=400)
 
-        product_name = (data.get("product_name") or "").strip()
-        price_raw = str(data.get("price", "")).strip()
+        data = serializer.validated_data
+        product_name = data["product_name"].strip()
+        price = data["price"]
 
         product = Product.objects.filter(name__iexact=product_name).first()
         if not product:
-            return JsonResponse({"error": "Product not found"}, status=400)
-
-        try:
-            price = Decimal(price_raw)
-        except InvalidOperation:
-            return JsonResponse({"error": f"Invalid price: {price_raw!r}"}, status=400)
+            return Response({"error": "Product not found"}, status=400)
 
         cp, created = CustomerProduct.objects.get_or_create(
             customer=paired_instance.customer,
@@ -453,7 +439,7 @@ class NotifyCustomerProductView(View):
             cp.price = price
             cp.save(update_fields=["price"])
 
-        return JsonResponse({"status": "ok", "created": created})
+        return Response({"status": "ok", "created": created})
 
 
 class BrowseCatalogueView(LoginRequiredMixin, PermissionRequiredMixin, View):

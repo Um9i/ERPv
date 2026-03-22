@@ -10,7 +10,6 @@ from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views import View
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.vary import vary_on_headers
 from django.views.generic import (
     CreateView,
@@ -21,6 +20,10 @@ from django.views.generic import (
     UpdateView,
 )
 from django_ratelimit.decorators import ratelimit
+from drf_spectacular.utils import extend_schema
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from config.models import PairedInstance
 from config.notifications import (
@@ -45,6 +48,7 @@ from .models import (
     Product,
     StockTransfer,
 )
+from .serializers import CatalogueItemSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -741,30 +745,23 @@ class StockTransferCreateView(LoginRequiredMixin, PermissionRequiredMixin, Creat
         return context
 
 
-@method_decorator(csrf_exempt, name="dispatch")
 @method_decorator(
     ratelimit(key="ip", rate="60/m", method="GET", block=True), name="dispatch"
 )
-class CatalogueApiView(View):
+class CatalogueApiView(APIView):
     """Public endpoint — returns catalogue products to paired instances."""
 
-    def get(self, request, *args, **kwargs):
-        from main.auth import verify_bearer_token
+    permission_classes = [IsAuthenticated]
 
-        err = verify_bearer_token(request, log_prefix="catalogue_api")
-        if err:
-            return err
+    @extend_schema(
+        responses=CatalogueItemSerializer(many=True),
+        description="Returns all catalogue products with sale prices. Rate limit: 60 req/min.",
+        tags=["Catalogue"],
+    )
+    def get(self, request, *args, **kwargs):
         products = Product.objects.filter(catalogue_item=True, sale_price__isnull=False)
-        data = [
-            {
-                "name": p.name,
-                "description": p.description,
-                "sale_price": f"{p.sale_price:.2f}",
-                "sku": None,
-            }
-            for p in products
-        ]
-        return JsonResponse(data, safe=False)
+        serializer = CatalogueItemSerializer(products, many=True)
+        return Response(serializer.data)
 
 
 class InventoryExportView(LoginRequiredMixin, View):

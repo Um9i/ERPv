@@ -1,5 +1,4 @@
 import csv
-import hmac
 import logging
 
 from django import forms
@@ -11,7 +10,6 @@ from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views import View
-from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -20,6 +18,11 @@ from django.views.generic import (
     TemplateView,
     UpdateView,
 )
+from django_ratelimit.decorators import ratelimit
+from drf_spectacular.utils import extend_schema
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from main.constants import PARTNER_PREFILL_FIELDS
 from main.utils import safe_redirect
@@ -41,6 +44,10 @@ from .models import (
     SalesLedger,
     SalesOrder,
     SalesOrderLine,
+)
+from .serializers import (
+    NotifyPurchaseOrderRequestSerializer,
+    NotifyPurchaseOrderResponseSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -318,7 +325,6 @@ class CustomerProductIDsView(LoginRequiredMixin, DetailView):
                 "id", flat=True
             )
         )
-        from django.http import JsonResponse
 
         return JsonResponse({"product_ids": ids})
 
@@ -788,7 +794,6 @@ class PickConfirmView(LoginRequiredMixin, DetailView):
         return context
 
     def post(self, request, *args, **kwargs):
-        from django.http import JsonResponse
         from django.utils import timezone
 
         from inventory.models import Product
@@ -991,58 +996,46 @@ class SalesOrderExportView(LoginRequiredMixin, View):
         return response
 
 
-@method_decorator(csrf_exempt, name="dispatch")
-class NotifyPurchaseOrderView(View):
+@method_decorator(
+    ratelimit(key="ip", rate="30/m", method="POST", block=True), name="dispatch"
+)
+class NotifyPurchaseOrderView(APIView):
     """Inbound: a customer's paired instance sends a PO for us to fulfil.
 
     Auto-creates a matching SalesOrder + lines and notifies local users.
     """
 
-    def post(self, request, *args, **kwargs):
-        import json
-        from datetime import date as date_cls
+    permission_classes = [IsAuthenticated]
 
-        from config.models import Notification, PairedInstance
+    @extend_schema(
+        request=NotifyPurchaseOrderRequestSerializer,
+        responses=NotifyPurchaseOrderResponseSerializer,
+        description="Receives a purchase order from a remote paired customer and auto-creates a matching SalesOrder. Rate limit: 30 req/min.",
+        tags=["Pairing Notifications"],
+    )
+    def post(self, request, *args, **kwargs):
+
+        from config.models import Notification
         from config.signals import _notify_all_users
         from inventory.models import Product
 
-        auth = request.META.get("HTTP_AUTHORIZATION", "")
-        if not auth.startswith("Bearer "):
-            return JsonResponse({"error": "Unauthorized"}, status=401)
-        key = auth[len("Bearer ") :]
-        paired_instance = next(
-            (
-                pi
-                for pi in PairedInstance.objects.all()
-                if hmac.compare_digest(key, pi.our_key)
-            ),
-            None,
-        )
-        if paired_instance is None:
-            return JsonResponse({"error": "Unauthorized"}, status=401)
+        paired_instance = request.auth
 
         if not paired_instance.customer:
-            return JsonResponse(
+            return Response(
                 {"error": "Customer not linked to this paired instance"}, status=400
             )
 
-        try:
-            data = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
+        serializer = NotifyPurchaseOrderRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({"error": serializer.errors}, status=400)
 
+        data = serializer.validated_data
         lines_data = data.get("lines", [])
         if not lines_data:
-            return JsonResponse({"error": "No line items provided"}, status=400)
+            return Response({"error": "No line items provided"}, status=400)
 
-        due_date_raw = data.get("due_date")
-        ship_by_date = None
-        if due_date_raw:
-            try:
-                ship_by_date = date_cls.fromisoformat(due_date_raw)
-            except (ValueError, TypeError):
-                pass
-
+        ship_by_date = data.get("due_date")
         customer = paired_instance.customer
         remote_order_number = data.get("order_number", "")
 
@@ -1067,7 +1060,7 @@ class NotifyPurchaseOrderView(View):
             resolved_lines.append((cp, int(quantity)))
 
         if not resolved_lines:
-            return JsonResponse(
+            return Response(
                 {"error": "No matching products found for any line item"}, status=400
             )
 
@@ -1099,7 +1092,7 @@ class NotifyPurchaseOrderView(View):
             link=reverse_lazy("sales:sales-order-detail", args=[so.pk]),
         )
 
-        return JsonResponse(
+        return Response(
             {
                 "status": "ok",
                 "sales_order": so.order_number,

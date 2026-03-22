@@ -186,11 +186,14 @@ static/        # Static assets and TypeScript source
 
 Each module has its own detailed docs in the [`docs/`](docs/) directory:
 
+- [API](docs/api.md) — multi-site pairing API (OpenAPI/Swagger)
 - [Inventory](docs/inventory.md) — stock tracking, locations, adjustments, and the catalogue API
 - [Procurement](docs/procurement.md) — suppliers, purchase orders, and receiving
 - [Production](docs/production.md) — BOMs, manufacturing jobs, and cost analysis
 - [Sales](docs/sales.md) — customers, orders, shipping, and invoicing
 - [Finance](docs/finance.md) — ledgers, P&L, and the finance dashboard
+
+Interactive API docs are available at `/api/docs/` (Swagger UI) when the server is running.
 
 ## License
 

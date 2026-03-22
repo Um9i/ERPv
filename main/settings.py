@@ -68,7 +68,7 @@ CORS_ALLOWED_ORIGINS = [
     for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
     if origin.strip()
 ]
-CORS_URLS_REGEX = r"^/(?:config|inventory|procurement)/api/.*$"
+CORS_URLS_REGEX = r"^/(?:config|inventory|procurement|sales)/api/.*$"
 
 # CSRF — trusted origins for cross-site POST requests (ngrok, paired instances)
 CSRF_TRUSTED_ORIGINS = [
@@ -105,6 +105,8 @@ INSTALLED_APPS = [
     "django_admin_inline_paginator",
     # crispy forms support
     "corsheaders",
+    "rest_framework",
+    "drf_spectacular",
     "crispy_forms",
     "crispy_bootstrap5",
     "main",
@@ -356,5 +358,39 @@ LOGGING = {
             "level": LOG_LEVEL,
             "propagate": False,
         },
+    },
+}
+
+# ── Django REST Framework ──────────────────────────────────────────────
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "main.auth.BearerTokenAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "ERPv API",
+    "DESCRIPTION": (
+        "Multi-site pairing API for ERPv. Enables paired instances to exchange "
+        "company info, catalogue data, customer/supplier notifications, and "
+        "purchase orders via Bearer token authentication."
+    ),
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SECURITY": [{"BearerAuth": []}],
+    "APPEND_COMPONENTS": {
+        "securitySchemes": {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+            }
+        }
     },
 }

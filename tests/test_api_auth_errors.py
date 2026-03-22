@@ -126,7 +126,8 @@ class TestNotifyCustomerErrors:
             HTTP_AUTHORIZATION=f"Bearer {paired.our_key}",
         )
         assert resp.status_code == 400
-        assert "Invalid JSON" in resp.json()["error"]
+        body = resp.json()
+        assert "detail" in body or "error" in body  # DRF parse-error key
 
     @pytest.mark.django_db
     def test_empty_body_returns_400(self, anon, paired):
@@ -182,7 +183,8 @@ class TestNotifyCustomerProductErrors:
             HTTP_AUTHORIZATION=f"Bearer {paired_with_customer.our_key}",
         )
         assert resp.status_code == 400
-        assert "Invalid JSON" in resp.json()["error"]
+        body = resp.json()
+        assert "detail" in body or "error" in body
 
     @pytest.mark.django_db
     def test_invalid_price_returns_400(self, anon, paired_with_customer, product):
@@ -193,7 +195,7 @@ class TestNotifyCustomerProductErrors:
             HTTP_AUTHORIZATION=f"Bearer {paired_with_customer.our_key}",
         )
         assert resp.status_code == 400
-        assert "Invalid price" in resp.json()["error"]
+        assert "price" in resp.json()["error"]
 
     @pytest.mark.django_db
     def test_missing_product_name_returns_400(self, anon, paired_with_customer):
@@ -204,7 +206,7 @@ class TestNotifyCustomerProductErrors:
             HTTP_AUTHORIZATION=f"Bearer {paired_with_customer.our_key}",
         )
         assert resp.status_code == 400
-        assert "Product not found" in resp.json()["error"]
+        assert "product_name" in resp.json()["error"]
 
     @pytest.mark.django_db
     def test_get_method_not_allowed(self, anon, paired_with_customer):
@@ -275,7 +277,8 @@ class TestNotifySupplierProductErrors:
             HTTP_AUTHORIZATION=f"Bearer {paired_with_supplier.our_key}",
         )
         assert resp.status_code == 400
-        assert "Invalid JSON" in resp.json()["error"]
+        body = resp.json()
+        assert "detail" in body or "error" in body
 
     @pytest.mark.django_db
     def test_invalid_cost_returns_400(self, anon, paired_with_supplier, product):
@@ -291,7 +294,7 @@ class TestNotifySupplierProductErrors:
             HTTP_AUTHORIZATION=f"Bearer {paired_with_supplier.our_key}",
         )
         assert resp.status_code == 400
-        assert "Invalid cost" in resp.json()["error"]
+        assert "cost" in resp.json()["error"]
 
     @pytest.mark.django_db
     def test_missing_product_name_returns_400(self, anon, paired_with_supplier):
@@ -302,7 +305,7 @@ class TestNotifySupplierProductErrors:
             HTTP_AUTHORIZATION=f"Bearer {paired_with_supplier.our_key}",
         )
         assert resp.status_code == 400
-        assert "product_name is required" in resp.json()["error"]
+        assert "product_name" in resp.json()["error"]
 
     @pytest.mark.django_db
     def test_supplier_product_not_found_returns_400(

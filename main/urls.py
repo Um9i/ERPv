@@ -21,6 +21,7 @@ from django.contrib.auth import views as auth_views
 from django.urls import include, path
 from django.views.generic import TemplateView
 from django_ratelimit.decorators import ratelimit
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from main.views import GlobalSearchView, HealthCheckView
 
@@ -32,6 +33,12 @@ urlpatterns = (
     ([path("admin/", admin.site.urls)] if settings.DEBUG else [])
     + [
         path("healthz/", HealthCheckView.as_view(), name="healthz"),
+        path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+        path(
+            "api/docs/",
+            SpectacularSwaggerView.as_view(url_name="schema"),
+            name="swagger-ui",
+        ),
         path(
             "robots.txt",
             TemplateView.as_view(template_name="robots.txt", content_type="text/plain"),
