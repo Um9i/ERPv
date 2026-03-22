@@ -15,7 +15,7 @@ dependencies = [
     "Django>=6.0",
     "django-cors-headers>=4.9",
     "django-admin-inline-paginator>=0.4",
-    "django-crispy-forms>=2.5",
+    "django-crispy-forms>=2.6",
     "django-registration>=5.2",
     "fonttools>=4.61",
     "gunicorn>=25.1",
@@ -37,7 +37,7 @@ dependencies = [
     "django-ratelimit>=4.1",
     "djangorestframework>=3.17",
     "drf-spectacular>=0.29",
-    "sentry-sdk>=2.54",
+    "sentry-sdk>=2.55",
 ]
 
 [project.optional-dependencies]
