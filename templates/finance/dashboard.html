@@ -5,11 +5,11 @@
 {% block dashboard_title %}Finance Overview{% endblock %}
 
 {% block dashboard_links %}
-<a href="{% url 'finance:sales-ledger-archive' %}"><i class="bi bi-receipt me-2"></i>Sales ledger</a>
-<a href="{% url 'finance:purchase-ledger-archive' %}"><i class="bi bi-bag me-2"></i>Purchase ledger</a>
-<a href="{% url 'finance:production-ledger-archive' %}"><i class="bi bi-gear me-2"></i>Production ledger</a>
-<a href="{% url 'finance:outstanding-orders' %}"><i class="bi bi-clock-history me-2"></i>Outstanding Orders</a>
-<a href="{% url 'finance:product-pl' %}"><i class="bi bi-graph-up me-2"></i>Product P&amp;L</a>
+<a href="{% url 'finance:sales-ledger-archive' %}"><i class="bi bi-receipt me-2" aria-hidden="true"></i>Sales ledger</a>
+<a href="{% url 'finance:purchase-ledger-archive' %}"><i class="bi bi-bag me-2" aria-hidden="true"></i>Purchase ledger</a>
+<a href="{% url 'finance:production-ledger-archive' %}"><i class="bi bi-gear me-2" aria-hidden="true"></i>Production ledger</a>
+<a href="{% url 'finance:outstanding-orders' %}"><i class="bi bi-clock-history me-2" aria-hidden="true"></i>Outstanding Orders</a>
+<a href="{% url 'finance:product-pl' %}"><i class="bi bi-graph-up me-2" aria-hidden="true"></i>Product P&amp;L</a>
 {% endblock %}
 
 {% block dashboard_metrics %}

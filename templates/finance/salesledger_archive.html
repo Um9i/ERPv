@@ -21,7 +21,7 @@
             {% endfor %}
         </select>
         <button class="btn btn-outline-secondary" type="submit">Apply</button>
-        <a href="{% url 'finance:sales-ledger-export' %}?{{ request.GET.urlencode }}" class="btn btn-outline-secondary"><i class="bi bi-download me-1"></i>Export CSV</a>
+        <a href="{% url 'finance:sales-ledger-export' %}?{{ request.GET.urlencode }}" class="btn btn-outline-secondary"><i class="bi bi-download me-1" aria-hidden="true"></i>Export CSV</a>
     </div>
 </form>
 
@@ -54,14 +54,14 @@
 <table class="table align-middle table-striped">
     <thead>
         <tr>
-            <th>Date</th>
-            <th>Customer</th>
-            <th>Product</th>
-            <th class="text-end">Quantity</th>
-            <th class="text-end">Value</th>
-            <th class="text-end">Transaction</th>
-            <th>Created by</th>
-            <th>Updated by</th>
+            <th scope="col">Date</th>
+            <th scope="col">Customer</th>
+            <th scope="col">Product</th>
+            <th scope="col" class="text-end">Quantity</th>
+            <th scope="col" class="text-end">Value</th>
+            <th scope="col" class="text-end">Transaction</th>
+            <th scope="col">Created by</th>
+            <th scope="col">Updated by</th>
         </tr>
     </thead>
     <tbody>

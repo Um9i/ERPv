@@ -36,19 +36,19 @@
            <div class="toast app-toast app-toast-{{ message.tags }}" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="5000">
                <div class="toast-header">
                    {% if message.tags == 'success' %}
-                   <i class="bi bi-check-circle-fill me-2 text-success"></i>
+                   <i class="bi bi-check-circle-fill me-2 text-success" aria-hidden="true"></i>
                    <strong class="me-auto">Success</strong>
                    {% elif message.tags == 'error' %}
-                   <i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i>
+                   <i class="bi bi-exclamation-triangle-fill me-2 text-danger" aria-hidden="true"></i>
                    <strong class="me-auto">Error</strong>
                    {% elif message.tags == 'warning' %}
-                   <i class="bi bi-exclamation-circle-fill me-2 text-warning"></i>
+                   <i class="bi bi-exclamation-circle-fill me-2 text-warning" aria-hidden="true"></i>
                    <strong class="me-auto">Warning</strong>
                    {% elif message.tags == 'info' %}
-                   <i class="bi bi-info-circle-fill me-2 text-info"></i>
+                   <i class="bi bi-info-circle-fill me-2 text-info" aria-hidden="true"></i>
                    <strong class="me-auto">Info</strong>
                    {% else %}
-                   <i class="bi bi-bell-fill me-2"></i>
+                   <i class="bi bi-bell-fill me-2" aria-hidden="true"></i>
                    <strong class="me-auto">Notice</strong>
                    {% endif %}
                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>

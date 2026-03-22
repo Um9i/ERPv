@@ -7,19 +7,19 @@
       <p class="text-muted">Remote ERPv instances that can exchange company data with you.</p>
     </div>
     <a href="{% url 'config:paired-instance-create' %}" class="btn btn-primary">
-      <i class="bi bi-plus-lg"></i> Add Paired Instance
+      <i class="bi bi-plus-lg" aria-hidden="true"></i> Add Paired Instance
     </a>
   </div>
 
   {% if new_our_key %}
     <div class="alert alert-success alert-dismissible fade show" role="alert">
-      <strong><i class="bi bi-key-fill"></i> Your API key has been generated.</strong>
+      <strong><i class="bi bi-key-fill" aria-hidden="true"></i> Your API key has been generated.</strong>
       Send this key to your partner — it will <strong>not</strong> be shown in full again.
       <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
         <code id="new-our-key" class="fs-6 user-select-all">{{ new_our_key }}</code>
         <button type="button" class="btn btn-sm btn-outline-secondary"
                 onclick="navigator.clipboard.writeText(document.getElementById('new-our-key').innerText)">
-          <i class="bi bi-clipboard"></i> Copy
+          <i class="bi bi-clipboard" aria-hidden="true"></i> Copy
         </button>
       </div>
       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -38,12 +38,12 @@
       <table class="table table-hover align-middle">
         <thead class="table-light">
           <tr>
-            <th>Name</th>
-            <th>URL</th>
-            <th>Our Key (preview)</th>
-            <th>Status</th>
-            <th>Created</th>
-            <th class="text-end">Actions</th>
+            <th scope="col">Name</th>
+            <th scope="col">URL</th>
+            <th scope="col">Our Key (preview)</th>
+            <th scope="col">Status</th>
+            <th scope="col">Created</th>
+            <th scope="col" class="text-end">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -65,46 +65,46 @@
             <td class="text-end">
               {% if inst.status == "pending" %}
                 <a href="{% url 'config:paired-instance-complete' inst.pk %}" class="btn btn-sm btn-warning me-1">
-                  <i class="bi bi-key"></i> Enter Their Key
+                  <i class="bi bi-key" aria-hidden="true"></i> Enter Their Key
                 </a>
                 <button class="btn btn-sm btn-outline-secondary me-1" disabled
                         title="Complete pairing first">
-                  <i class="bi bi-person-plus"></i> Import as Customer
+                  <i class="bi bi-person-plus" aria-hidden="true"></i> Import as Customer
                 </button>
                 <button class="btn btn-sm btn-outline-secondary me-1" disabled
                         title="Complete pairing first">
-                  <i class="bi bi-truck"></i> Import as Supplier
+                  <i class="bi bi-truck" aria-hidden="true"></i> Import as Supplier
                 </button>
               {% else %}
                 {% if inst.customer %}
                   <button class="btn btn-sm btn-outline-secondary me-1" disabled
                           title="Already imported as {{ inst.customer.name }}">
-                    <i class="bi bi-person-check"></i> Customer Imported
+                    <i class="bi bi-person-check" aria-hidden="true"></i> Customer Imported
                   </button>
                 {% else %}
                   <a href="{% url 'config:import-as-customer' inst.pk %}" class="btn btn-sm btn-outline-indigo me-1">
-                    <i class="bi bi-person-plus"></i> Import as Customer
+                    <i class="bi bi-person-plus" aria-hidden="true"></i> Import as Customer
                   </a>
                 {% endif %}
                 {% if inst.supplier %}
                   <button class="btn btn-sm btn-outline-secondary me-1" disabled
                           title="Already imported as {{ inst.supplier.name }}">
-                    <i class="bi bi-truck"></i> Supplier Imported
+                    <i class="bi bi-truck" aria-hidden="true"></i> Supplier Imported
                   </button>
                 {% else %}
                   <a href="{% url 'config:import-as-supplier' inst.pk %}" class="btn btn-sm btn-outline-primary me-1">
-                    <i class="bi bi-truck"></i> Import as Supplier
+                    <i class="bi bi-truck" aria-hidden="true"></i> Import as Supplier
                   </a>
                 {% endif %}
                 <a href="{% url 'config:paired-instance-browse-catalogue' inst.pk %}" class="btn btn-sm btn-outline-secondary me-1">
-                  <i class="bi bi-grid"></i> Browse Catalogue
+                  <i class="bi bi-grid" aria-hidden="true"></i> Browse Catalogue
                 </a>
               {% endif %}
               <a href="{% url 'config:paired-instance-edit' inst.pk %}" class="btn btn-sm btn-outline-secondary me-1" title="Edit">
-                <i class="bi bi-pencil"></i>
+                <i class="bi bi-pencil" aria-hidden="true"></i>
               </a>
               <a href="{% url 'config:paired-instance-delete' inst.pk %}" class="btn btn-sm btn-outline-danger">
-                <i class="bi bi-trash"></i>
+                <i class="bi bi-trash" aria-hidden="true"></i>
               </a>
             </td>
           </tr>
@@ -114,7 +114,7 @@
     </div>
   {% else %}
     <div class="text-center py-5 text-muted">
-      <i class="bi bi-diagram-2 fs-1"></i>
+      <i class="bi bi-diagram-2 fs-1" aria-hidden="true"></i>
       <p class="mt-2">No paired instances yet. Add one to get started.</p>
     </div>
   {% endif %}

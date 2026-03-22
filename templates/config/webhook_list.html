@@ -7,19 +7,19 @@
       <p class="text-muted">External endpoints that receive event notifications when orders, shipments, stock, or production changes occur.</p>
     </div>
     <a href="{% url 'config:webhook-create' %}" class="btn btn-primary">
-      <i class="bi bi-plus-lg"></i> Add Webhook
+      <i class="bi bi-plus-lg" aria-hidden="true"></i> Add Webhook
     </a>
   </div>
 
   {% if new_secret %}
     <div class="alert alert-success alert-dismissible fade show" role="alert">
-      <strong><i class="bi bi-key-fill"></i> Signing secret generated.</strong>
+      <strong><i class="bi bi-key-fill" aria-hidden="true"></i> Signing secret generated.</strong>
       Use this secret to verify webhook signatures. It will <strong>not</strong> be shown in full again.
       <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
         <code id="new-webhook-secret" class="fs-6 user-select-all">{{ new_secret }}</code>
         <button type="button" class="btn btn-sm btn-outline-secondary"
                 onclick="navigator.clipboard.writeText(document.getElementById('new-webhook-secret').innerText)">
-          <i class="bi bi-clipboard"></i> Copy
+          <i class="bi bi-clipboard" aria-hidden="true"></i> Copy
         </button>
       </div>
       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -38,13 +38,13 @@
       <table class="table table-hover align-middle">
         <thead class="table-light">
           <tr>
-            <th>Name</th>
-            <th>URL</th>
-            <th>Events</th>
-            <th>Secret (preview)</th>
-            <th>Status</th>
-            <th>Created</th>
-            <th class="text-end">Actions</th>
+            <th scope="col">Name</th>
+            <th scope="col">URL</th>
+            <th scope="col">Events</th>
+            <th scope="col">Secret (preview)</th>
+            <th scope="col">Status</th>
+            <th scope="col">Created</th>
+            <th scope="col" class="text-end">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -68,13 +68,13 @@
             <td>{{ ep.created_at|date:"d M Y" }}</td>
             <td class="text-end">
               <a href="{% url 'config:webhook-deliveries' ep.pk %}" class="btn btn-sm btn-outline-secondary me-1" title="View delivery log">
-                <i class="bi bi-list-check"></i> Deliveries
+                <i class="bi bi-list-check" aria-hidden="true"></i> Deliveries
               </a>
               <a href="{% url 'config:webhook-edit' ep.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit">
-                <i class="bi bi-pencil"></i>
+                <i class="bi bi-pencil" aria-hidden="true"></i>
               </a>
               <a href="{% url 'config:webhook-delete' ep.pk %}" class="btn btn-sm btn-outline-danger" title="Delete">
-                <i class="bi bi-trash"></i>
+                <i class="bi bi-trash" aria-hidden="true"></i>
               </a>
             </td>
           </tr>
@@ -84,9 +84,9 @@
     </div>
   {% else %}
     <div class="text-center py-5 text-muted">
-      <i class="bi bi-broadcast fs-1 d-block mb-2"></i>
+      <i class="bi bi-broadcast fs-1 d-block mb-2" aria-hidden="true"></i>
       <p>No webhooks configured yet.</p>
-      <a href="{% url 'config:webhook-create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Webhook</a>
+      <a href="{% url 'config:webhook-create' %}" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Webhook</a>
     </div>
   {% endif %}
 </div>

@@ -6,10 +6,10 @@
 {% block dashboard_title %}Production Management{% endblock %}
 
 {% block dashboard_links %}
-<a href="{% url 'production:bom-create' %}"><i class="bi bi-plus-circle"></i>Create BOM</a>
-<a href="{% url 'production:bom-list' %}"><i class="bi bi-diagram-3"></i>View BOMs</a>
-<a href="{% url 'production:production-create' %}"><i class="bi bi-plus-circle"></i>Create Job</a>
-<a href="{% url 'production:production-list' %}"><i class="bi bi-gear"></i>View Jobs</a>
+<a href="{% url 'production:bom-create' %}"><i class="bi bi-plus-circle" aria-hidden="true"></i>Create BOM</a>
+<a href="{% url 'production:bom-list' %}"><i class="bi bi-diagram-3" aria-hidden="true"></i>View BOMs</a>
+<a href="{% url 'production:production-create' %}"><i class="bi bi-plus-circle" aria-hidden="true"></i>Create Job</a>
+<a href="{% url 'production:production-list' %}"><i class="bi bi-gear" aria-hidden="true"></i>View Jobs</a>
 {% endblock %}
 
 {% block dashboard_metrics %}
@@ -25,7 +25,7 @@
     <a href="{{ boms_url }}" class="metric-card-link">
       <div class="metric-card">
         <div class="metric-card-icon metric-card-icon--dark">
-          <i class="bi bi-diagram-3"></i>
+          <i class="bi bi-diagram-3" aria-hidden="true"></i>
         </div>
         <div class="metric-card-content">
           <span class="metric-card-label">Bills of Materials</span>
@@ -40,7 +40,7 @@
     <a href="{{ jobs_url }}?status=active" class="metric-card-link">
       <div class="metric-card {% if active_jobs %}border-warning{% endif %}">
         <div class="metric-card-icon metric-card-icon--warning">
-          <i class="bi bi-wrench-adjustable-circle"></i>
+          <i class="bi bi-wrench-adjustable-circle" aria-hidden="true"></i>
         </div>
         <div class="metric-card-content">
           <span class="metric-card-label">Active Jobs</span>
@@ -55,7 +55,7 @@
     <a href="{{ jobs_url }}?status=completed" class="metric-card-link">
       <div class="metric-card">
         <div class="metric-card-icon metric-card-icon--success">
-          <i class="bi bi-check-circle"></i>
+          <i class="bi bi-check-circle" aria-hidden="true"></i>
         </div>
         <div class="metric-card-content w-100">
           <span class="metric-card-label">Completed Jobs</span>
@@ -78,7 +78,7 @@
     <a href="{{ low_stock_url }}?filter=producible" class="metric-card-link">
       <div class="metric-card {% if producible_low_stock %}border-danger{% endif %}">
         <div class="metric-card-icon metric-card-icon--danger">
-          <i class="bi bi-exclamation-triangle"></i>
+          <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
         </div>
         <div class="metric-card-content">
           <span class="metric-card-label">Items to Produce</span>
@@ -98,17 +98,17 @@
     {% if producible_low_stock %}
     <div class="panel h-100">
       <div class="panel-header d-flex align-items-center justify-content-between">
-        <span><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Production Required</span>
+        <span><i class="bi bi-exclamation-triangle-fill text-danger me-2" aria-hidden="true"></i>Production Required</span>
       </div>
       <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
           <thead class="table-light">
             <tr>
-              <th class="ps-3">Product</th>
-              <th class="text-end">On Hand</th>
-              <th class="text-end">Needed</th>
-              <th class="text-end">In Active Jobs</th>
-              <th class="text-end pe-3">Action</th>
+              <th scope="col" class="ps-3">Product</th>
+              <th scope="col" class="text-end">On Hand</th>
+              <th scope="col" class="text-end">Needed</th>
+              <th scope="col" class="text-end">In Active Jobs</th>
+              <th scope="col" class="text-end pe-3">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -133,7 +133,7 @@
     {% elif active_jobs %}
     <div class="panel h-100">
       <div class="panel-header d-flex align-items-center justify-content-between">
-        <span><i class="bi bi-wrench-adjustable-circle text-warning me-2"></i>Jobs in Progress</span>
+        <span><i class="bi bi-wrench-adjustable-circle text-warning me-2" aria-hidden="true"></i>Jobs in Progress</span>
         <a href="{{ jobs_url }}?status=active" class="btn btn-sm btn-outline-warning">View {{ active_jobs }}</a>
       </div>
       <div class="panel-body">
@@ -154,9 +154,9 @@
     </div>
     {% else %}
     <div class="panel h-100">
-      <div class="panel-header"><i class="bi bi-check-circle-fill text-success me-2"></i>Production Status</div>
+      <div class="panel-header"><i class="bi bi-check-circle-fill text-success me-2" aria-hidden="true"></i>Production Status</div>
       <div class="panel-body text-center py-4 text-success">
-        <i class="bi bi-check-circle-fill fs-1 mb-2 d-block"></i>
+        <i class="bi bi-check-circle-fill fs-1 mb-2 d-block" aria-hidden="true"></i>
         <p class="mb-0 fw-semibold">No production shortages or active jobs.</p>
       </div>
     </div>

@@ -17,7 +17,7 @@
       <div class="input-group">
         <input type="text" name="q" class="form-control" placeholder="Search jobs" value="{{ request.GET.q }}">
         <button class="btn btn-outline-secondary d-flex align-items-center justify-content-center px-3 search-icon-btn" type="submit" aria-label="Search">
-          <i class="bi bi-search"></i>
+          <i class="bi bi-search" aria-hidden="true"></i>
         </button>
       </div>
     </div>
@@ -27,14 +27,14 @@
 <table class="table table-striped">
     <thead>
       <tr>
-        <th>ID</th>
-        <th>Product</th>
-        <th>Qty</th>
-        <th>Qty Remaining</th>
-        <th>Sufficient Materials</th>
-        <th>Due Date</th>
-        <th>Status</th>
-        <th class=\"text-end\">Actions</th>
+        <th scope="col">ID</th>
+        <th scope="col">Product</th>
+        <th scope="col">Qty</th>
+        <th scope="col">Qty Remaining</th>
+        <th scope="col">Sufficient Materials</th>
+        <th scope="col">Due Date</th>
+        <th scope="col">Status</th>
+        <th scope="col" class=\"text-end\">Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -46,9 +46,11 @@
         <td>{{ job.remaining }}</td>
         <td>
           {% if job.materials_ok %}
-            <i class="bi bi-check-circle-fill text-success" title="Materials available"></i>
+            <i class="bi bi-check-circle-fill text-success" title="Materials available" aria-hidden="true"></i>
+            <span class="visually-hidden">Materials available</span>
           {% else %}
-            <i class="bi bi-exclamation-triangle-fill text-danger" title="Insufficient components"></i>
+            <i class="bi bi-exclamation-triangle-fill text-danger" title="Insufficient components" aria-hidden="true"></i>
+            <span class="visually-hidden">Insufficient components</span>
           {% endif %}
         </td>
         <td>

@@ -14,13 +14,13 @@
             <button class="btn btn-outline-secondary" type="submit">Apply</button>
         </div>
         <div class="col-auto">
-            <a href="{% url 'sales:sales-order-export' %}?{{ request.GET.urlencode }}" class="btn btn-outline-secondary"><i class="bi bi-download me-1"></i>Export CSV</a>
+            <a href="{% url 'sales:sales-order-export' %}?{{ request.GET.urlencode }}" class="btn btn-outline-secondary"><i class="bi bi-download me-1" aria-hidden="true"></i>Export CSV</a>
         </div>
         <div class="col-md-6 col-lg-5 ms-auto">
             <div class="input-group">
                 <input type="text" name="q" class="form-control" placeholder="Search orders" value="{{ request.GET.q }}">
                 <button class="btn btn-outline-secondary d-flex align-items-center justify-content-center px-3 search-icon-btn" type="submit" aria-label="Search">
-                    <i class="bi bi-search"></i>
+                    <i class="bi bi-search" aria-hidden="true"></i>
                 </button>
             </div>
         </div>
@@ -32,37 +32,40 @@
     <span id="bulk-count" class="text-muted">0 selected</span>
     <button type="submit" name="bulk_action" value="close" class="btn btn-sm btn-danger"
             onclick="return confirm('Close all selected orders?');">
-        <i class="bi bi-x-circle me-1"></i>Close Selected
+        <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Close Selected
     </button>
 </div>
 <div class="table-responsive">
 <table class="table table-striped">
     <thead>
         <tr>
-            <th><input type="checkbox" id="select-all"></th>
-            <th>ID</th>
-            <th>Customer</th>
-            <th>Status</th>
-            <th>Stock Available</th>
-            <th>Ship By</th>
-            <th>Created At</th>
-            <th class=\"text-end\">Actions</th>
+            <th scope="col"><input type="checkbox" id="select-all" aria-label="Select all orders"></th>
+            <th scope="col">ID</th>
+            <th scope="col">Customer</th>
+            <th scope="col">Status</th>
+            <th scope="col">Stock Available</th>
+            <th scope="col">Ship By</th>
+            <th scope="col">Created At</th>
+            <th scope="col" class=\"text-end\">Actions</th>
         </tr>
     </thead>
     <tbody>
         {% for order in sales_orders %}
         <tr>
-            <td><input type="checkbox" name="selected" value="{{ order.pk }}" class="row-select"></td>
+            <td><input type="checkbox" name="selected" value="{{ order.pk }}" class="row-select" aria-label="Select order {{ order.order_number }}"></td>
             <td><a href="{% url 'sales:sales-order-detail' order.id %}">{{ order.order_number }}</a></td>
             <td><a href="{% url 'sales:customer-detail' order.customer.id %}">{{ order.customer.name }}</a></td>
             <td>{% if order.has_open_lines %}<span class="badge bg-success-subtle text-success">Open</span>{% else %}<span class="badge bg-secondary-subtle text-secondary">Closed</span>{% endif %}</td>
             <td>
               {% if order.stock_ok is None %}
-                <span class="text-muted">—</span>
+                <span class="text-muted" aria-hidden="true">—</span>
+                <span class="visually-hidden">N/A</span>
               {% elif order.stock_ok %}
-                <i class="bi bi-check-circle-fill text-success" title="Stock available"></i>
+                <i class="bi bi-check-circle-fill text-success" title="Stock available" aria-hidden="true"></i>
+                <span class="visually-hidden">Stock available</span>
               {% else %}
-                <i class="bi bi-exclamation-triangle-fill text-danger" title="Insufficient stock"></i>
+                <i class="bi bi-exclamation-triangle-fill text-danger" title="Insufficient stock" aria-hidden="true"></i>
+                <span class="visually-hidden">Insufficient stock</span>
               {% endif %}
             </td>
             <td>{{ order.ship_by_date|default:"—" }}</td>

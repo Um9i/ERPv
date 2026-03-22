@@ -44,7 +44,7 @@
                         {{ line_form|crispy }}
                     </div>
                     <button type="button" class="btn btn-outline-danger btn-sm ms-2 mt-2 remove-line" title="Remove component">
-                        <i class="bi bi-x-lg"></i>
+                        <i class="bi bi-x-lg" aria-hidden="true"></i>
                     </button>
                 </div>
                 {% for error in line_form.non_field_errors %}
@@ -56,7 +56,7 @@
 
         <div class="d-flex justify-content-between align-items-center mt-3 mb-4">
             <button type="button" class="btn btn-outline-secondary" id="add-line">
-                <i class="bi bi-plus-circle me-1"></i> Add another component
+                <i class="bi bi-plus-circle me-1" aria-hidden="true"></i> Add another component
             </button>
             <div class="text-end">
                 <span class="text-muted">Components: </span><strong id="line-count">0</strong>
@@ -67,7 +67,7 @@
     {# ── Submit ── #}
     <hr>
     <button type="submit" class="btn btn-success">
-        <i class="bi bi-check-lg me-1"></i> {% if form.instance.pk %}Update BOM{% else %}Create BOM{% endif %}
+        <i class="bi bi-check-lg me-1" aria-hidden="true"></i> {% if form.instance.pk %}Update BOM{% else %}Create BOM{% endif %}
     </button>
 </form>
 

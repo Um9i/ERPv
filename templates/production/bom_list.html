@@ -9,7 +9,7 @@
             <div class="input-group">
                 <input type="text" name="q" class="form-control" placeholder="Search BOMs" value="{{ request.GET.q }}">
                 <button class="btn btn-outline-secondary d-flex align-items-center justify-content-center px-3 search-icon-btn" type="submit" aria-label="Search">
-                  <i class="bi bi-search"></i>
+                  <i class="bi bi-search" aria-hidden="true"></i>
                 </button>
             </div>
         </div>
@@ -17,7 +17,7 @@
 </form>
 <div class="table-responsive">
 <table class="table table-striped">
-    <thead><tr><th>Product</th><th class="text-end">Actions</th></tr></thead>
+    <thead><tr><th scope="col">Product</th><th scope="col" class="text-end">Actions</th></tr></thead>
     <tbody>
     {% for bom in boms %}
     <tr>

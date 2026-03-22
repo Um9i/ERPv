@@ -7,13 +7,13 @@
       <p class="text-muted">Remote product catalogue from <a href="{{ instance.url }}" target="_blank" rel="noopener noreferrer">{{ instance.url }}</a>.</p>
     </div>
     <a href="{% url 'config:company-config' %}#integrations" class="btn btn-outline-secondary">
-      <i class="bi bi-arrow-left"></i> Back to Integrations
+      <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Integrations
     </a>
   </div>
 
   {% if not supplier %}
     <div class="alert alert-warning" role="alert">
-      <i class="bi bi-exclamation-triangle-fill me-2"></i>
+      <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
       You must import this instance as a Supplier before importing products.
       <a href="{% url 'config:import-as-supplier' instance.pk %}" class="alert-link ms-1">Import as Supplier</a>
     </div>
@@ -21,7 +21,7 @@
 
   {% if error %}
     <div class="alert alert-danger" role="alert">
-      <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+      <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>{{ error }}
     </div>
   {% elif catalogue is not None %}
     {% if catalogue %}
@@ -29,10 +29,10 @@
         <table class="table table-striped align-middle">
           <thead class="table-light">
             <tr>
-              <th>Name</th>
-              <th>Description</th>
-              <th class="text-end">Sale Price</th>
-              <th></th>
+              <th scope="col">Name</th>
+              <th scope="col">Description</th>
+              <th scope="col" class="text-end">Sale Price</th>
+              <th scope="col"></th>
             </tr>
           </thead>
           <tbody>
@@ -46,7 +46,7 @@
                   {% if item.already_imported %}
                     <button class="btn btn-outline-secondary btn-sm" disabled
                             title="Already imported">
-                      <i class="bi bi-check2"></i> Already Imported
+                      <i class="bi bi-check2" aria-hidden="true"></i> Already Imported
                     </button>
                   {% else %}
                     <form method="post" action="{% url 'config:paired-instance-import-product' instance.pk %}">
@@ -56,14 +56,14 @@
                       <input type="hidden" name="sale_price" value="{{ item.sale_price }}">
                       <input type="hidden" name="supplier_id" value="{{ supplier.pk }}">
                       <button type="submit" class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-plus"></i> Import as Supplier Product
+                        <i class="bi bi-plus" aria-hidden="true"></i> Import as Supplier Product
                       </button>
                     </form>
                   {% endif %}
                 {% else %}
                   <button class="btn btn-outline-primary btn-sm" disabled
                           title="Import this instance as a Supplier first">
-                    <i class="bi bi-plus"></i> Import as Supplier Product
+                    <i class="bi bi-plus" aria-hidden="true"></i> Import as Supplier Product
                   </button>
                 {% endif %}
               </td>

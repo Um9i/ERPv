@@ -100,7 +100,7 @@
 
 {% if any_shortage %}
 <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
-    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
     <div>Insufficient components for remaining quantity.
     <a href="{% url 'inventory:inventory-low-stock' %}" class="alert-link">View shortages →</a></div>
 </div>
@@ -111,7 +111,7 @@
     <div class="detail-section-header d-flex justify-content-between align-items-center">
         <h2 class="detail-section-title mb-0">Bill of Materials</h2>
         <button class="btn btn-sm btn-outline-secondary" id="bom-expand-all">
-            <i class="bi bi-arrows-expand me-1"></i>Expand All
+            <i class="bi bi-arrows-expand me-1" aria-hidden="true"></i>Expand All
         </button>
     </div>
     <div id="bom-tree" class="mt-2 px-2" data-variant="badges"></div>
@@ -128,11 +128,11 @@
         <table class="table table-sm table-striped align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Component</th>
-                    <th class="text-center" style="width:6rem;">Per Unit</th>
-                    <th class="text-center" style="width:8rem;">Required</th>
-                    <th class="text-center" style="width:7rem;">In Stock</th>
-                    <th class="text-center" style="width:7rem;">Shortfall</th>
+                    <th scope="col">Component</th>
+                    <th scope="col" class="text-center" style="width:6rem;">Per Unit</th>
+                    <th scope="col" class="text-center" style="width:8rem;">Required</th>
+                    <th scope="col" class="text-center" style="width:7rem;">In Stock</th>
+                    <th scope="col" class="text-center" style="width:7rem;">Shortfall</th>
                 </tr>
             </thead>
             <tbody>
@@ -152,7 +152,7 @@
                     <td class="text-center">{{ c.stock }}</td>
                     <td class="text-center">
                         {% if c.ok %}
-                            <span class="badge bg-success-subtle text-success"><i class="bi bi-check-lg"></i> OK</span>
+                            <span class="badge bg-success-subtle text-success"><i class="bi bi-check-lg" aria-hidden="true"></i> OK</span>
                         {% else %}
                             <span class="badge bg-danger-subtle text-danger fw-semibold">−{{ c.shortfall }}</span>
                         {% endif %}
@@ -184,7 +184,7 @@
 
     <div class="card border">
         <div class="card-header bg-transparent fw-semibold">
-            <i class="bi bi-box-arrow-in-down me-1"></i>Receive Units
+            <i class="bi bi-box-arrow-in-down me-1" aria-hidden="true"></i>Receive Units
         </div>
         <div class="card-body">
 
@@ -200,7 +200,7 @@
             {% if max_receivable > 0 %}
             {% if not materials_available_for_remaining %}
             <div class="alert alert-warning py-2 mb-3">
-                <i class="bi bi-exclamation-triangle me-1"></i>
+                <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
                 Only enough materials to receive <strong>{{ max_receivable }}</strong> of {{ production.remaining }} remaining units.
             </div>
             {% endif %}
@@ -221,10 +221,10 @@
                         class="btn btn-outline-danger"
                         form="cancel-form"
                         onclick="return confirm('Cancel this job and release its allocations?');">
-                        <i class="bi bi-x-circle me-1"></i>Cancel Job
+                        <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Cancel Job
                     </button>
                     <button type="submit" name="receive_production" value="1" class="btn btn-success">
-                        <i class="bi bi-check-lg me-1"></i>Receive
+                        <i class="bi bi-check-lg me-1" aria-hidden="true"></i>Receive
                     </button>
                 </div>
             </form>
@@ -235,7 +235,7 @@
                     class="btn btn-outline-danger"
                     form="cancel-form"
                     onclick="return confirm('Cancel this job and release its allocations?');">
-                    <i class="bi bi-x-circle me-1"></i>Cancel Job
+                    <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Cancel Job
                 </button>
             </div>
             {% endif %}

@@ -65,6 +65,7 @@ ERPv is a full-featured ERP web application designed for small-to-medium manufac
 | Backend | Django 6.0.3, Python 3.14 |
 | Database | PostgreSQL (production), SQLite (development) |
 | Frontend | Bootstrap 5 via django-crispy-forms, TypeScript |
+| Accessibility | WCAG 2.1 AA — ARIA landmarks, skip nav, sr-only text, focus-visible |
 | PDF Generation | WeasyPrint |
 | QR Codes | python-qrcode |
 | Static Files | WhiteNoise |

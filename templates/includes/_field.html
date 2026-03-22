@@ -10,10 +10,11 @@
         id="{{ field.id_for_label }}"
         value="{{ field.value|default:'' }}"
         {% if field.field.max_length %}maxlength="{{ field.field.max_length }}"{% endif %}
+        {% if field.errors %}aria-invalid="true" aria-describedby="{{ field.id_for_label }}_error"{% elif show_help and field.help_text %}aria-describedby="{{ field.id_for_label }}_help"{% endif %}
         class="form-control{% if field.errors %} is-invalid{% endif %}">
     {% if field.errors %}
-    <div class="invalid-feedback">{{ field.errors|join:", " }}</div>
+    <div class="invalid-feedback" id="{{ field.id_for_label }}_error">{{ field.errors|join:", " }}</div>
     {% elif show_help and field.help_text %}
-    <div class="form-text">{{ field.help_text }}</div>
+    <div class="form-text" id="{{ field.id_for_label }}_help">{{ field.help_text }}</div>
     {% endif %}
 </div>

@@ -5,12 +5,12 @@
 {# ── Week navigation bar ──────────────────────────────────────────── #}
 <div class="panel mb-3">
   <div class="panel-header d-flex align-items-center justify-content-between">
-    <a href="?date={{ prev_date|date:'Y-m-d' }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-left"></i></a>
+    <a href="?date={{ prev_date|date:'Y-m-d' }}" class="btn btn-sm btn-outline-secondary" aria-label="Previous day"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
     <span class="fw-semibold">
       {{ current_date|date:'l, N j, Y' }}
       {% if current_date == today %}<span class="badge bg-primary ms-1">Today</span>{% endif %}
     </span>
-    <a href="?date={{ next_date|date:'Y-m-d' }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-right"></i></a>
+    <a href="?date={{ next_date|date:'Y-m-d' }}" class="btn btn-sm btn-outline-secondary" aria-label="Next day"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
   </div>
   <div class="panel-body p-2">
     <div class="d-flex justify-content-between text-center">
@@ -30,24 +30,24 @@
 {# ── Today button ─────────────────────────────────────────────────── #}
 {% if current_date != today %}
 <div class="mb-3 text-center">
-  <a href="{% url 'dashboards:delivery-schedule' %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-calendar-event me-1"></i>Jump to Today</a>
+  <a href="{% url 'dashboards:delivery-schedule' %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-calendar-event me-1" aria-hidden="true"></i>Jump to Today</a>
 </div>
 {% endif %}
 
 {# ── Overdue orders ───────────────────────────────────────────────── #}
 {% if overdue_orders %}
 <div class="panel mb-3 border-danger">
-  <div class="panel-header text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>Overdue Deliveries ({{ overdue_orders|length }})</div>
+  <div class="panel-header text-danger"><i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>Overdue Deliveries ({{ overdue_orders|length }})</div>
   <div class="panel-body p-0">
     <div class="table-responsive">
       <table class="table table-hover mb-0">
         <thead>
           <tr>
-            <th>Order</th>
-            <th>Supplier</th>
-            <th>Due Date</th>
-            <th>Status</th>
-            <th class="text-end">Value</th>
+            <th scope="col">Order</th>
+            <th scope="col">Supplier</th>
+            <th scope="col">Due Date</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="text-end">Value</th>
           </tr>
         </thead>
         <tbody>
@@ -70,7 +70,7 @@
 {# ── Orders for the selected date ─────────────────────────────────── #}
 <div class="panel">
   <div class="panel-header">
-    <i class="bi bi-box-seam me-2"></i>Expected Deliveries — {{ current_date|date:'N j, Y' }}
+    <i class="bi bi-box-seam me-2" aria-hidden="true"></i>Expected Deliveries — {{ current_date|date:'N j, Y' }}
     {% if orders %}<span class="badge bg-primary ms-2">{{ orders|length }}</span>{% endif %}
   </div>
   <div class="panel-body p-0">
@@ -79,11 +79,11 @@
       <table class="table table-hover mb-0">
         <thead>
           <tr>
-            <th>Order</th>
-            <th>Supplier</th>
-            <th>Status</th>
-            <th class="text-end">Total Value</th>
-            <th class="text-end">Remaining</th>
+            <th scope="col">Order</th>
+            <th scope="col">Supplier</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="text-end">Total Value</th>
+            <th scope="col" class="text-end">Remaining</th>
           </tr>
         </thead>
         <tbody>
@@ -101,7 +101,7 @@
     </div>
     {% else %}
     <div class="text-center py-4 text-muted">
-      <i class="bi bi-calendar-check fs-1 d-block mb-2"></i>
+      <i class="bi bi-calendar-check fs-1 d-block mb-2" aria-hidden="true"></i>
       <p class="mb-0">No deliveries expected on this date.</p>
     </div>
     {% endif %}

@@ -11,7 +11,7 @@
     <a href="{{ inventory_url }}" class="metric-card-link">
       <div class="metric-card">
         <div class="metric-card-icon metric-card-icon--dark">
-          <i class="bi bi-box-seam"></i>
+          <i class="bi bi-box-seam" aria-hidden="true"></i>
         </div>
         <div class="metric-card-content">
           <span class="metric-card-label">Products</span>
@@ -26,18 +26,18 @@
     <a href="{{ inventory_url }}" class="metric-card-link">
       <div class="metric-card">
         <div class="metric-card-icon metric-card-icon--dark">
-          <i class="bi bi-boxes"></i>
+          <i class="bi bi-boxes" aria-hidden="true"></i>
         </div>
         <div class="metric-card-content">
           <span class="metric-card-label">Total Stock</span>
           <div class="d-flex align-items-baseline gap-2">
             <span class="metric-card-value">{{ total_quantity|default:'—' }}</span>
             {% if trend_quantity == "up" %}
-              <span class="text-success small fw-semibold"><i class="bi bi-arrow-up-right"></i> 7d</span>
+              <span class="text-success small fw-semibold"><i class="bi bi-arrow-up-right" aria-hidden="true"></i> 7d</span>
             {% elif trend_quantity == "down" %}
-              <span class="text-danger small fw-semibold"><i class="bi bi-arrow-down-right"></i> 7d</span>
+              <span class="text-danger small fw-semibold"><i class="bi bi-arrow-down-right" aria-hidden="true"></i> 7d</span>
             {% else %}
-              <span class="text-muted small"><i class="bi bi-dash"></i> 7d</span>
+              <span class="text-muted small"><i class="bi bi-dash" aria-hidden="true"></i> 7d</span>
             {% endif %}
           </div>
         </div>
@@ -49,18 +49,18 @@
   <div class="col-12 col-lg-6 col-xl-3">
     <div class="metric-card">
       <div class="metric-card-icon metric-card-icon--success">
-        <i class="bi bi-arrow-down-circle"></i>
+        <i class="bi bi-arrow-down-circle" aria-hidden="true"></i>
       </div>
       <div class="metric-card-content">
         <span class="metric-card-label">Stock In (30 days)</span>
         <div class="d-flex align-items-baseline gap-2">
           <span class="metric-card-value">{{ stock_in_30d|default:'0' }}</span>
           {% if trend_stock_in == "up" %}
-            <span class="text-success small fw-semibold"><i class="bi bi-arrow-up-right"></i> vs prev</span>
+            <span class="text-success small fw-semibold"><i class="bi bi-arrow-up-right" aria-hidden="true"></i> vs prev</span>
           {% elif trend_stock_in == "down" %}
-            <span class="text-danger small fw-semibold"><i class="bi bi-arrow-down-right"></i> vs prev</span>
+            <span class="text-danger small fw-semibold"><i class="bi bi-arrow-down-right" aria-hidden="true"></i> vs prev</span>
           {% else %}
-            <span class="text-muted small"><i class="bi bi-dash"></i> vs prev</span>
+            <span class="text-muted small"><i class="bi bi-dash" aria-hidden="true"></i> vs prev</span>
           {% endif %}
         </div>
       </div>
@@ -71,18 +71,18 @@
   <div class="col-12 col-lg-6 col-xl-3">
     <div class="metric-card">
       <div class="metric-card-icon metric-card-icon--primary">
-        <i class="bi bi-arrow-up-circle"></i>
+        <i class="bi bi-arrow-up-circle" aria-hidden="true"></i>
       </div>
       <div class="metric-card-content">
         <span class="metric-card-label">Stock Out (30 days)</span>
         <div class="d-flex align-items-baseline gap-2">
           <span class="metric-card-value">{{ stock_out_30d|default:'0' }}</span>
           {% if trend_stock_out == "up" %}
-            <span class="text-success small fw-semibold"><i class="bi bi-arrow-up-right"></i> vs prev</span>
+            <span class="text-success small fw-semibold"><i class="bi bi-arrow-up-right" aria-hidden="true"></i> vs prev</span>
           {% elif trend_stock_out == "down" %}
-            <span class="text-danger small fw-semibold"><i class="bi bi-arrow-down-right"></i> vs prev</span>
+            <span class="text-danger small fw-semibold"><i class="bi bi-arrow-down-right" aria-hidden="true"></i> vs prev</span>
           {% else %}
-            <span class="text-muted small"><i class="bi bi-dash"></i> vs prev</span>
+            <span class="text-muted small"><i class="bi bi-dash" aria-hidden="true"></i> vs prev</span>
           {% endif %}
         </div>
       </div>
@@ -99,17 +99,17 @@
     {% if low_stock_count %}
     <div class="panel h-100">
       <div class="panel-header">
-        <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Low Stock — Top Shortfalls
+        <i class="bi bi-exclamation-triangle-fill text-danger me-2" aria-hidden="true"></i>Low Stock — Top Shortfalls
       </div>
       <div class="panel-body p-0">
         <table class="table table-sm mb-0">
           <thead class="table-light">
             <tr>
-              <th class="ps-3">Product</th>
-              <th class="text-end">In Stock</th>
-              <th class="text-end">Short by</th>
-              <th class="ps-3" style="min-width:120px;">Coverage</th>
-              <th></th>
+              <th scope="col" class="ps-3">Product</th>
+              <th scope="col" class="text-end">In Stock</th>
+              <th scope="col" class="text-end">Short by</th>
+              <th scope="col" class="ps-3" style="min-width:120px;">Coverage</th>
+              <th scope="col"></th>
             </tr>
           </thead>
           <tbody>
@@ -130,7 +130,7 @@
               </td>
               <td class="text-end pe-2">
                 <a href="{% url 'inventory:inventory-detail' item.pk %}" class="btn btn-sm btn-outline-secondary py-0 px-2">
-                  <i class="bi bi-arrow-right"></i>
+                  <i class="bi bi-arrow-right" aria-hidden="true"></i>
                 </a>
               </td>
             </tr>
@@ -141,9 +141,9 @@
     </div>
     {% else %}
     <div class="panel h-100">
-      <div class="panel-header"><i class="bi bi-check-circle-fill text-success me-2"></i>Stock Health</div>
+      <div class="panel-header"><i class="bi bi-check-circle-fill text-success me-2" aria-hidden="true"></i>Stock Health</div>
       <div class="panel-body text-center py-4 text-success">
-        <i class="bi bi-check-circle-fill fs-1 mb-2 d-block"></i>
+        <i class="bi bi-check-circle-fill fs-1 mb-2 d-block" aria-hidden="true"></i>
         <p class="mb-0 fw-semibold">All products are sufficiently stocked.</p>
       </div>
     </div>
@@ -191,7 +191,7 @@
     <a href="{{ inventory_url }}" class="metric-card-link">
       <div class="metric-card border-warning">
         <div class="metric-card-icon metric-card-icon--warning">
-          <i class="bi bi-archive"></i>
+          <i class="bi bi-archive" aria-hidden="true"></i>
         </div>
         <div class="metric-card-content">
           <span class="metric-card-label">Dead Stock (90+ days)</span>

@@ -23,7 +23,7 @@
     {% endif %}
     {% if any_shortage %}
     <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
         <div>Insufficient stock for one or more lines. Quantities have been capped to available inventory.</div>
     </div>
     {% endif %}
@@ -31,11 +31,11 @@
     <table class="table">
         <thead>
             <tr>
-                <th>Product</th>
-                <th>Quantity</th>
-                <th>Quantity Shipped</th>
-                <th>In Stock</th>
-                <th>Quantity to Ship</th>
+                <th scope="col">Product</th>
+                <th scope="col">Quantity</th>
+                <th scope="col">Quantity Shipped</th>
+                <th scope="col">In Stock</th>
+                <th scope="col">Quantity to Ship</th>
             </tr>
         </thead>
         <tbody>

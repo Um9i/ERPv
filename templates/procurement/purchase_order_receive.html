@@ -12,11 +12,11 @@
 {% if purchase_order.status == "Open" %}
 <div class="card mb-3 border-primary">
   <div class="card-body">
-    <h5 class="card-title"><i class="bi bi-upc-scan me-2"></i>Scan to Receive</h5>
+    <h5 class="card-title"><i class="bi bi-upc-scan me-2" aria-hidden="true"></i>Scan to Receive</h5>
     <p class="text-muted small mb-2">Scan a product barcode or SKU to automatically increment the received quantity for the matching line.</p>
     <div class="input-group">
       <input type="text" id="scan-input" class="form-control" placeholder="Scan barcode / SKU…" autofocus autocomplete="off">
-      <button type="button" id="scan-btn" class="btn btn-primary"><i class="bi bi-upc-scan"></i></button>
+      <button type="button" id="scan-btn" class="btn btn-primary" aria-label="Scan barcode"><i class="bi bi-upc-scan" aria-hidden="true"></i></button>
     </div>
     <div id="scan-feedback" class="mt-2"></div>
   </div>
@@ -29,11 +29,11 @@
     <table class="table">
         <thead>
             <tr>
-                <th>Product</th>
-                <th>Barcode / SKU</th>
-                <th>Quantity</th>
-                <th>Received</th>
-                <th>Quantity Received</th>
+                <th scope="col">Product</th>
+                <th scope="col">Barcode / SKU</th>
+                <th scope="col">Quantity</th>
+                <th scope="col">Received</th>
+                <th scope="col">Quantity Received</th>
             </tr>
         </thead>
         <tbody>
@@ -91,12 +91,12 @@
     if(!val) return;
     const lineId=lineMap[val];
     if(!lineId){
-      feedback.innerHTML='<span class="text-danger"><i class="bi bi-x-circle me-1"></i>No matching line for: '+val+'</span>';
+      feedback.innerHTML='<span class="text-danger"><i class="bi bi-x-circle me-1" aria-hidden="true"></i>No matching line for: '+val+'</span>';
       return;
     }
     const input=document.getElementById('recv-'+lineId);
     if(!input){
-      feedback.innerHTML='<span class="text-warning"><i class="bi bi-check-circle me-1"></i>Line already complete.</span>';
+      feedback.innerHTML='<span class="text-warning"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>Line already complete.</span>';
       return;
     }
     const max=parseInt(input.max)||0;
@@ -106,9 +106,9 @@
       const row=document.getElementById('line-'+lineId);
       row.classList.add('table-info');
       setTimeout(()=>row.classList.remove('table-info'),600);
-      feedback.innerHTML='<span class="text-success"><i class="bi bi-check-circle me-1"></i>Scanned: '+val+' (qty: '+(cur+1)+')</span>';
+      feedback.innerHTML='<span class="text-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>Scanned: '+val+' (qty: '+(cur+1)+')</span>';
     } else {
-      feedback.innerHTML='<span class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Max quantity reached for this line.</span>';
+      feedback.innerHTML='<span class="text-warning"><i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>Max quantity reached for this line.</span>';
     }
     scanInput.focus();
   }

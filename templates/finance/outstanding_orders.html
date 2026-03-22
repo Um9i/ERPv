@@ -9,7 +9,7 @@
 <div class="row g-3 mb-4">
     <div class="col-6">
         <div class="metric-card">
-            <div class="metric-card-icon metric-card-icon--warning"><i class="bi bi-cart3"></i></div>
+            <div class="metric-card-icon metric-card-icon--warning"><i class="bi bi-cart3" aria-hidden="true"></i></div>
             <div class="metric-card-content">
                 <span class="metric-card-label">Open Sales Value</span>
                 <span class="metric-card-value">{{ open_sales_value|currency }}</span>
@@ -18,7 +18,7 @@
     </div>
     <div class="col-6">
         <div class="metric-card">
-            <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-bag"></i></div>
+            <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-bag" aria-hidden="true"></i></div>
             <div class="metric-card-content">
                 <span class="metric-card-label">Open Purchases Value</span>
                 <span class="metric-card-value">{{ open_purchases_value|currency }}</span>
@@ -39,10 +39,10 @@
                 <table class="table table-striped align-middle mb-0">
                     <thead>
                         <tr>
-                            <th>Customer</th>
-                            <th>Order Ref</th>
-                            <th>Date</th>
-                            <th class="text-end">Open Value</th>
+                            <th scope="col">Customer</th>
+                            <th scope="col">Order Ref</th>
+                            <th scope="col">Date</th>
+                            <th scope="col" class="text-end">Open Value</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -73,10 +73,10 @@
                 <table class="table table-striped align-middle mb-0">
                     <thead>
                         <tr>
-                            <th>Supplier</th>
-                            <th>Order Ref</th>
-                            <th>Date</th>
-                            <th class="text-end">Open Value</th>
+                            <th scope="col">Supplier</th>
+                            <th scope="col">Order Ref</th>
+                            <th scope="col">Date</th>
+                            <th scope="col" class="text-end">Open Value</th>
                         </tr>
                     </thead>
                     <tbody>

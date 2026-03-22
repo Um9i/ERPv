@@ -10,7 +10,7 @@
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3">
         <div class="metric-card">
-            <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-graph-up-arrow"></i></div>
+            <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i></div>
             <div class="metric-card-content">
                 <span class="metric-card-label">Total Revenue</span>
                 <span class="metric-card-value">{{ total_revenue|currency }}</span>
@@ -19,7 +19,7 @@
     </div>
     <div class="col-6 col-lg-3">
         <div class="metric-card">
-            <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-graph-down-arrow"></i></div>
+            <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-graph-down-arrow" aria-hidden="true"></i></div>
             <div class="metric-card-content">
                 <span class="metric-card-label">Total Cost</span>
                 <span class="metric-card-value">{{ total_cost|currency }}</span>
@@ -28,7 +28,7 @@
     </div>
     <div class="col-6 col-lg-3">
         <div class="metric-card">
-            <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-wallet2"></i></div>
+            <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-wallet2" aria-hidden="true"></i></div>
             <div class="metric-card-content">
                 <span class="metric-card-label">Gross Profit</span>
                 <span class="metric-card-value">{{ total_profit|currency }}</span>
@@ -39,18 +39,18 @@
         <div class="metric-card">
             {% if avg_margin_pct is not None %}
             {% if avg_margin_pct >= 30 %}
-            <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-percent"></i></div>
+            <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-percent" aria-hidden="true"></i></div>
             {% elif avg_margin_pct >= 10 %}
-            <div class="metric-card-icon metric-card-icon--warning"><i class="bi bi-percent"></i></div>
+            <div class="metric-card-icon metric-card-icon--warning"><i class="bi bi-percent" aria-hidden="true"></i></div>
             {% else %}
-            <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-percent"></i></div>
+            <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-percent" aria-hidden="true"></i></div>
             {% endif %}
             <div class="metric-card-content">
                 <span class="metric-card-label">Avg Margin</span>
                 <span class="metric-card-value">{{ avg_margin_pct|floatformat:1 }}%</span>
             </div>
             {% else %}
-            <div class="metric-card-icon metric-card-icon--dark"><i class="bi bi-percent"></i></div>
+            <div class="metric-card-icon metric-card-icon--dark"><i class="bi bi-percent" aria-hidden="true"></i></div>
             <div class="metric-card-content">
                 <span class="metric-card-label">Avg Margin</span>
                 <span class="metric-card-value">—</span>
@@ -85,14 +85,14 @@
         <table class="table table-striped align-middle">
             <thead>
                 <tr>
-                    <th>Product</th>
-                    <th class="text-end">Unit Cost</th>
-                    <th class="text-end">Sale Price</th>
-                    <th class="text-end">Margin %</th>
-                    <th class="text-end">Units Sold</th>
-                    <th class="text-end">Revenue</th>
-                    <th class="text-end">Cost</th>
-                    <th class="text-end">Gross Profit</th>
+                    <th scope="col">Product</th>
+                    <th scope="col" class="text-end">Unit Cost</th>
+                    <th scope="col" class="text-end">Sale Price</th>
+                    <th scope="col" class="text-end">Margin %</th>
+                    <th scope="col" class="text-end">Units Sold</th>
+                    <th scope="col" class="text-end">Revenue</th>
+                    <th scope="col" class="text-end">Cost</th>
+                    <th scope="col" class="text-end">Gross Profit</th>
                 </tr>
             </thead>
             <tbody>

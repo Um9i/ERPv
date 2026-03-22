@@ -17,13 +17,13 @@
         </span>
         {% if all_confirmed %}
         <a href="{% url 'sales:sales-order-ship' pick_list.sales_order.pk %}" class="btn btn-success btn-sm">
-            <i class="bi bi-truck me-1"></i>Proceed to Ship
+            <i class="bi bi-truck me-1" aria-hidden="true"></i>Proceed to Ship
         </a>
         {% endif %}
         <form method="post" action="{% url 'sales:pick-confirm-reset' pick_list.pk %}" class="d-inline">
             {% csrf_token %}
             <button type="submit" class="btn btn-outline-warning btn-sm" onclick="return confirm('Reset all confirmations?')">
-                <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+                <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Reset
             </button>
         </form>
         <a href="{% url 'sales:pick-list-detail' pick_list.pk %}" class="btn btn-app-secondary btn-sm">
@@ -35,7 +35,7 @@
 <!-- Scanner input -->
 <div class="card mb-3 border-primary d-print-none">
     <div class="card-body">
-        <h5 class="card-title mb-3"><i class="bi bi-qr-code-scan me-2"></i>Scan Barcode / QR Code</h5>
+        <h5 class="card-title mb-3"><i class="bi bi-qr-code-scan me-2" aria-hidden="true"></i>Scan Barcode / QR Code</h5>
         <div class="row g-2 align-items-end">
             <div class="col-12 col-md-8">
                 <label for="scan-input" class="form-label">Scan or type a barcode / SKU</label>
@@ -43,10 +43,10 @@
             </div>
             <div class="col-12 col-md-4 d-flex gap-2">
                 <button type="button" id="scan-submit" class="btn btn-primary btn-lg flex-grow-1">
-                    <i class="bi bi-check2 me-1"></i>Confirm Scan
+                    <i class="bi bi-check2 me-1" aria-hidden="true"></i>Confirm Scan
                 </button>
-                <button type="button" id="camera-toggle" class="btn btn-outline-primary btn-lg" title="Use camera to scan">
-                    <i class="bi bi-camera"></i>
+                <button type="button" id="camera-toggle" class="btn btn-outline-primary btn-lg" title="Use camera to scan" aria-label="Use camera to scan">
+                    <i class="bi bi-camera" aria-hidden="true"></i>
                 </button>
             </div>
         </div>
@@ -56,7 +56,7 @@
                 <video id="camera-video" class="w-100 rounded border" autoplay playsinline></video>
                 <canvas id="camera-canvas" class="d-none"></canvas>
                 <button type="button" id="camera-stop" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2">
-                    <i class="bi bi-x-lg"></i>
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
                 </button>
             </div>
             <p class="text-muted small mt-1">Point your camera at a barcode or QR code.</p>
@@ -71,11 +71,11 @@
     <table class="table table-striped align-middle" id="pick-table">
         <thead>
             <tr>
-                <th>Product</th>
-                <th>Pick From</th>
-                <th class="text-end">Quantity</th>
-                <th class="text-center">Status</th>
-                <th class="text-center d-print-none">Action</th>
+                <th scope="col">Product</th>
+                <th scope="col">Pick From</th>
+                <th scope="col" class="text-end">Quantity</th>
+                <th scope="col" class="text-center">Status</th>
+                <th scope="col" class="text-center d-print-none">Action</th>
             </tr>
         </thead>
         <tbody>
@@ -92,9 +92,9 @@
                 </td>
                 <td>
                     {% if line.is_shortage %}
-                    <i class="bi bi-exclamation-triangle me-1 text-warning"></i><span class="text-warning">Insufficient Stock</span>
+                    <i class="bi bi-exclamation-triangle me-1 text-warning" aria-hidden="true"></i><span class="text-warning">Insufficient Stock</span>
                     {% elif line.location %}
-                    <i class="bi bi-geo-alt me-1 text-muted"></i>{{ line.location }}
+                    <i class="bi bi-geo-alt me-1 text-muted" aria-hidden="true"></i>{{ line.location }}
                     {% else %}
                     <span class="text-muted">Unallocated</span>
                     {% endif %}
@@ -104,7 +104,7 @@
                     {% if line.is_shortage %}
                     <span class="badge bg-warning text-dark">Shortage</span>
                     {% elif line.confirmed %}
-                    <span class="badge bg-success" data-status="confirmed"><i class="bi bi-check-circle me-1"></i>Confirmed</span>
+                    <span class="badge bg-success" data-status="confirmed"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>Confirmed</span>
                     {% else %}
                     <span class="badge bg-secondary" data-status="pending">Pending</span>
                     {% endif %}
@@ -112,10 +112,11 @@
                 <td class="text-center d-print-none">
                     {% if not line.is_shortage and not line.confirmed %}
                     <button type="button" class="btn btn-sm btn-outline-success confirm-btn" data-line-id="{{ line.pk }}">
-                        <i class="bi bi-check-lg me-1"></i>Confirm
+                        <i class="bi bi-check-lg me-1" aria-hidden="true"></i>Confirm
                     </button>
                     {% elif line.confirmed %}
-                    <i class="bi bi-check-circle-fill text-success"></i>
+                    <i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i>
+                    <span class="visually-hidden">Confirmed</span>
                     {% else %}
                     <span class="text-muted">—</span>
                     {% endif %}
@@ -175,11 +176,11 @@ document.addEventListener('DOMContentLoaded', function () {
         row.classList.add('table-success');
         const statusCell = row.querySelector('[data-status]');
         if (statusCell) {
-            statusCell.outerHTML = '<span class="badge bg-success" data-status="confirmed"><i class="bi bi-check-circle me-1"></i>Confirmed</span>';
+            statusCell.outerHTML = '<span class="badge bg-success" data-status="confirmed"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>Confirmed</span>';
         }
         const actionCell = row.querySelector('.confirm-btn');
         if (actionCell) {
-            actionCell.outerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+            actionCell.outerHTML = '<i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i>';
         }
         // Update counters
         const badge = document.querySelector('.badge.fs-6');
@@ -211,14 +212,14 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.ok) {
-                showFeedback('<i class="bi bi-check-circle me-1"></i><strong>' + (data.product_name || 'Item') + '</strong> confirmed!', 'success');
+                showFeedback('<i class="bi bi-check-circle me-1" aria-hidden="true"></i><strong>' + (data.product_name || 'Item') + '</strong> confirmed!', 'success');
                 markLineConfirmed(data.line_id, data.product_name);
                 if (data.all_confirmed) {
-                    showFeedback('<i class="bi bi-check-circle me-1"></i>All items confirmed! Ready to ship.', 'success');
+                    showFeedback('<i class="bi bi-check-circle me-1" aria-hidden="true"></i>All items confirmed! Ready to ship.', 'success');
                     setTimeout(function() { location.reload(); }, 1000);
                 }
             } else {
-                showFeedback('<i class="bi bi-exclamation-triangle me-1"></i>' + data.error, 'warning');
+                showFeedback('<i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>' + data.error, 'warning');
             }
             scanInput.value = '';
             scanInput.focus();
@@ -242,13 +243,13 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.ok) {
-                showFeedback('<i class="bi bi-check-circle me-1"></i>Line confirmed!', 'success');
+                showFeedback('<i class="bi bi-check-circle me-1" aria-hidden="true"></i>Line confirmed!', 'success');
                 markLineConfirmed(data.line_id);
                 if (data.all_confirmed) {
                     setTimeout(function() { location.reload(); }, 1000);
                 }
             } else {
-                showFeedback('<i class="bi bi-exclamation-triangle me-1"></i>' + data.error, 'warning');
+                showFeedback('<i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>' + data.error, 'warning');
             }
         });
     }
@@ -284,7 +285,7 @@ document.addEventListener('DOMContentLoaded', function () {
     cameraToggle.addEventListener('click', function() {
         if (cameraStream) { stopCamera(); return; }
         if (!('BarcodeDetector' in window)) {
-            showFeedback('<i class="bi bi-info-circle me-1"></i>Camera barcode scanning is not supported in this browser. Please type the barcode manually.', 'info');
+            showFeedback('<i class="bi bi-info-circle me-1" aria-hidden="true"></i>Camera barcode scanning is not supported in this browser. Please type the barcode manually.', 'info');
             return;
         }
         navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
@@ -306,7 +307,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }, 500);
         })
         .catch(function() {
-            showFeedback('<i class="bi bi-exclamation-triangle me-1"></i>Could not access camera. Check permissions.', 'danger');
+            showFeedback('<i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>Could not access camera. Check permissions.', 'danger');
         });
     });
 });

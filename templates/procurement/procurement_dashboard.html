@@ -6,11 +6,11 @@
 {% block dashboard_title %}Procurement Management{% endblock %}
 
 {% block dashboard_links %}
-<a href="{% url 'procurement:purchase-order-create' %}"><i class="bi bi-plus-circle"></i>Create Purchase Order</a>
-<a href="{% url 'procurement:purchase-order-list' %}"><i class="bi bi-bag"></i>View Purchase Orders</a>
-<a href="{% url 'procurement:po-template-list' %}"><i class="bi bi-bookmark-star"></i>PO Templates</a>
-<a href="{% url 'procurement:supplier-create' %}"><i class="bi bi-person-plus"></i>Create Supplier</a>
-<a href="{% url 'procurement:supplier-list' %}"><i class="bi bi-people"></i>View Suppliers</a>
+<a href="{% url 'procurement:purchase-order-create' %}"><i class="bi bi-plus-circle" aria-hidden="true"></i>Create Purchase Order</a>
+<a href="{% url 'procurement:purchase-order-list' %}"><i class="bi bi-bag" aria-hidden="true"></i>View Purchase Orders</a>
+<a href="{% url 'procurement:po-template-list' %}"><i class="bi bi-bookmark-star" aria-hidden="true"></i>PO Templates</a>
+<a href="{% url 'procurement:supplier-create' %}"><i class="bi bi-person-plus" aria-hidden="true"></i>Create Supplier</a>
+<a href="{% url 'procurement:supplier-list' %}"><i class="bi bi-people" aria-hidden="true"></i>View Suppliers</a>
 {% endblock %}
 
 {% block dashboard_metrics %}
@@ -26,7 +26,7 @@
     <a href="{% url 'procurement:purchase-order-list' %}?status=&q=" class="metric-card-link">
       <div class="metric-card">
         <div class="metric-card-icon metric-card-icon--dark">
-          <i class="bi bi-cart-plus"></i>
+          <i class="bi bi-cart-plus" aria-hidden="true"></i>
         </div>
         <div class="metric-card-content">
           <span class="metric-card-label">Total Purchase Orders</span>
@@ -41,7 +41,7 @@
     <a href="{% url 'procurement:purchase-order-list' %}?status=closed&q=" class="metric-card-link">
       <div class="metric-card">
         <div class="metric-card-icon metric-card-icon--success">
-          <i class="bi bi-check2-square"></i>
+          <i class="bi bi-check2-square" aria-hidden="true"></i>
         </div>
         <div class="metric-card-content w-100">
           <span class="metric-card-label">Total Orders Received</span>
@@ -64,7 +64,7 @@
     <a href="{{ purchase_orders_url }}?filter=pending_receiving" class="metric-card-link">
       <div class="metric-card {% if pending_receiving %}border-warning{% endif %}">
         <div class="metric-card-icon metric-card-icon--warning">
-          <i class="bi bi-clock-history"></i>
+          <i class="bi bi-clock-history" aria-hidden="true"></i>
         </div>
         <div class="metric-card-content">
           <span class="metric-card-label">Pending Receiving</span>
@@ -79,7 +79,7 @@
     <a href="{{ suppliers_url }}" class="metric-card-link">
       <div class="metric-card">
         <div class="metric-card-icon metric-card-icon--dark">
-          <i class="bi bi-people-fill"></i>
+          <i class="bi bi-people-fill" aria-hidden="true"></i>
         </div>
         <div class="metric-card-content">
           <span class="metric-card-label">Suppliers</span>
@@ -99,17 +99,17 @@
     {% if purchasable_low_stock %}
     <div class="panel h-100">
       <div class="panel-header d-flex align-items-center justify-content-between">
-        <span><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Items to Reorder</span>
+        <span><i class="bi bi-exclamation-triangle-fill text-danger me-2" aria-hidden="true"></i>Items to Reorder</span>
       </div>
       <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
           <thead class="table-light">
             <tr>
-              <th class="ps-3">Product</th>
-              <th class="text-end">On Hand</th>
-              <th class="text-end">Needed</th>
-              <th class="text-end">On PO</th>
-              <th class="text-end pe-3">Action</th>
+              <th scope="col" class="ps-3">Product</th>
+              <th scope="col" class="text-end">On Hand</th>
+              <th scope="col" class="text-end">Needed</th>
+              <th scope="col" class="text-end">On PO</th>
+              <th scope="col" class="text-end pe-3">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -133,7 +133,7 @@
     {% elif pending_receiving %}
     <div class="panel h-100">
       <div class="panel-header d-flex align-items-center justify-content-between">
-        <span><i class="bi bi-clock-history text-warning me-2"></i>Orders Awaiting Receipt</span>
+        <span><i class="bi bi-clock-history text-warning me-2" aria-hidden="true"></i>Orders Awaiting Receipt</span>
         <a href="{{ purchase_orders_url }}?filter=pending_receiving" class="btn btn-sm btn-outline-warning">View {{ pending_receiving }}</a>
       </div>
       <div class="panel-body">
@@ -154,9 +154,9 @@
     </div>
     {% else %}
     <div class="panel h-100">
-      <div class="panel-header"><i class="bi bi-check-circle-fill text-success me-2"></i>Procurement Status</div>
+      <div class="panel-header"><i class="bi bi-check-circle-fill text-success me-2" aria-hidden="true"></i>Procurement Status</div>
       <div class="panel-body text-center py-4 text-success">
-        <i class="bi bi-check-circle-fill fs-1 mb-2 d-block"></i>
+        <i class="bi bi-check-circle-fill fs-1 mb-2 d-block" aria-hidden="true"></i>
         <p class="mb-0 fw-semibold">All purchase orders received, nothing to reorder.</p>
       </div>
     </div>

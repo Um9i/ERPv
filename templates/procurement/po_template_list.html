@@ -8,11 +8,11 @@
 <table class="table table-striped">
     <thead>
         <tr>
-            <th>Name</th>
-            <th>Supplier</th>
-            <th>Lines</th>
-            <th>Created</th>
-            <th class="text-end">Actions</th>
+            <th scope="col">Name</th>
+            <th scope="col">Supplier</th>
+            <th scope="col">Lines</th>
+            <th scope="col">Created</th>
+            <th scope="col" class="text-end">Actions</th>
         </tr>
     </thead>
     <tbody>
@@ -24,11 +24,11 @@
             <td>{{ tpl.created_at|date:"Y-m-d" }}</td>
             <td class="text-end">
                 <a href="{% url 'procurement:po-template-use' tpl.pk %}" class="btn btn-sm btn-success">
-                    <i class="bi bi-plus-circle me-1"></i>Create PO
+                    <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>Create PO
                 </a>
                 <a href="{% url 'procurement:po-template-delete' tpl.pk %}" class="btn btn-sm btn-danger"
                    onclick="return confirm('Delete template &quot;{{ tpl.name }}&quot;?');">
-                    <i class="bi bi-trash me-1"></i>Delete
+                    <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete
                 </a>
             </td>
         </tr>

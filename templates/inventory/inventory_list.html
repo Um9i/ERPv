@@ -14,13 +14,13 @@
             <button class="btn btn-outline-secondary" type="submit">Apply</button>
         </div>
         <div class="col-auto">
-            <a href="{% url 'inventory:inventory-export' %}?{{ request.GET.urlencode }}" class="btn btn-outline-secondary"><i class="bi bi-download me-1"></i>Export CSV</a>
+            <a href="{% url 'inventory:inventory-export' %}?{{ request.GET.urlencode }}" class="btn btn-outline-secondary"><i class="bi bi-download me-1" aria-hidden="true"></i>Export CSV</a>
         </div>
         <div class="col-md-6 col-lg-5 ms-auto">
             <div class="input-group">
                 <input type="text" name="q" class="form-control" placeholder="Search products" value="{{ request.GET.q }}">
                 <button class="btn btn-outline-secondary d-flex align-items-center justify-content-center px-3 search-icon-btn" type="submit" aria-label="Search">
-                  <i class="bi bi-search"></i>
+                  <i class="bi bi-search" aria-hidden="true"></i>
                 </button>
             </div>
         </div>
@@ -31,10 +31,10 @@
 <table class="table table-striped">
     <thead>
     <tr>
-        <th>Product</th>
-        <th>Quantity</th>
-        <th class="text-center">Catalogue</th>
-        <th class="text-end">Actions</th>
+        <th scope="col">Product</th>
+        <th scope="col">Quantity</th>
+        <th scope="col" class="text-center">Catalogue</th>
+        <th scope="col" class="text-end">Actions</th>
     </tr>
     </thead>
     <tbody>
@@ -44,9 +44,11 @@
         <td>{{ inventory.quantity }}</td>
         <td class="text-center">
             {% if inventory.product.catalogue_item %}
-                <i class="bi bi-check-circle-fill text-success" title="Catalogue item"></i>
+                <i class="bi bi-check-circle-fill text-success" title="Catalogue item" aria-hidden="true"></i>
+                <span class="visually-hidden">Yes</span>
             {% else %}
-                <span class="text-muted">—</span>
+                <span class="text-muted" aria-hidden="true">—</span>
+                <span class="visually-hidden">No</span>
             {% endif %}
         </td>
         <td class="text-end">

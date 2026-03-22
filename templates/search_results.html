@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-header">
     <div class="page-header-content">
-        <div class="page-header-icon page-header-icon--green"><i class="bi bi-search"></i></div>
+        <div class="page-header-icon page-header-icon--green"><i class="bi bi-search" aria-hidden="true"></i></div>
         <div>
             <h1 class="page-title">Search Results</h1>
             {% if q %}<p class="text-muted mb-0">Showing results for "<strong>{{ q }}</strong>"</p>{% endif %}
@@ -15,7 +15,7 @@
 {% if not q %}
 <div class="panel mt-3">
     <div class="panel-body text-center py-5 text-muted">
-        <i class="bi bi-search fs-1 d-block mb-2"></i>
+        <i class="bi bi-search fs-1 d-block mb-2" aria-hidden="true"></i>
         <p class="mb-0">Enter a search term in the navbar to find products, orders, suppliers, and more.</p>
     </div>
 </div>
@@ -24,7 +24,7 @@
 {% if not has_results %}
 <div class="panel mt-3">
     <div class="panel-body text-center py-5 text-muted">
-        <i class="bi bi-emoji-frown fs-1 d-block mb-2"></i>
+        <i class="bi bi-emoji-frown fs-1 d-block mb-2" aria-hidden="true"></i>
         <p class="mb-0">No results found for "<strong>{{ q }}</strong>".</p>
     </div>
 </div>
@@ -34,16 +34,16 @@
 {% if products %}
 <div class="panel mt-3">
     <div class="panel-header d-flex align-items-center justify-content-between">
-        <span><i class="bi bi-box-seam text-success me-2"></i>Products ({{ products|length }})</span>
+        <span><i class="bi bi-box-seam text-success me-2" aria-hidden="true"></i>Products ({{ products|length }})</span>
         <a href="{% url 'inventory:inventory-list' %}?q={{ q }}" class="btn btn-sm btn-outline-secondary">View all</a>
     </div>
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th class="ps-3">Product</th>
-                    <th class="text-end">On Hand</th>
-                    <th class="text-end pe-3">Sale Price</th>
+                    <th scope="col" class="ps-3">Product</th>
+                    <th scope="col" class="text-end">On Hand</th>
+                    <th scope="col" class="text-end pe-3">Sale Price</th>
                 </tr>
             </thead>
             <tbody>
@@ -64,16 +64,16 @@
 {% if suppliers %}
 <div class="panel mt-3">
     <div class="panel-header d-flex align-items-center justify-content-between">
-        <span><i class="bi bi-people-fill text-primary me-2"></i>Suppliers ({{ suppliers|length }})</span>
+        <span><i class="bi bi-people-fill text-primary me-2" aria-hidden="true"></i>Suppliers ({{ suppliers|length }})</span>
         <a href="{% url 'procurement:supplier-list' %}?q={{ q }}" class="btn btn-sm btn-outline-secondary">View all</a>
     </div>
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th class="ps-3">Name</th>
-                    <th>Email</th>
-                    <th class="pe-3">Phone</th>
+                    <th scope="col" class="ps-3">Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col" class="pe-3">Phone</th>
                 </tr>
             </thead>
             <tbody>
@@ -94,16 +94,16 @@
 {% if customers %}
 <div class="panel mt-3">
     <div class="panel-header d-flex align-items-center justify-content-between">
-        <span><i class="bi bi-people text-indigo me-2"></i>Customers ({{ customers|length }})</span>
+        <span><i class="bi bi-people text-indigo me-2" aria-hidden="true"></i>Customers ({{ customers|length }})</span>
         <a href="{% url 'sales:customer-list' %}?q={{ q }}" class="btn btn-sm btn-outline-secondary">View all</a>
     </div>
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th class="ps-3">Name</th>
-                    <th>Email</th>
-                    <th class="pe-3">Phone</th>
+                    <th scope="col" class="ps-3">Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col" class="pe-3">Phone</th>
                 </tr>
             </thead>
             <tbody>
@@ -124,17 +124,17 @@
 {% if purchase_orders %}
 <div class="panel mt-3">
     <div class="panel-header d-flex align-items-center justify-content-between">
-        <span><i class="bi bi-cart-plus text-primary me-2"></i>Purchase Orders ({{ purchase_orders|length }})</span>
+        <span><i class="bi bi-cart-plus text-primary me-2" aria-hidden="true"></i>Purchase Orders ({{ purchase_orders|length }})</span>
         <a href="{% url 'procurement:purchase-order-list' %}?q={{ q }}&status=" class="btn btn-sm btn-outline-secondary">View all</a>
     </div>
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th class="ps-3">Order</th>
-                    <th>Supplier</th>
-                    <th>Status</th>
-                    <th class="text-end pe-3">Due</th>
+                    <th scope="col" class="ps-3">Order</th>
+                    <th scope="col">Supplier</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" class="text-end pe-3">Due</th>
                 </tr>
             </thead>
             <tbody>
@@ -162,17 +162,17 @@
 {% if sales_orders %}
 <div class="panel mt-3">
     <div class="panel-header d-flex align-items-center justify-content-between">
-        <span><i class="bi bi-cart4 text-indigo me-2"></i>Sales Orders ({{ sales_orders|length }})</span>
+        <span><i class="bi bi-cart4 text-indigo me-2" aria-hidden="true"></i>Sales Orders ({{ sales_orders|length }})</span>
         <a href="{% url 'sales:sales-order-list' %}?q={{ q }}&status=" class="btn btn-sm btn-outline-secondary">View all</a>
     </div>
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th class="ps-3">Order</th>
-                    <th>Customer</th>
-                    <th>Status</th>
-                    <th class="text-end pe-3">Ship By</th>
+                    <th scope="col" class="ps-3">Order</th>
+                    <th scope="col">Customer</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" class="text-end pe-3">Ship By</th>
                 </tr>
             </thead>
             <tbody>
@@ -200,17 +200,17 @@
 {% if production_jobs %}
 <div class="panel mt-3">
     <div class="panel-header d-flex align-items-center justify-content-between">
-        <span><i class="bi bi-gear-fill text-warning me-2"></i>Production Jobs ({{ production_jobs|length }})</span>
+        <span><i class="bi bi-gear-fill text-warning me-2" aria-hidden="true"></i>Production Jobs ({{ production_jobs|length }})</span>
         <a href="{% url 'production:production-list' %}?q={{ q }}" class="btn btn-sm btn-outline-secondary">View all</a>
     </div>
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th class="ps-3">Job</th>
-                    <th>Product</th>
-                    <th class="text-end">Qty</th>
-                    <th class="text-end pe-3">Due</th>
+                    <th scope="col" class="ps-3">Job</th>
+                    <th scope="col">Product</th>
+                    <th scope="col" class="text-end">Qty</th>
+                    <th scope="col" class="text-end pe-3">Due</th>
                 </tr>
             </thead>
             <tbody>
@@ -232,15 +232,15 @@
 {% if boms %}
 <div class="panel mt-3">
     <div class="panel-header d-flex align-items-center justify-content-between">
-        <span><i class="bi bi-diagram-3 text-dark me-2"></i>Bills of Materials ({{ boms|length }})</span>
+        <span><i class="bi bi-diagram-3 text-dark me-2" aria-hidden="true"></i>Bills of Materials ({{ boms|length }})</span>
         <a href="{% url 'production:bom-list' %}?q={{ q }}" class="btn btn-sm btn-outline-secondary">View all</a>
     </div>
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th class="ps-3">Product</th>
-                    <th class="text-end pe-3">Production Cost</th>
+                    <th scope="col" class="ps-3">Product</th>
+                    <th scope="col" class="text-end pe-3">Production Cost</th>
                 </tr>
             </thead>
             <tbody>

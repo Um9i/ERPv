@@ -4,18 +4,18 @@
 {% block card_title %}{% if filter_by == 'purchasable' %}Items to Reorder{% elif filter_by == 'producible' %}Items to Produce{% else %}Low Stock Items{% endif %}{% endblock %}
 {% block card_body %}
 <div class="mb-3">
-    <a href="{% url 'inventory:low-stock-export' %}?{{ request.GET.urlencode }}" class="btn btn-outline-secondary"><i class="bi bi-download me-1"></i>Export CSV</a>
+    <a href="{% url 'inventory:low-stock-export' %}?{{ request.GET.urlencode }}" class="btn btn-outline-secondary"><i class="bi bi-download me-1" aria-hidden="true"></i>Export CSV</a>
 </div>
 {% if required_items %}
 <div class="table-responsive">
       <table class="table table-striped mb-0">
         <thead>
           <tr>
-            <th>Product</th>
-            <th>Required</th>
-            <th>In production</th>
-            <th>On PO</th>
-            <th>Actions</th>
+            <th scope="col">Product</th>
+            <th scope="col">Required</th>
+            <th scope="col">In production</th>
+            <th scope="col">On PO</th>
+            <th scope="col">Actions</th>
           </tr>
         </thead>
         <tbody>

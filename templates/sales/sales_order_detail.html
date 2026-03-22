@@ -14,7 +14,7 @@
     <form method="post" class="d-inline-flex align-items-center gap-2 mb-0">
         {% csrf_token %}
         <input type="date" name="ship_by_date" value="{{ sales_order.ship_by_date|date:'Y-m-d' }}" class="form-control form-control-sm" style="width: auto;">
-        <button type="submit" name="update_ship_by_date" class="btn btn-sm btn-outline-secondary"><i class="bi bi-check-lg"></i></button>
+        <button type="submit" name="update_ship_by_date" class="btn btn-sm btn-outline-secondary" aria-label="Save ship by date"><i class="bi bi-check-lg" aria-hidden="true"></i></button>
     </form>
 </div>
 {% endif %}
@@ -23,16 +23,16 @@
 <p><strong>Total Order Value:</strong> {{ sales_order.total_amount|currency }}</p>
 <p><strong>Open Order Value:</strong> {{ sales_order.remaining_total|currency }}</p>
 <div class="mb-3">
-    <a href="{% url 'sales:sales-order-invoice' sales_order.pk %}" class="btn btn-outline-primary" target="_blank"><i class="bi bi-file-earmark-pdf me-1"></i>Download Invoice</a>
+    <a href="{% url 'sales:sales-order-invoice' sales_order.pk %}" class="btn btn-outline-primary" target="_blank"><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>Download Invoice</a>
 </div>
 
 {% if has_open_lines %}
 <div class="d-flex gap-2 mb-3 d-print-none">
     <a href="{% url 'sales:sales-order-ship' sales_order.pk %}" class="btn btn-success">
-        <i class="bi bi-truck me-1"></i>Ship
+        <i class="bi bi-truck me-1" aria-hidden="true"></i>Ship
     </a>
     <a href="{% url 'sales:pick-list-create' sales_order.pk %}" class="btn btn-primary">
-        <i class="bi bi-card-checklist me-1"></i>Pick List
+        <i class="bi bi-card-checklist me-1" aria-hidden="true"></i>Pick List
     </a>
 </div>
 {% endif %}
@@ -42,12 +42,12 @@
 <table class="table">
     <thead>
         <tr>
-            <th>Product</th>
-            <th>Quantity</th>
-            <th>Shipped</th>
-            <th>Unit Price</th>
-            <th>Shipped Total</th>
-            <th>Remaining Total</th>
+            <th scope="col">Product</th>
+            <th scope="col">Quantity</th>
+            <th scope="col">Shipped</th>
+            <th scope="col">Unit Price</th>
+            <th scope="col">Shipped Total</th>
+            <th scope="col">Remaining Total</th>
         </tr>
     </thead>
     <tbody>

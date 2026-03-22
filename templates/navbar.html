@@ -1,22 +1,22 @@
 <nav class="navbar navbar-expand-lg app-navbar" data-bs-theme="dark" aria-label="Top navigation">
     <div class="container-fluid">
         <a class="navbar-brand app-navbar-brand" href="{% url 'home' %}">
-            <i class="bi bi-box-seam me-2"></i>ERPv
+            <i class="bi bi-box-seam me-2" aria-hidden="true"></i>ERPv
         </a>
         <div class="d-flex align-items-center ms-auto order-lg-last">
             <!-- Desktop search (inline, left of bell) -->
             <form class="d-none d-lg-flex me-3" action="{% url 'global-search' %}" method="get" role="search">
                 <div class="input-group input-group-sm">
-                    <span class="input-group-text navbar-search-icon"><i class="bi bi-search"></i></span>
+                    <span class="input-group-text navbar-search-icon"><i class="bi bi-search" aria-hidden="true"></i></span>
                     <input type="search" name="q" class="form-control navbar-search-input" placeholder="Search…"
                            aria-label="Search" value="{{ request.GET.q|default:'' }}" autocomplete="off">
                 </div>
             </form>
             {% if user.is_authenticated %}
-            <a href="{% url 'config:notification-list' %}" class="nav-link position-relative navbar-icon-link" title="Notifications">
-                <i class="bi bi-bell fs-5"></i>
+            <a href="{% url 'config:notification-list' %}" class="nav-link position-relative navbar-icon-link" title="Notifications" aria-label="Notifications{% if unread_notification_count %} ({{ unread_notification_count }} unread){% endif %}">
+                <i class="bi bi-bell fs-5" aria-hidden="true"></i>
                 {% if unread_notification_count %}
-                    <span class="position-absolute top-1 start-105 translate-middle badge rounded-pill bg-danger">
+                    <span class="position-absolute top-1 start-105 translate-middle badge rounded-pill bg-danger" aria-hidden="true">
                         {{ unread_notification_count }}
                     </span>
                 {% endif %}
@@ -31,7 +31,7 @@
             <!-- Mobile search -->
             <form class="d-lg-none my-2" action="{% url 'global-search' %}" method="get" role="search">
                 <div class="input-group input-group-sm">
-                    <span class="input-group-text navbar-search-icon"><i class="bi bi-search"></i></span>
+                    <span class="input-group-text navbar-search-icon"><i class="bi bi-search" aria-hidden="true"></i></span>
                     <input type="search" name="q" class="form-control navbar-search-input" placeholder="Search…"
                            aria-label="Search" value="{{ request.GET.q|default:'' }}" autocomplete="off">
                 </div>
@@ -51,12 +51,12 @@
             {% if user.is_authenticated %}
             <div class="d-lg-none border-top border-secondary pt-2 mt-2">
                 <div class="d-flex align-items-center px-2 py-1 text-light">
-                    <i class="bi bi-person-circle me-2"></i>
+                    <i class="bi bi-person-circle me-2" aria-hidden="true"></i>
                     <span class="small">{{ user.username }}</span>
                     <form method="post" action="{% url 'logout' %}" class="ms-auto">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-light" title="Sign out">
-                            <i class="bi bi-power"></i>
+                        <button type="submit" class="btn btn-sm btn-outline-light" title="Sign out" aria-label="Sign out">
+                            <i class="bi bi-power" aria-hidden="true"></i>
                         </button>
                     </form>
                 </div>

@@ -14,7 +14,7 @@
     <form method="post" class="d-inline-flex align-items-center gap-2 mb-0">
         {% csrf_token %}
         <input type="date" name="due_date" value="{{ purchase_order.due_date|date:'Y-m-d' }}" class="form-control form-control-sm" style="width: auto;">
-        <button type="submit" name="update_due_date" class="btn btn-sm btn-outline-secondary"><i class="bi bi-check-lg"></i></button>
+        <button type="submit" name="update_due_date" class="btn btn-sm btn-outline-secondary" aria-label="Save due date"><i class="bi bi-check-lg" aria-hidden="true"></i></button>
     </form>
 </div>
 {% endif %}
@@ -26,13 +26,13 @@
 {% if po_status != "Closed" %}
 <div class="d-flex gap-2 mb-3 d-print-none">
     <a href="{% url 'procurement:store-confirm' purchase_order.pk %}" class="btn btn-primary">
-        <i class="bi bi-upc-scan me-1"></i>Scan to Store
+        <i class="bi bi-upc-scan me-1" aria-hidden="true"></i>Scan to Store
     </a>
     <a href="{% url 'procurement:purchase-order-receive' purchase_order.pk %}" class="btn btn-success">
-        <i class="bi bi-box-seam me-1"></i>Receive
+        <i class="bi bi-box-seam me-1" aria-hidden="true"></i>Receive
     </a>
     <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#saveTemplateModal">
-        <i class="bi bi-bookmark-plus me-1"></i>Save as Template
+        <i class="bi bi-bookmark-plus me-1" aria-hidden="true"></i>Save as Template
     </button>
 </div>
 {% endif %}
@@ -54,7 +54,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary"><i class="bi bi-bookmark-check me-1"></i>Save Template</button>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-bookmark-check me-1" aria-hidden="true"></i>Save Template</button>
         </div>
       </form>
     </div>
@@ -66,12 +66,12 @@
 <table class="table">
     <thead>
         <tr>
-            <th>Product</th>
-            <th>Quantity</th>
-            <th>Received</th>
-            <th>Unit Price</th>
-            <th>Received Total</th>
-            <th>Remaining Total</th>
+            <th scope="col">Product</th>
+            <th scope="col">Quantity</th>
+            <th scope="col">Received</th>
+            <th scope="col">Unit Price</th>
+            <th scope="col">Received Total</th>
+            <th scope="col">Remaining Total</th>
         </tr>
     </thead>
     <tbody>

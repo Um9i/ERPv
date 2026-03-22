@@ -4,12 +4,12 @@
 {# ── Week navigation bar ──────────────────────────────────────────── #}
 <div class="panel mb-3">
   <div class="panel-header d-flex align-items-center justify-content-between">
-    <a href="?date={{ prev_date|date:'Y-m-d' }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-left"></i></a>
+    <a href="?date={{ prev_date|date:'Y-m-d' }}" class="btn btn-sm btn-outline-secondary" aria-label="Previous day"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
     <span class="fw-semibold">
       {{ current_date|date:'l, N j, Y' }}
       {% if current_date == today %}<span class="badge bg-primary ms-1">Today</span>{% endif %}
     </span>
-    <a href="?date={{ next_date|date:'Y-m-d' }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-right"></i></a>
+    <a href="?date={{ next_date|date:'Y-m-d' }}" class="btn btn-sm btn-outline-secondary" aria-label="Next day"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
   </div>
   <div class="panel-body p-2">
     <div class="d-flex justify-content-between text-center">
@@ -29,25 +29,25 @@
 {# ── Today button ─────────────────────────────────────────────────── #}
 {% if current_date != today %}
 <div class="mb-3 text-center">
-  <a href="{% url 'dashboards:production-schedule' %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-calendar-event me-1"></i>Jump to Today</a>
+  <a href="{% url 'dashboards:production-schedule' %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-calendar-event me-1" aria-hidden="true"></i>Jump to Today</a>
 </div>
 {% endif %}
 
 {# ── Overdue jobs ─────────────────────────────────────────────────── #}
 {% if overdue_jobs %}
 <div class="panel mb-3 border-danger">
-  <div class="panel-header text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>Overdue Production Jobs ({{ overdue_jobs|length }})</div>
+  <div class="panel-header text-danger"><i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>Overdue Production Jobs ({{ overdue_jobs|length }})</div>
   <div class="panel-body p-0">
     <div class="table-responsive">
       <table class="table table-hover mb-0">
         <thead>
           <tr>
-            <th>Job</th>
-            <th>Product</th>
-            <th>Due Date</th>
-            <th>Status</th>
-            <th class="text-end">Quantity</th>
-            <th class="text-end">Remaining</th>
+            <th scope="col">Job</th>
+            <th scope="col">Product</th>
+            <th scope="col">Due Date</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="text-end">Quantity</th>
+            <th scope="col" class="text-end">Remaining</th>
           </tr>
         </thead>
         <tbody>
@@ -71,7 +71,7 @@
 {# ── Jobs for the selected date ───────────────────────────────────── #}
 <div class="panel">
   <div class="panel-header">
-    <i class="bi bi-gear me-2"></i>Production Jobs — {{ current_date|date:'N j, Y' }}
+    <i class="bi bi-gear me-2" aria-hidden="true"></i>Production Jobs — {{ current_date|date:'N j, Y' }}
     {% if jobs %}<span class="badge bg-primary ms-2">{{ jobs|length }}</span>{% endif %}
   </div>
   <div class="panel-body p-0">
@@ -80,11 +80,11 @@
       <table class="table table-hover mb-0">
         <thead>
           <tr>
-            <th>Job</th>
-            <th>Product</th>
-            <th>Status</th>
-            <th class="text-end">Quantity</th>
-            <th class="text-end">Remaining</th>
+            <th scope="col">Job</th>
+            <th scope="col">Product</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="text-end">Quantity</th>
+            <th scope="col" class="text-end">Remaining</th>
           </tr>
         </thead>
         <tbody>
@@ -102,7 +102,7 @@
     </div>
     {% else %}
     <div class="text-center py-4 text-muted">
-      <i class="bi bi-calendar-check fs-1 d-block mb-2"></i>
+      <i class="bi bi-calendar-check fs-1 d-block mb-2" aria-hidden="true"></i>
       <p class="mb-0">No production jobs scheduled for this date.</p>
     </div>
     {% endif %}

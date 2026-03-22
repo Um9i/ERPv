@@ -6,27 +6,27 @@
 <ul class="nav nav-tabs detail-tabs mb-3" id="financeTabs" role="tablist">
   <li class="nav-item" role="presentation">
     <button class="nav-link active" id="tab-overview" data-bs-toggle="tab" data-bs-target="#pane-overview" type="button" role="tab">
-      <i class="bi bi-house me-1"></i>Overview
+      <i class="bi bi-house me-1" aria-hidden="true"></i>Overview
     </button>
   </li>
   <li class="nav-item" role="presentation">
     <button class="nav-link" id="tab-sales" data-bs-toggle="tab" data-bs-target="#pane-sales" type="button" role="tab">
-      <i class="bi bi-receipt me-1"></i>Recent Sales
+      <i class="bi bi-receipt me-1" aria-hidden="true"></i>Recent Sales
     </button>
   </li>
   <li class="nav-item" role="presentation">
     <button class="nav-link" id="tab-purchases" data-bs-toggle="tab" data-bs-target="#pane-purchases" type="button" role="tab">
-      <i class="bi bi-bag me-1"></i>Recent Purchases
+      <i class="bi bi-bag me-1" aria-hidden="true"></i>Recent Purchases
     </button>
   </li>
   <li class="nav-item" role="presentation">
     <button class="nav-link" id="tab-production" data-bs-toggle="tab" data-bs-target="#pane-production" type="button" role="tab">
-      <i class="bi bi-gear me-1"></i>Recent Production
+      <i class="bi bi-gear me-1" aria-hidden="true"></i>Recent Production
     </button>
   </li>
   <li class="nav-item" role="presentation">
     <button class="nav-link" id="tab-chart" data-bs-toggle="tab" data-bs-target="#pane-chart" type="button" role="tab">
-      <i class="bi bi-bar-chart-line me-1"></i>Monthly Chart
+      <i class="bi bi-bar-chart-line me-1" aria-hidden="true"></i>Monthly Chart
     </button>
   </li>
 </ul>
@@ -41,7 +41,7 @@
 
       <div class="col-12 col-lg-4">
         <div class="metric-card">
-          <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-graph-up-arrow"></i></div>
+          <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i></div>
           <div class="metric-card-content">
             <span class="metric-card-label">Total Sales</span>
             <span class="metric-card-value">{{ sales_total|currency }}</span>
@@ -50,7 +50,7 @@
       </div>
       <div class="col-12 col-lg-4">
         <div class="metric-card">
-          <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-graph-down-arrow"></i></div>
+          <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-graph-down-arrow" aria-hidden="true"></i></div>
           <div class="metric-card-content">
             <span class="metric-card-label">Total Purchases</span>
             <span class="metric-card-value">{{ purchase_total|currency }}</span>
@@ -59,7 +59,7 @@
       </div>
       <div class="col-12 col-lg-4">
         <div class="metric-card">
-          <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-wallet2"></i></div>
+          <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-wallet2" aria-hidden="true"></i></div>
           <div class="metric-card-content">
             <span class="metric-card-label">Gross Profit</span>
             <span class="metric-card-value {% if gross_profit < 0 %}text-danger{% endif %}">{{ gross_profit|currency }}</span>
@@ -71,7 +71,7 @@
 
       <div class="col-12 col-lg-4">
         <div class="metric-card metric-card--secondary">
-          <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-receipt"></i></div>
+          <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-receipt" aria-hidden="true"></i></div>
           <div class="metric-card-content">
             <span class="metric-card-label">Sales This Month</span>
             <span class="metric-card-value">{{ month_sales_total|currency }}</span>
@@ -80,7 +80,7 @@
       </div>
       <div class="col-12 col-lg-4">
         <div class="metric-card metric-card--secondary">
-          <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-bag"></i></div>
+          <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-bag" aria-hidden="true"></i></div>
           <div class="metric-card-content">
             <span class="metric-card-label">Purchases This Month</span>
             <span class="metric-card-value">{{ month_purchase_total|currency }}</span>
@@ -89,7 +89,7 @@
       </div>
       <div class="col-12 col-lg-4">
         <div class="metric-card metric-card--secondary">
-          <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-cash-stack"></i></div>
+          <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-cash-stack" aria-hidden="true"></i></div>
           <div class="metric-card-content">
             <span class="metric-card-label">Profit This Month</span>
             <span class="metric-card-value {% if month_profit < 0 %}text-danger{% endif %}">{{ month_profit|currency }}</span>
@@ -101,7 +101,7 @@
 
       <div class="col-12 col-lg-4">
         <div class="metric-card metric-card--secondary">
-          <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-boxes"></i></div>
+          <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-boxes" aria-hidden="true"></i></div>
           <div class="metric-card-content">
             <span class="metric-card-label">Stock Value</span>
             <span class="metric-card-value">{{ stock_value|currency }}</span>
@@ -124,10 +124,10 @@
         <table class="table table-sm align-middle mb-0">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Customer</th>
-              <th>Product</th>
-              <th class="text-end">Value</th>
+              <th scope="col">Date</th>
+              <th scope="col">Customer</th>
+              <th scope="col">Product</th>
+              <th scope="col" class="text-end">Value</th>
             </tr>
           </thead>
           <tbody>
@@ -160,10 +160,10 @@
         <table class="table table-sm align-middle mb-0">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Supplier</th>
-              <th>Product</th>
-              <th class="text-end">Value</th>
+              <th scope="col">Date</th>
+              <th scope="col">Supplier</th>
+              <th scope="col">Product</th>
+              <th scope="col" class="text-end">Value</th>
             </tr>
           </thead>
           <tbody>
@@ -196,10 +196,10 @@
         <table class="table table-sm align-middle mb-0">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Product</th>
-              <th class="text-end">Qty</th>
-              <th class="text-end">Value</th>
+              <th scope="col">Date</th>
+              <th scope="col">Product</th>
+              <th scope="col" class="text-end">Qty</th>
+              <th scope="col" class="text-end">Value</th>
             </tr>
           </thead>
           <tbody>

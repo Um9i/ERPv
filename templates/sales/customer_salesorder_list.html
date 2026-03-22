@@ -4,7 +4,7 @@
 <h1>Sales Orders for {{ view.kwargs.pk }}</h1>
 <table class="table">
   <thead>
-    <tr><th>Order #</th><th>Date</th><th>Status</th><th>Total</th></tr>
+    <tr><th scope="col">Order #</th><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Total</th></tr>
   </thead>
   <tbody>
   {% for order in sales_orders %}

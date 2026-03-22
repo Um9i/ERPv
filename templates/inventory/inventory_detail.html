@@ -7,19 +7,19 @@
 {% block card_header %}
 <div class="d-flex justify-content-end gap-2 mb-4">
     <a class="btn btn-sm btn-outline-secondary" href="{% url 'inventory:product-update' inventory.product.pk %}">
-        <i class="bi bi-pencil me-1"></i>Edit Product
+        <i class="bi bi-pencil me-1" aria-hidden="true"></i>Edit Product
     </a>
     <a class="btn btn-sm btn-outline-warning" href="{% url 'inventory:inventory-adjust' inventory.pk %}">
-        <i class="bi bi-sliders me-1"></i>Adjust Quantity
+        <i class="bi bi-sliders me-1" aria-hidden="true"></i>Adjust Quantity
     </a>
     {% if bom %}
     <a class="btn btn-sm btn-outline-info" href="{% url 'production:production-create' %}?bom={{ bom.pk }}">
-        <i class="bi bi-gear me-1"></i>Produce
+        <i class="bi bi-gear me-1" aria-hidden="true"></i>Produce
     </a>
     {% endif %}
     {% if has_supplier %}
     <a class="btn btn-sm btn-outline-primary" href="{% url 'procurement:purchase-order-create' %}?product={{ inventory.product.pk }}">
-        <i class="bi bi-cart-plus me-1"></i>Purchase
+        <i class="bi bi-cart-plus me-1" aria-hidden="true"></i>Purchase
     </a>
     {% endif %}
 </div>
@@ -31,7 +31,7 @@
 <div class="row row-cols-2 row-cols-sm-3 g-3 mb-4">
     <div class="col">
         <div class="metric-card">
-            <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-boxes"></i></div>
+            <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-boxes" aria-hidden="true"></i></div>
             <div class="metric-card-content">
                 <span class="metric-card-value">{{ inventory.quantity }}</span>
                 <span class="metric-card-label">In Stock</span>
@@ -40,7 +40,7 @@
     </div>
     <div class="col">
         <div class="metric-card">
-            <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-cart-check"></i></div>
+            <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-cart-check" aria-hidden="true"></i></div>
             <div class="metric-card-content">
                 <span class="metric-card-value">{{ sales_pending }}</span>
                 <span class="metric-card-label">Sales Pending</span>
@@ -49,7 +49,7 @@
     </div>
     <div class="col">
         <div class="metric-card">
-            <div class="metric-card-icon metric-card-icon--dark"><i class="bi bi-truck"></i></div>
+            <div class="metric-card-icon metric-card-icon--dark"><i class="bi bi-truck" aria-hidden="true"></i></div>
             <div class="metric-card-content">
                 <span class="metric-card-value">{{ purchase_pending }}</span>
                 <span class="metric-card-label">Purchases Incoming</span>
@@ -59,7 +59,7 @@
     {% if production_pending > 0 %}
     <div class="col">
         <div class="metric-card">
-            <div class="metric-card-icon metric-card-icon--warning"><i class="bi bi-gear"></i></div>
+            <div class="metric-card-icon metric-card-icon--warning"><i class="bi bi-gear" aria-hidden="true"></i></div>
             <div class="metric-card-content">
                 <span class="metric-card-value">{{ production_pending }}</span>
                 <span class="metric-card-label">In Production</span>
@@ -70,7 +70,7 @@
     {% if required_qty > 0 %}
     <div class="col">
         <div class="metric-card">
-            <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-exclamation-triangle"></i></div>
+            <div class="metric-card-icon metric-card-icon--danger"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i></div>
             <div class="metric-card-content">
                 <span class="metric-card-value text-danger">{{ required_qty }}</span>
                 <span class="metric-card-label">Shortage</span>
@@ -81,7 +81,7 @@
     {% if inventory.product.sale_price %}
     <div class="col">
         <div class="metric-card">
-            <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-tag"></i></div>
+            <div class="metric-card-icon metric-card-icon--success"><i class="bi bi-tag" aria-hidden="true"></i></div>
             <div class="metric-card-content">
                 <span class="metric-card-value">£{{ inventory.product.sale_price|floatformat:2 }}</span>
                 <span class="metric-card-label">Sale Price</span>
@@ -92,9 +92,9 @@
     {% if inventory.product.catalogue_item %}
     <div class="col">
         <div class="metric-card">
-            <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-book"></i></div>
+            <div class="metric-card-icon metric-card-icon--primary"><i class="bi bi-book" aria-hidden="true"></i></div>
             <div class="metric-card-content">
-                <span class="metric-card-value"><i class="bi bi-check-circle-fill text-success"></i></span>
+                <span class="metric-card-value"><i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i> <span class="visually-hidden">Yes</span></span>
                 <span class="metric-card-label">Catalogue Item</span>
             </div>
         </div>
@@ -196,7 +196,7 @@
                             <div class="text-muted small">Bill of Materials</div>
                             <div class="fw-semibold">
                                 <a href="{% url 'production:bom-detail' bom.pk %}" class="text-decoration-none">
-                                    <span class="badge bg-info-subtle text-info"><i class="bi bi-diagram-3 me-1"></i>View BOM</span>
+                                    <span class="badge bg-info-subtle text-info"><i class="bi bi-diagram-3 me-1" aria-hidden="true"></i>View BOM</span>
                                 </a>
                             </div>
                         </div>
@@ -269,11 +269,11 @@
                 <div>
                     <a href="{% url 'inventory:stock-transfer' inventory.pk %}"
                        class="btn btn-sm btn-outline-warning me-1">
-                        <i class="bi bi-arrow-left-right me-1"></i>Transfer
+                        <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i>Transfer
                     </a>
                     <a href="{% url 'inventory:inventory-location-add' inventory.pk %}"
                        class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-plus-lg me-1"></i>Assign Location
+                        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Assign Location
                     </a>
                 </div>
             </div>
@@ -282,16 +282,16 @@
                 <table class="table table-sm align-middle mb-0">
                     <thead>
                         <tr>
-                            <th>Location</th>
-                            <th class="text-end">Quantity</th>
-                            <th class="text-end">% of Stock</th>
-                            <th></th>
+                            <th scope="col">Location</th>
+                            <th scope="col" class="text-end">Quantity</th>
+                            <th scope="col" class="text-end">% of Stock</th>
+                            <th scope="col"></th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for sl in stock_locations_list %}
                         <tr>
-                            <td><i class="bi bi-inbox me-2 text-muted"></i>{{ sl.location }}</td>
+                            <td><i class="bi bi-inbox me-2 text-muted" aria-hidden="true"></i>{{ sl.location }}</td>
                             <td class="text-end fw-semibold">{{ sl.quantity }}</td>
                             <td class="text-end text-muted">
                                 {% if inventory.quantity > 0 %}
@@ -299,15 +299,15 @@
                                 {% else %}—{% endif %}
                             </td>
                             <td class="text-end">
-                                <a href="{% url 'inventory:inventory-location-update' sl.pk %}" class="btn btn-sm btn-outline-secondary me-1"><i class="bi bi-pencil"></i></a>
-                                <a href="{% url 'inventory:inventory-location-delete' sl.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                                <a href="{% url 'inventory:inventory-location-update' sl.pk %}" class="btn btn-sm btn-outline-secondary me-1" aria-label="Edit location"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                                <a href="{% url 'inventory:inventory-location-delete' sl.pk %}" class="btn btn-sm btn-outline-danger" aria-label="Remove location"><i class="bi bi-trash" aria-hidden="true"></i></a>
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                     <tfoot class="table-group-divider">
                         <tr class="text-muted small">
-                            <td><i class="bi bi-dash-circle me-2 opacity-50"></i>Unallocated</td>
+                            <td><i class="bi bi-dash-circle me-2 opacity-50" aria-hidden="true"></i>Unallocated</td>
                             <td class="text-end fw-semibold">{{ unallocated_qty }}</td>
                             <td class="text-end">
                                 {% if inventory.quantity > 0 %}
@@ -351,12 +351,12 @@
                 <table class="table table-striped align-middle">
                     <thead>
                         <tr>
-                            <th>Date</th>
-                            <th class="text-end">Change</th>
-                            <th class="text-end">Balance</th>
-                            <th>Action</th>
-                            {% if ledger_has_locations %}<th>Location</th>{% endif %}
-                            <th>Transaction</th>
+                            <th scope="col">Date</th>
+                            <th scope="col" class="text-end">Change</th>
+                            <th scope="col" class="text-end">Balance</th>
+                            <th scope="col">Action</th>
+                            {% if ledger_has_locations %}<th scope="col">Location</th>{% endif %}
+                            <th scope="col">Transaction</th>
                         </tr>
                     </thead>
                     <tbody>
