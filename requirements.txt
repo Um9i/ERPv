@@ -9,7 +9,7 @@ dj-database-url==3.1.2
 Django==6.0.3
 django-cors-headers==4.9.0
 django-admin-inline-paginator==0.4.0
-django-crispy-forms==2.5
+django-crispy-forms==2.6
 django-registration==5.2.1
 fonttools==4.62.1
 gunicorn==25.1.0
