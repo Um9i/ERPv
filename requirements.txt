@@ -12,7 +12,7 @@ django-admin-inline-paginator==0.4.0
 django-crispy-forms==2.6
 django-registration==5.2.1
 fonttools==4.62.1
-gunicorn==25.1.0
+gunicorn==25.3.0
 httpx==0.28.1
 pillow==12.1.1
 psycopg2-binary==2.9.11
