@@ -13,7 +13,7 @@
 [![Linting: ruff](https://img.shields.io/badge/linting-ruff-261230.svg)](https://github.com/astral-sh/ruff)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[**Live Demo →**](https://um9i.dev/)
+[**Live Demo →**](https://erp.um9i.dev/)
 
 </div>
 
