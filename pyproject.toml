@@ -37,7 +37,7 @@ dependencies = [
     "django-ratelimit>=4.1",
     "djangorestframework>=3.17",
     "drf-spectacular>=0.29",
-    "sentry-sdk>=2.55",
+    "sentry-sdk==2.57.0",
 ]
 
 [project.optional-dependencies]
@@ -47,7 +47,7 @@ dev = [
     "django-debug-toolbar>=6.2",
     "django-migration-linter>=6.0",
     "django-silk>=5.4",
-    "django-stubs>=5.2",
+    "django-stubs>=6.0.2",
     "factory_boy>=3.3",
     "Faker>=40.8",
     "gprof2dot>=2025.4",
