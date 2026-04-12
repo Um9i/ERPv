@@ -6,7 +6,7 @@ ruff==0.15.5
 bandit==1.9.4
 pip-audit==2.10.0
 mypy==1.19.1
-django-stubs==6.0.1
+django-stubs==6.0.2
 django-migration-linter==6.0.0
 
 # Testing
