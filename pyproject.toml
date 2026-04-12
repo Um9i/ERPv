@@ -37,7 +37,7 @@ dependencies = [
     "django-ratelimit>=4.1",
     "djangorestframework>=3.17",
     "drf-spectacular>=0.29",
-    "sentry-sdk>=2.55",
+    "sentry-sdk>=2.57.0",
 ]
 
 [project.optional-dependencies]
