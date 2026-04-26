@@ -31,4 +31,4 @@ zopfli==0.4.1
 django-ratelimit==4.1.0
 djangorestframework==3.17.1
 drf-spectacular==0.29.0
-sentry-sdk==2.57.0
+sentry-sdk==2.58.0
