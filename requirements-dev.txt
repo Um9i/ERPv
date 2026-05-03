@@ -20,15 +20,15 @@ pytest-env
 pytest-xdist==3.8.0
 
 # Debug & profiling
-django-debug-toolbar==6.2.0
+django-debug-toolbar==6.3.0
 django-silk==5.5.0
 gprof2dot==2025.4.14
 
 # Tunnelling
-pyngrok==8.0.0
+pyngrok==8.1.2
 
 # Transitive (pinned for reproducibility)
 iniconfig==2.3.0
-packaging==26.0
+packaging==26.2
 pluggy==1.6.0
 Pygments==2.20.0
