@@ -185,6 +185,15 @@ class SalesOrder(SoftDeleteMixin, AuditMixin, models.Model):
         )
         self.save(update_fields=["total_amount_cached"])
 
+    def force_close(self) -> int:
+        """Mark all open lines as complete and closed. Returns count of lines updated."""
+        updated = self.sales_order_lines.filter(complete=False).update(
+            complete=True, closed=True
+        )
+        if updated:
+            self.save(update_fields=["updated_at"])
+        return updated
+
 
 class SalesLedger(models.Model):
     product = models.ForeignKey(
@@ -243,8 +252,8 @@ class SalesOrderLine(models.Model):
 
     def clean(self):
         if self.complete and not self.closed:
-            product = Inventory.objects.get(product=self.product.product)
-            if product.quantity - self.quantity < 0:
+            inv = Inventory.objects.get(product=self.product.product)
+            if inv.quantity - self.quantity < 0:
                 raise ValidationError(
                     _("Not enough resources to complete transaction.")
                 )

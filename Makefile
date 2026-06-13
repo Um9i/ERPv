@@ -36,7 +36,7 @@ check:
 MYPY_TARGETS = config/ dashboards/ finance/ inventory/ main/ procurement/ production/ sales/
 
 mypy:
-	$(PYTHON) -m mypy $(MYPY_TARGETS)
+	DEBUG=True SECRETKEY=test-secret $(PYTHON) -m mypy $(MYPY_TARGETS)
 
 audit:
 	$(PYTHON) -m bandit -r . --exclude ./.venv,./tests -q

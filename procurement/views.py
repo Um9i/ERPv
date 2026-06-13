@@ -1,5 +1,6 @@
 import csv
 import logging
+from typing import cast
 
 from django import forms
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
@@ -115,12 +116,7 @@ class SupplierListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        """Allow filtering by a simple ``q`` query parameter.
-
-        We only expose a basic case-insensitive name search right now; the
-        calling templates render a search box and include any existing query
-        when paginating.
-        """
+        """Filter by case-insensitive name search via ``q`` query parameter."""
         qs = Supplier.objects.all().order_by("name")
         q = self.request.GET.get("q", "").strip()
         if q:
@@ -449,7 +445,7 @@ class ProcurementDashboardView(LoginRequiredMixin, TemplateView):
         best_sp_map = best_supplier_products(product_ids)
 
         purchasable_items = []
-        supplier_items: dict = {}
+        supplier_items: dict[int, list[tuple[int | None, int]]] = {}
         for inv in inv_list:
             if inv.product_id not in purchasable_ids:
                 continue
@@ -481,10 +477,11 @@ class ProcurementDashboardView(LoginRequiredMixin, TemplateView):
         for entry in purchasable_items:
             sid = entry["supplier_id"]
             if sid:
-                pairs = supplier_items.get(sid, [])
+                sid_int = cast(int, sid)
+                pairs: list[tuple[int | None, int]] = supplier_items.get(sid_int) or []
                 qs = "&".join(f"item={pid}:{qty}" for pid, qty in pairs)
                 entry["po_url"] = (
-                    f"{reverse('procurement:purchase-order-create')}?supplier={sid}&{qs}"
+                    f"{reverse('procurement:purchase-order-create')}?supplier={sid_int}&{qs}"
                 )
             else:
                 entry["po_url"] = None

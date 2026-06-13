@@ -269,15 +269,21 @@ def _notify_production_material_shortage(sender, instance, created, **kwargs):
         available = inv_map.get(item.product_id, 0)
         if available < required:
             short = required - available
-            has_sub_bom = BillOfMaterials.objects.filter(product=item.product).exists()
-            shortages.append((item.product, short, has_sub_bom))
+            shortages.append((item.product, short, item.product_id))
 
     if not shortages:
         return
 
+    shortage_product_ids = {pid for _, _, pid in shortages}
+    sub_bom_ids = set(
+        BillOfMaterials.objects.filter(product_id__in=shortage_product_ids).values_list(
+            "product_id", flat=True
+        )
+    )
+
     lines = []
-    for product, short, has_sub_bom in shortages:
-        action = "produce or procure" if has_sub_bom else "procure"
+    for product, short, product_id in shortages:
+        action = "produce or procure" if product_id in sub_bom_ids else "procure"
         lines.append(f"  • {product.name}: short {short} (can {action})")
 
     _notify_all_users(

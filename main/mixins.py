@@ -1,9 +1,18 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Protocol
 
 from django.conf import settings
 from django.db import models
+
+if TYPE_CHECKING:
+    from django.http import HttpRequest
+
+
+class _TemplateViewProtocol(Protocol):
+    request: HttpRequest
+    template_name: str
+    partial_template_name: str
 
 
 class HtmxPartialMixin:
@@ -14,7 +23,7 @@ class HtmxPartialMixin:
 
     partial_template_name: str = ""
 
-    def get_template_names(self: Any) -> list[str]:
+    def get_template_names(self: _TemplateViewProtocol) -> list[str]:
         if self.request.headers.get("HX-Request"):
             return [self.partial_template_name]
         return [self.template_name]

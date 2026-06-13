@@ -528,14 +528,7 @@ class SalesOrderListView(LoginRequiredMixin, ListView):
         if not selected or action not in ("close", "cancel"):
             return safe_redirect(request.get_full_path())
         orders = SalesOrder.objects.filter(pk__in=selected)
-        count = 0
-        for so in orders:
-            updated = so.sales_order_lines.filter(complete=False).update(
-                complete=True, closed=True
-            )
-            if updated:
-                so.save(update_fields=["updated_at"])
-                count += 1
+        count = sum(1 for so in orders if so.force_close())
         from django.contrib import messages
 
         messages.success(request, f"{count} order(s) closed.")
@@ -563,11 +556,7 @@ class SalesOrderDetailView(LoginRequiredMixin, DetailView):
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         if "close_order" in request.POST:
-            updated = self.object.sales_order_lines.filter(complete=False).update(
-                complete=True, closed=True
-            )
-            if updated:
-                self.object.save(update_fields=["updated_at"])
+            self.object.force_close()
             return safe_redirect(request.path)
         if "update_ship_by_date" in request.POST:
             if self.object.status == "Closed":

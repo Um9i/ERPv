@@ -484,7 +484,7 @@ class ProductionDetailView(LoginRequiredMixin, DetailView):
 
         context = super().get_context_data(**kwargs)
         job = self.object
-        bom_items = job.bom()
+        bom_items = job.get_bom_items()
         context["bom"] = bom_items
         context["today"] = timezone.now().date()
         context["today_plus_7"] = timezone.now().date() + timedelta(days=7)

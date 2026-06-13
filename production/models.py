@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
@@ -5,6 +9,9 @@ from django.utils.translation import gettext_lazy as _
 
 from inventory.models import Inventory, Product, ProductionAllocated
 from main.mixins import AuditMixin, SoftDeleteMixin
+
+if TYPE_CHECKING:
+    pass
 
 
 class BillOfMaterials(models.Model):
@@ -50,9 +57,9 @@ class BOMItem(models.Model):
     def __str__(self):
         return f"{self.product.name} x {self.quantity}"
 
-    def _get_all_sub_products(self, product, visited=None):
+    def _get_all_sub_products(self, product):
         """Iteratively collect all sub-product IDs using bulk queries."""
-        visited = set()
+        visited: set[int] = set()
         frontier = {product.pk}
         while frontier:
             visited |= frontier
@@ -74,7 +81,7 @@ class BOMItem(models.Model):
         # Don't allow circular references: if the product being added as a
         # BOM item itself has a BOM that (directly or indirectly) contains
         # the parent product, reject it.
-        sub_products = self._get_all_sub_products(self.product, visited=set())
+        sub_products = self._get_all_sub_products(self.product)
         if self.bom.product.pk in sub_products:
             raise ValidationError(
                 _(
@@ -154,7 +161,7 @@ class Production(SoftDeleteMixin, AuditMixin, models.Model):
             models.Index(fields=["bom_allocated"]),
         ]
 
-    def bom(self):
+    def get_bom_items(self):
         try:
             bom = [
                 item
@@ -176,10 +183,9 @@ class Production(SoftDeleteMixin, AuditMixin, models.Model):
         need a job‑level predicate that scales the component requirements by
         ``self.quantity``.
         """
-        bom_items = self.bom()
+        bom_items = self.get_bom_items()
         if bom_items is None:
             return False
-        from inventory.models import Inventory
 
         inv_map = {
             inv.product_id: inv.quantity
@@ -200,25 +206,29 @@ class Production(SoftDeleteMixin, AuditMixin, models.Model):
     @property
     def max_receivable(self):
         """Max units that can be received given current inventory."""
-        if self.bom() is None:
+        bom_items = self.get_bom_items()
+        if bom_items is None:
             return 0
-        from inventory.models import Inventory
 
+        product_ids = [item.product_id for item in bom_items]
+        inv_map = {
+            inv.product_id: inv.quantity
+            for inv in Inventory.objects.filter(product_id__in=product_ids)
+        }
         cap = self.remaining
-        for item in self.bom():
-            try:
-                inv = Inventory.objects.get(product=item.product)
-            except Inventory.DoesNotExist:
+        for item in bom_items:
+            if item.product_id not in inv_map:
                 return 0
             if item.quantity > 0:
-                cap = min(cap, inv.quantity // item.quantity)
+                cap = min(cap, inv_map[item.product_id] // item.quantity)
         return cap
 
     def clean(self):
-        if self.bom() is None:
+        bom_items = self.get_bom_items()
+        if bom_items is None:
             raise ValidationError(_("Product has no Bill of Materials."))
         # when attempting to receive anything ensure components are available
-        if self.quantity_received > 0 and self.bom() is not None:
+        if self.quantity_received > 0:
             prev_received = 0
             if self.pk:
                 try:
@@ -227,28 +237,37 @@ class Production(SoftDeleteMixin, AuditMixin, models.Model):
                     prev_received = 0
             delta = self.quantity_received - prev_received
             if delta > 0:
-                for item in self.bom():
-                    product = Inventory.objects.select_for_update().get(
-                        product=item.product
+                from inventory.models import Inventory
+
+                product_ids = [item.product_id for item in bom_items]
+                inv_map = {
+                    inv.product_id: inv.quantity
+                    for inv in Inventory.objects.select_for_update().filter(
+                        product_id__in=product_ids
                     )
-                    if product.quantity - item.quantity * delta < 0:
+                }
+                for item in bom_items:
+                    available = inv_map.get(item.product_id, 0)
+                    if available - item.quantity * delta < 0:
                         raise ValidationError(
                             _("Not enough Inventory to complete production.")
                         )
 
     @transaction.atomic
-    def save(self, *args, skip_allocation=False, **kwargs):
+    def save(self, *args: Any, skip_allocation: bool = False, **kwargs: Any) -> None:
         from production.services import allocate_production, receive_production
+
+        bom_items = self.get_bom_items()
 
         # run validation when allocating or if any quantity_received change
         should_validate = (
-            self.bom() is not None and not self.bom_allocated and not skip_allocation
+            bom_items is not None and not self.bom_allocated and not skip_allocation
         ) or (self.quantity_received > 0 and not self.closed)
         if should_validate:
             self.full_clean()
 
         # handle allocation via service
-        if self.bom() is not None and not self.bom_allocated and not skip_allocation:
+        if bom_items is not None and not self.bom_allocated and not skip_allocation:
             allocate_production(self)
 
         # adjust inventory for newly received amount via service
@@ -279,8 +298,8 @@ class Production(SoftDeleteMixin, AuditMixin, models.Model):
         )
         affected_product_ids = {self.product_id}
 
-        if self.bom() is not None and outstanding_qty > 0:
-            for item in self.bom():
+        if self.get_bom_items() is not None and outstanding_qty > 0:
+            for item in self.get_bom_items():
                 qty_change = item.quantity * outstanding_qty
                 alloc = ProductionAllocated.objects.select_for_update().get(
                     product=item.product

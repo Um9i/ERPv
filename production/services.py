@@ -28,7 +28,7 @@ def allocate_production(job: Production) -> None:
     marks the job as allocated.  Raises ``ValidationError`` if the product has
     no bill of materials.
     """
-    bom_items = job.bom()
+    bom_items = job.get_bom_items()
     if bom_items is None:
         raise ValidationError("Product has no Bill of Materials.")
 
@@ -63,7 +63,7 @@ def receive_production(job: Production, delta: int) -> set[int]:
     if delta <= 0:
         return set()
 
-    bom_items = job.bom()
+    bom_items = job.get_bom_items()
     affected_product_ids: set[int] = set()
 
     # ensure all components have enough stock

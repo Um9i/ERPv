@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from decimal import Decimal
+
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import Min, Sum
@@ -45,7 +49,7 @@ class Product(SoftDeleteMixin, models.Model):
         return self.name
 
     @property
-    def last_sale_price(self):
+    def last_sale_price(self) -> Decimal | None:
         from sales.models import SalesOrderLine
 
         last = (
@@ -57,12 +61,12 @@ class Product(SoftDeleteMixin, models.Model):
         return last
 
     @property
-    def effective_sale_price(self):
+    def effective_sale_price(self) -> Decimal | int:
         """sale_price if set, otherwise fall back to last sold price."""
         return self.sale_price or self.last_sale_price or 0
 
     @property
-    def unit_cost(self):
+    def unit_cost(self) -> Decimal | int:
         """Return a per-unit cost for this product.
 
         Priority:
@@ -151,7 +155,7 @@ class Product(SoftDeleteMixin, models.Model):
         return costs.get(self.pk, 0)
 
     @property
-    def can_produce(self):
+    def can_produce(self) -> bool:
         """Return ``True`` if there is sufficient inventory of every component
         required for a single unit of this product's bill of materials.
 
@@ -213,17 +217,23 @@ class Inventory(models.Model):
 
     @property
     def required(self) -> int:
-        """Quantity required to satisfy allocated production and sales orders.
+        """Quantity required to satisfy allocated production and sales orders."""
+        from django.db.models import F
 
-        Mirrors logic previously implemented in the admin helper.  Positive
-        value indicates how many more units we need (stock minus demand).
-        """
         allocated = (
             self.product.production_allocated.aggregate(total=Sum("quantity"))["total"]
             or 0
         )
-        sales_orders = sum(
-            sold.on_sales_order() for sold in self.product.product_customers.all()
+        from sales.models import SalesOrderLine
+
+        sales_orders = (
+            SalesOrderLine.objects.filter(
+                product__product=self.product,
+                complete=False,
+            )
+            .annotate(remaining_qty=F("quantity") - F("quantity_shipped"))
+            .aggregate(total=Sum("remaining_qty"))["total"]
+            or 0
         )
         short = self.quantity - allocated - sales_orders
         return abs(short) if short < 0 else 0

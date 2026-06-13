@@ -24,7 +24,9 @@ def _sign(payload_bytes: bytes, secret: str) -> str:
     return hmac.new(secret.encode(), payload_bytes, hashlib.sha256).hexdigest()
 
 
-def dispatch_event(event_type: str, payload: dict[str, Any]) -> None:
+def dispatch_event(
+    event_type: WebhookEndpoint.EventType, payload: dict[str, Any]
+) -> None:
     """Send *event_type* with *payload* to every active, subscribed endpoint."""
     endpoints = WebhookEndpoint.objects.filter(is_active=True)
     for ep in endpoints:
@@ -34,7 +36,9 @@ def dispatch_event(event_type: str, payload: dict[str, Any]) -> None:
 
 
 def _deliver(
-    endpoint: WebhookEndpoint, event_type: str, payload: dict[str, Any]
+    endpoint: WebhookEndpoint,
+    event_type: WebhookEndpoint.EventType,
+    payload: dict[str, Any],
 ) -> None:
     """POST the payload to a single endpoint with exponential-backoff retry."""
     body = json.dumps(payload, default=str)

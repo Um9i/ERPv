@@ -17,17 +17,13 @@ class DashboardHomeView(LoginRequiredMixin, TemplateView):
     template_name = "dashboards/home.html"
 
 
-@method_decorator(vary_on_headers("HX-Request"), name="dispatch")
-class ShippingScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
-    """Day-based shipping schedule driven by SalesOrder.ship_by_date."""
-
-    template_name = "dashboards/shipping_schedule.html"
-    partial_template_name = "dashboards/_shipping_metrics.html"
+class ScheduleDateMixin:
+    """Mixin that parses a ?date= query param and adds navigation context."""
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)  # type: ignore[misc]
         today = date.today()
-        raw = self.request.GET.get("date")
+        raw = self.request.GET.get("date")  # type: ignore[attr-defined]
         if raw:
             try:
                 current = date.fromisoformat(raw)
@@ -35,12 +31,27 @@ class ShippingScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
                 current = today
         else:
             current = today
-
         context["current_date"] = current
         context["today"] = today
         context["prev_date"] = current - timedelta(days=1)
         context["next_date"] = current + timedelta(days=1)
         context["week_start"] = current - timedelta(days=current.weekday())
+        return context
+
+
+@method_decorator(vary_on_headers("HX-Request"), name="dispatch")
+class ShippingScheduleView(
+    ScheduleDateMixin, HtmxPartialMixin, LoginRequiredMixin, TemplateView
+):
+    """Day-based shipping schedule driven by SalesOrder.ship_by_date."""
+
+    template_name = "dashboards/shipping_schedule.html"
+    partial_template_name = "dashboards/_shipping_metrics.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        current = context["current_date"]
+        today = context["today"]
 
         # Subquery annotations so status / remaining_total don't fire per-row
         from sales.models import SalesOrderLine
@@ -120,7 +131,9 @@ class ShippingScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
 
 
 @method_decorator(vary_on_headers("HX-Request"), name="dispatch")
-class DeliveryScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
+class DeliveryScheduleView(
+    ScheduleDateMixin, HtmxPartialMixin, LoginRequiredMixin, TemplateView
+):
     """Day-based delivery schedule driven by PurchaseOrder.due_date."""
 
     template_name = "dashboards/delivery_schedule.html"
@@ -128,21 +141,8 @@ class DeliveryScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        today = date.today()
-        raw = self.request.GET.get("date")
-        if raw:
-            try:
-                current = date.fromisoformat(raw)
-            except ValueError:
-                current = today
-        else:
-            current = today
-
-        context["current_date"] = current
-        context["today"] = today
-        context["prev_date"] = current - timedelta(days=1)
-        context["next_date"] = current + timedelta(days=1)
-        context["week_start"] = current - timedelta(days=current.weekday())
+        current = context["current_date"]
+        today = context["today"]
 
         # orders due on this date (exclude closed orders)
         context["orders"] = (
@@ -192,7 +192,9 @@ class DeliveryScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
 
 
 @method_decorator(vary_on_headers("HX-Request"), name="dispatch")
-class ProductionScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
+class ProductionScheduleView(
+    ScheduleDateMixin, HtmxPartialMixin, LoginRequiredMixin, TemplateView
+):
     """Day-based production schedule driven by Production.due_date."""
 
     template_name = "dashboards/production_schedule.html"
@@ -200,21 +202,8 @@ class ProductionScheduleView(HtmxPartialMixin, LoginRequiredMixin, TemplateView)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        today = date.today()
-        raw = self.request.GET.get("date")
-        if raw:
-            try:
-                current = date.fromisoformat(raw)
-            except ValueError:
-                current = today
-        else:
-            current = today
-
-        context["current_date"] = current
-        context["today"] = today
-        context["prev_date"] = current - timedelta(days=1)
-        context["next_date"] = current + timedelta(days=1)
-        context["week_start"] = current - timedelta(days=current.weekday())
+        current = context["current_date"]
+        today = context["today"]
 
         # production jobs due on this date (exclude closed jobs)
         context["jobs"] = Production.objects.filter(
