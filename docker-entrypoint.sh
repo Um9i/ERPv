@@ -24,4 +24,21 @@ python manage.py collectstatic --noinput
 echo "Running migrations..."
 python manage.py migrate --noinput
 
+# Create default superuser if credentials are provided and user doesn't exist
+if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ]; then
+  python manage.py shell -c "
+from django.contrib.auth import get_user_model
+User = get_user_model()
+if not User.objects.filter(username='$DJANGO_SUPERUSER_USERNAME').exists():
+    User.objects.create_superuser(
+        username='$DJANGO_SUPERUSER_USERNAME',
+        email='${DJANGO_SUPERUSER_EMAIL:-}',
+        password='$DJANGO_SUPERUSER_PASSWORD',
+    )
+    print('Superuser created: $DJANGO_SUPERUSER_USERNAME')
+else:
+    print('Superuser already exists: $DJANGO_SUPERUSER_USERNAME')
+"
+fi
+
 exec "$@"
