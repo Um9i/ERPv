@@ -1,5 +1,8 @@
+from typing import cast
+
 from django import forms
 from django.db.models import Q
+from django.forms import ModelChoiceField
 
 from inventory.models import Location
 
@@ -33,13 +36,11 @@ class BOMItemForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Only show products that can be procured or produced.
-        self.fields["product"].queryset = (
-            self.fields["product"]
-            .queryset.filter(
-                Q(product_suppliers__isnull=False) | Q(billofmaterials__isnull=False)
-            )
-            .distinct()
-        )
+        product_field = cast(ModelChoiceField, self.fields["product"])
+        assert product_field.queryset is not None
+        product_field.queryset = product_field.queryset.filter(
+            Q(product_suppliers__isnull=False) | Q(billofmaterials__isnull=False)
+        ).distinct()
 
     def clean_quantity(self):
         qty = self.cleaned_data.get("quantity")

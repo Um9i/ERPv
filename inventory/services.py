@@ -83,9 +83,8 @@ def apply_inventory_adjustment(
 
     # route delta to a specific bin when requested
     if location:
-        inv_obj = Inventory.objects.get(product=product)
         inv_loc, _ = InventoryLocation.objects.get_or_create(
-            inventory=inv_obj,
+            inventory=inv,
             location=location,
             defaults={"quantity": 0},
         )
@@ -93,7 +92,7 @@ def apply_inventory_adjustment(
         inv_loc.save()
 
     # refresh required-stock cache
-    inv = Inventory.objects.get(product=product)
+    inv.refresh_from_db(fields=["quantity"])
     inv.update_required_cached()
 
     logger.info(

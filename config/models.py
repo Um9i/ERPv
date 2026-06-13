@@ -1,6 +1,7 @@
 import secrets
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -35,7 +36,7 @@ class CompanyConfig(AddressMixin, models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk and CompanyConfig.objects.exists():
-            raise ValueError(
+            raise ValidationError(
                 "Only one CompanyConfig instance is allowed. "
                 "Update the existing record instead."
             )

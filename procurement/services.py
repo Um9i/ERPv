@@ -79,13 +79,13 @@ def receive_purchase_order_line(line: PurchaseOrderLine, qty: int) -> int | None
 
     product = line.product.product  # the catalogue Product
 
-    # increase on-hand stock
+    # increase on-hand stock and fetch the updated row in one lock
     Inventory.objects.select_for_update().filter(product=product).update(
         quantity=F("quantity") + qty, last_updated=timezone.now()
     )
 
     # route to single-bin location when applicable
-    inv_obj = Inventory.objects.get(product=product)
+    inv_obj = Inventory.objects.select_for_update().get(product=product)
     stock_locs = list(inv_obj.stock_locations.all())
     recv_location = None
     if len(stock_locs) == 1:

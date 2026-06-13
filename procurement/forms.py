@@ -1,5 +1,8 @@
+from typing import cast
+
 from django import forms
 from django.core.validators import EmailValidator
+from django.forms import ModelChoiceField
 from django.utils import timezone
 
 from main.validators import phone_validator
@@ -152,8 +155,9 @@ class PurchaseOrderLineForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        qs = self.fields["product"].queryset
-        self.fields["product"].queryset = qs.select_related("product")
+        product_field = cast(ModelChoiceField, self.fields["product"])
+        assert product_field.queryset is not None
+        product_field.queryset = product_field.queryset.select_related("product")
 
     def clean_quantity(self):
         qty = self.cleaned_data.get("quantity")

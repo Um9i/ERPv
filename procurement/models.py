@@ -1,3 +1,4 @@
+import logging
 from decimal import ROUND_HALF_UP, Decimal
 
 from django.core.exceptions import ValidationError
@@ -10,6 +11,8 @@ from django.utils import timezone
 
 from inventory.models import Product
 from main.mixins import AddressMixin, AuditMixin, SoftDeleteMixin
+
+logger = logging.getLogger(__name__)
 
 
 class Supplier(SoftDeleteMixin, AddressMixin, models.Model):
@@ -332,4 +335,6 @@ def _update_po_cache(sender, instance, **kwargs):
     try:
         instance.purchase_order.update_cached_total()
     except Exception:
-        pass
+        logger.exception(
+            "Failed to update cached total for %s", instance.purchase_order_id
+        )

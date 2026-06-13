@@ -1,7 +1,7 @@
 import csv
 import logging
 from decimal import Decimal
-from typing import Any, Dict
+from typing import Any
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import OuterRef, Subquery, Sum
@@ -27,7 +27,7 @@ class FinanceDashboardView(HtmxPartialMixin, LoginRequiredMixin, TemplateView):
     template_name = "finance/dashboard.html"
     partial_template_name = "finance/_dashboard_metrics.html"
 
-    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         now = timezone.now()
 
@@ -87,7 +87,7 @@ class LedgerArchiveMixin:
     month_format = "%m"
     make_object_list = True
 
-    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context.setdefault("ledger_label", "Ledger")
         context.setdefault("today", timezone.now())
@@ -143,7 +143,7 @@ class SalesLedgerArchiveView(
     model = SalesLedger
     template_name = "finance/salesledger_archive.html"
 
-    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         self._sales_context(context)
         # Total across all (filtered) results, not just current page
@@ -163,7 +163,7 @@ class SalesLedgerMonthArchiveView(
     model = SalesLedger
     template_name = "finance/salesledger_month.html"
 
-    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         self._sales_context(context)
         # self.object_list is the month-filtered queryset before pagination
@@ -216,7 +216,7 @@ class PurchaseLedgerArchiveView(
     model = PurchaseLedger
     template_name = "finance/purchaseledger_archive.html"
 
-    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         self._purchase_context(context)
         qs = self.get_queryset()
@@ -235,7 +235,7 @@ class PurchaseLedgerMonthArchiveView(
     model = PurchaseLedger
     template_name = "finance/purchaseledger_month.html"
 
-    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         self._purchase_context(context)
         # self.object_list is the month-filtered queryset before pagination
@@ -256,7 +256,7 @@ class PurchaseLedgerMonthArchiveView(
 class OutstandingOrdersView(LoginRequiredMixin, TemplateView):
     template_name = "finance/outstanding_orders.html"
 
-    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         from django.core.paginator import Paginator
         from django.db.models import DecimalField, F, OuterRef, Subquery
         from django.db.models.functions import Coalesce, Greatest
@@ -337,7 +337,7 @@ class OutstandingOrdersView(LoginRequiredMixin, TemplateView):
 class ProductPLView(LoginRequiredMixin, TemplateView):
     template_name = "finance/product_pl.html"
 
-    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         from django.db.models import DecimalField, OuterRef, Subquery
 
         from procurement.models import SupplierProduct
@@ -615,7 +615,7 @@ class ProductionLedgerArchiveView(
     model = ProductionLedger
     template_name = "finance/productionledger_archive.html"
 
-    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         self._production_context(context)
         qs = self.get_queryset()
@@ -637,7 +637,7 @@ class ProductionLedgerMonthArchiveView(
     model = ProductionLedger
     template_name = "finance/productionledger_month.html"
 
-    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         self._production_context(context)
         context["month_total"] = self.object_list.aggregate(

@@ -485,8 +485,10 @@ class Command(BaseCommand):
                                 comp_have = inv_quantities.get(comp_id, 0)
                                 if comp_have < comp_needed:
                                     comp_short = comp_needed - comp_have
-                                    sp = supplier_by_product.get(comp_id)
-                                    if sp:
+                                    found_sp: SupplierProduct | None = (
+                                        supplier_by_product.get(comp_id)
+                                    )
+                                    if found_sp:
                                         po_date = current
                                         po_due = (
                                             current
@@ -494,12 +496,12 @@ class Command(BaseCommand):
                                         ).date()
                                         po_descriptors.append(
                                             (
-                                                sp.supplier,
+                                                found_sp.supplier,
                                                 po_date,
                                                 po_due,
                                                 [
                                                     (
-                                                        sp,
+                                                        found_sp,
                                                         comp_short,
                                                         True,
                                                         comp_short,
@@ -528,8 +530,8 @@ class Command(BaseCommand):
                             )
                         else:
                             # Regular product → PO for restocking
-                            sp = supplier_by_product.get(pid)
-                            if sp:
+                            found_sp = supplier_by_product.get(pid)
+                            if found_sp:
                                 po_date = current - timedelta(
                                     days=random.randint(3, 10)
                                 )
@@ -538,12 +540,12 @@ class Command(BaseCommand):
                                 ).date()
                                 po_descriptors.append(
                                     (
-                                        sp.supplier,
+                                        found_sp.supplier,
                                         po_date,
                                         po_due,
                                         [
                                             (
-                                                sp,
+                                                found_sp,
                                                 shortfall,
                                                 True,
                                                 shortfall,
@@ -580,8 +582,8 @@ class Command(BaseCommand):
                             comp_have = inv_quantities.get(comp_id, 0)
                             if comp_have < comp_needed:
                                 comp_short = comp_needed - comp_have
-                                sp = supplier_by_product.get(comp_id)
-                                if sp:
+                                found_sp = supplier_by_product.get(comp_id)
+                                if found_sp:
                                     po_date = current
                                     po_due = (
                                         current + timedelta(days=random.randint(7, 21))
@@ -590,12 +592,12 @@ class Command(BaseCommand):
                                     rcvd = comp_short if po_due_passed else 0
                                     po_descriptors.append(
                                         (
-                                            sp.supplier,
+                                            found_sp.supplier,
                                             po_date,
                                             po_due,
                                             [
                                                 (
-                                                    sp,
+                                                    found_sp,
                                                     comp_short,
                                                     po_due_passed,
                                                     rcvd,
@@ -728,26 +730,26 @@ class Command(BaseCommand):
         self._log("Syncing inventory location quantities...")
         loc_updates = []
         for inv in Inventory.objects.prefetch_related("stock_locations").all():
-            locs = list(inv.stock_locations.all())
-            if not locs:
+            inv_locs: list[InventoryLocation] = list(inv.stock_locations.all())
+            if not inv_locs:
                 continue
-            total_in_locs = sum(loc.quantity for loc in locs)
+            total_in_locs = sum(il.quantity for il in inv_locs)
             if total_in_locs == 0:
                 continue
             if inv.quantity == 0:
-                for loc in locs:
-                    loc.quantity = 0
-                    loc_updates.append(loc)
+                for il in inv_locs:
+                    il.quantity = 0
+                    loc_updates.append(il)
             elif total_in_locs != inv.quantity:
                 ratio = inv.quantity / total_in_locs
                 remaining = inv.quantity
-                for i, loc in enumerate(locs):
-                    if i == len(locs) - 1:
-                        loc.quantity = max(remaining, 0)
+                for i, il in enumerate(inv_locs):
+                    if i == len(inv_locs) - 1:
+                        il.quantity = max(remaining, 0)
                     else:
-                        loc.quantity = max(0, int(loc.quantity * ratio))
-                        remaining -= loc.quantity
-                    loc_updates.append(loc)
+                        il.quantity = max(0, int(il.quantity * ratio))
+                        remaining -= il.quantity
+                    loc_updates.append(il)
         if loc_updates:
             InventoryLocation.objects.bulk_update(
                 loc_updates, ["quantity"], batch_size=BATCH_SIZE

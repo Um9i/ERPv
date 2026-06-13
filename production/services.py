@@ -172,7 +172,7 @@ def receive_production_into_location(production_id, quantity_to_receive, locatio
     entry = (
         InventoryLedger.objects.filter(
             product=job.product,
-            action="Production",
+            action=InventoryLedger.Action.PRODUCTION,
             transaction_id=job.pk,
             location__isnull=True,
         )

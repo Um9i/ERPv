@@ -209,7 +209,11 @@ class InventoryAdjustCreateView(
     permission_required = "inventory.manage_stock"
 
     def get_inventory(self):
-        return Inventory.objects.select_related("product").get(pk=self.kwargs.get("pk"))
+        if not hasattr(self, "_inventory"):
+            self._inventory = Inventory.objects.select_related("product").get(
+                pk=self.kwargs.get("pk")
+            )
+        return self._inventory
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -430,7 +434,7 @@ class InventoryDashboardView(HtmxPartialMixin, LoginRequiredMixin, TemplateView)
         )
 
         # when ?required=1 is passed, include low-stock items in context
-        if getattr(self, "request", None) and self.request.GET.get("required"):
+        if self.request.GET.get("required"):
             from procurement.services import (
                 best_supplier_products,
                 pending_po_by_product,
