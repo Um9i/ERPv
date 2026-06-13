@@ -1,4 +1,5 @@
 import pytest
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from config.models import CompanyConfig
@@ -13,7 +14,7 @@ class CompanyConfigSingletonTest(TestCase):
 
     def test_cannot_create_second_instance(self):
         CompanyConfig.objects.create(name="ACME Ltd")
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValidationError):
             CompanyConfig(name="Other Co").save()
 
     def test_pk_always_forced_to_1(self):

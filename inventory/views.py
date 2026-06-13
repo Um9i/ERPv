@@ -434,7 +434,7 @@ class InventoryDashboardView(HtmxPartialMixin, LoginRequiredMixin, TemplateView)
         )
 
         # when ?required=1 is passed, include low-stock items in context
-        if self.request.GET.get("required"):
+        if hasattr(self, "request") and self.request.GET.get("required"):
             from procurement.services import (
                 best_supplier_products,
                 pending_po_by_product,
