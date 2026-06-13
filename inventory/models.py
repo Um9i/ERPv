@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
-from django.db.models import Min, Sum
+from django.db.models import Sum
 from django.db.models.functions import Lower
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
@@ -69,90 +69,12 @@ class Product(SoftDeleteMixin, models.Model):
     def unit_cost(self) -> Decimal | int:
         """Return a per-unit cost for this product.
 
-        Priority:
-        1. If a bill of materials exists, compute cost from components + production cost.
-        2. Cheapest supplier cost if any supplier products exist.
-        3. Otherwise zero.
+        Delegates to ``production.services.compute_unit_cost`` which handles
+        BOM roll-up, supplier costs, and cycle safety.
         """
-        from collections import defaultdict
+        from production.services import compute_unit_cost
 
-        from procurement.models import SupplierProduct
-        from production.models import BillOfMaterials, BOMItem
-
-        # BOM cost roll-up takes priority (manufactured product)
-        has_bom = BillOfMaterials.objects.filter(product=self).exists()
-
-        if not has_bom:
-            # no BOM — use cheapest supplier cost
-            first = (
-                SupplierProduct.objects.filter(product=self)
-                .order_by("cost")
-                .values_list("cost", flat=True)
-                .first()
-            )
-            if first is not None:
-                return first
-            return 0
-
-        # collect all product IDs in the BOM tree iteratively
-        all_ids = set()
-        frontier = {self.pk}
-        while frontier:
-            all_ids |= frontier
-            children = set(
-                BOMItem.objects.filter(bom__product_id__in=frontier).values_list(
-                    "product_id", flat=True
-                )
-            )
-            frontier = children - all_ids
-
-        # bulk-load all BOM edges
-        children_map = defaultdict(list)
-        for parent_id, child_id, qty in BOMItem.objects.filter(
-            bom__product_id__in=all_ids
-        ).values_list("bom__product_id", "product_id", "quantity"):
-            children_map[parent_id].append((child_id, qty))
-
-        # bulk-load cheapest supplier cost per product
-        supplier_costs = dict(
-            SupplierProduct.objects.filter(product_id__in=all_ids)
-            .values("product_id")
-            .annotate(min_cost=Min("cost"))
-            .values_list("product_id", "min_cost")
-        )
-
-        # bulk-load production costs per BOM
-        prod_costs = dict(
-            BillOfMaterials.objects.filter(product_id__in=all_ids).values_list(
-                "product_id", "production_cost"
-            )
-        )
-
-        # bottom-up cost computation
-        # Products with BOMs must be computed from components, not supplier cost
-        bom_pids = set(prod_costs.keys())
-        costs = {
-            pid: supplier_costs[pid]
-            for pid in all_ids
-            if pid in supplier_costs and pid not in bom_pids
-        }
-        changed = True
-        while changed:
-            changed = False
-            for pid in all_ids:
-                if pid in costs:
-                    continue
-                if pid not in children_map:
-                    costs[pid] = 0
-                    changed = True
-                elif all(cid in costs for cid, _ in children_map[pid]):
-                    component_cost = sum(
-                        qty * costs[cid] for cid, qty in children_map[pid]
-                    )
-                    costs[pid] = component_cost + (prod_costs.get(pid) or 0)
-                    changed = True
-
-        return costs.get(self.pk, 0)
+        return compute_unit_cost(self.pk)
 
     @property
     def can_produce(self) -> bool:

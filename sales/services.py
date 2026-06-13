@@ -1,18 +1,21 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from django.db import transaction
 from django.utils import timezone
 
 from inventory.models import Inventory, InventoryLedger, InventoryLocation
 
+if TYPE_CHECKING:
+    from sales.models import SalesOrder, SalesOrderLine
+
 logger = logging.getLogger(__name__)
 
 
 @transaction.atomic
-def complete_sales_line(line) -> None:
+def complete_sales_line(line: SalesOrderLine) -> None:
     """Close a sales order line: deduct inventory, record ledger entries.
 
     Decrements stock for the ordered quantity, creates inventory and sales
@@ -63,7 +66,7 @@ def complete_sales_line(line) -> None:
     )
 
 
-def get_ship_context(sales_order) -> dict[str, Any]:
+def get_ship_context(sales_order: SalesOrder) -> dict[str, Any]:
     """Build shipping context: annotate lines with stock info.
 
     Returns a dict with ``lines`` (list of order lines with stock
@@ -87,15 +90,15 @@ def get_ship_context(sales_order) -> dict[str, Any]:
     any_shortage = False
     for line in all_lines:
         if line.complete:
-            line.stock = None
-            line.stock_ok = None
-            line.max_shippable = 0
+            line.stock = None  # type: ignore[attr-defined]
+            line.stock_ok = None  # type: ignore[attr-defined]
+            line.max_shippable = 0  # type: ignore[attr-defined]
         else:
             stock = inv_map.get(line.product.product_id, 0)
-            line.stock = stock
-            line.stock_ok = stock >= line.remaining
-            line.max_shippable = min(line.remaining, max(stock, 0))
-            if not line.stock_ok:
+            line.stock = stock  # type: ignore[attr-defined]
+            line.stock_ok = stock >= line.remaining  # type: ignore[attr-defined]
+            line.max_shippable = min(line.remaining, max(stock, 0))  # type: ignore[attr-defined]
+            if not line.stock_ok:  # type: ignore[attr-defined]
                 any_shortage = True
     return {"lines": all_lines, "any_shortage": any_shortage}
 
@@ -208,3 +211,245 @@ def ship_sales_order(
         },
     )
     return touched, errors
+
+
+def populate_pick_list_lines(pick_list) -> None:
+    """Create pick lines based on current stock levels.
+
+    Bulk-loads all required Inventory and InventoryLocation rows up front to
+    avoid per-line queries inside the loop.
+    """
+    from django.db.models import Sum
+
+    from sales.models import PickListLine
+
+    open_lines = list(
+        pick_list.sales_order.sales_order_lines.filter(complete=False).select_related(
+            "product__product"
+        )
+    )
+    product_ids = [line.product.product_id for line in open_lines]
+
+    inv_map = {
+        inv.product_id: inv
+        for inv in Inventory.objects.filter(product_id__in=product_ids)
+    }
+    stock_locs_map: dict[int, list] = {pid: [] for pid in product_ids}
+    for sl in (
+        InventoryLocation.objects.filter(
+            inventory__product_id__in=product_ids, quantity__gt=0
+        )
+        .select_related("location")
+        .order_by("location__name")
+    ):
+        stock_locs_map[sl.inventory.product_id].append(sl)
+
+    loc_totals_map: dict[int, int] = {
+        row["inventory__product_id"]: row["total"]
+        for row in InventoryLocation.objects.filter(
+            inventory__product_id__in=product_ids
+        )
+        .values("inventory__product_id")
+        .annotate(total=Sum("quantity"))
+    }
+
+    lines_to_create = []
+    for line in open_lines:
+        remaining = line.remaining
+        if remaining <= 0:
+            continue
+        product_id = line.product.product_id
+        inv = inv_map.get(product_id)
+        if inv is None:
+            lines_to_create.append(
+                PickListLine(
+                    pick_list=pick_list,
+                    sales_order_line=line,
+                    location=None,
+                    quantity=remaining,
+                )
+            )
+            continue
+
+        stock_locs = stock_locs_map.get(product_id, [])
+        allocated = 0
+        for sl in stock_locs:
+            if allocated >= remaining:
+                break
+            pick_qty = min(sl.quantity, remaining - allocated)
+            lines_to_create.append(
+                PickListLine(
+                    pick_list=pick_list,
+                    sales_order_line=line,
+                    location=sl.location,
+                    quantity=pick_qty,
+                )
+            )
+            allocated += pick_qty
+
+        if allocated < remaining:
+            loc_total = loc_totals_map.get(product_id, 0)
+            unallocated_qty = max(inv.quantity - loc_total, 0)
+            if unallocated_qty > 0:
+                pick_qty = min(unallocated_qty, remaining - allocated)
+                lines_to_create.append(
+                    PickListLine(
+                        pick_list=pick_list,
+                        sales_order_line=line,
+                        location=None,
+                        quantity=pick_qty,
+                    )
+                )
+                allocated += pick_qty
+
+        if allocated < remaining:
+            lines_to_create.append(
+                PickListLine(
+                    pick_list=pick_list,
+                    sales_order_line=line,
+                    location=None,
+                    quantity=remaining - allocated,
+                    is_shortage=True,
+                )
+            )
+
+    PickListLine.objects.bulk_create(lines_to_create)
+
+
+def refresh_unconfirmed_pick_lines(pick_list) -> None:
+    """Re-check stock for unconfirmed lines, preserving confirmed ones.
+
+    Bulk-loads Inventory and InventoryLocation up front to avoid per-line queries.
+    """
+    from django.db.models import Sum
+
+    from sales.models import PickListLine
+
+    pick_list.lines.filter(confirmed=False).delete()
+
+    confirmed_by_sol = (
+        pick_list.lines.filter(confirmed=True)
+        .values("sales_order_line_id")
+        .annotate(confirmed_qty=Sum("quantity"))
+    )
+    confirmed_map = {
+        row["sales_order_line_id"]: row["confirmed_qty"] for row in confirmed_by_sol
+    }
+
+    open_lines = list(
+        pick_list.sales_order.sales_order_lines.filter(complete=False).select_related(
+            "product__product"
+        )
+    )
+    product_ids = [line.product.product_id for line in open_lines]
+
+    inv_map = {
+        inv.product_id: inv
+        for inv in Inventory.objects.filter(product_id__in=product_ids)
+    }
+    stock_locs_map: dict[int, list] = {pid: [] for pid in product_ids}
+    for sl in (
+        InventoryLocation.objects.filter(
+            inventory__product_id__in=product_ids, quantity__gt=0
+        )
+        .select_related("location")
+        .order_by("location__name")
+    ):
+        stock_locs_map[sl.inventory.product_id].append(sl)
+
+    loc_totals_map: dict[int, int] = {
+        row["inventory__product_id"]: row["total"]
+        for row in InventoryLocation.objects.filter(
+            inventory__product_id__in=product_ids
+        )
+        .values("inventory__product_id")
+        .annotate(total=Sum("quantity"))
+    }
+
+    # per-line confirmed-location maps (still per-line but data already in memory)
+    confirmed_locs_map: dict[int, dict[int, int]] = {}
+    for row in (
+        pick_list.lines.filter(confirmed=True, location__isnull=False)
+        .values("sales_order_line_id", "location_id")
+        .annotate(used=Sum("quantity"))
+    ):
+        confirmed_locs_map.setdefault(row["sales_order_line_id"], {})[
+            row["location_id"]
+        ] = row["used"]
+
+    confirmed_unallocated_map: dict[int, int] = {
+        row["sales_order_line_id"]: row["used"]
+        for row in pick_list.lines.filter(confirmed=True, location__isnull=True)
+        .values("sales_order_line_id")
+        .annotate(used=Sum("quantity"))
+    }
+
+    lines_to_create = []
+    for line in open_lines:
+        already_confirmed = confirmed_map.get(line.pk, 0)
+        remaining = line.remaining - already_confirmed
+        if remaining <= 0:
+            continue
+        product_id = line.product.product_id
+        inv = inv_map.get(product_id)
+        if inv is None:
+            lines_to_create.append(
+                PickListLine(
+                    pick_list=pick_list,
+                    sales_order_line=line,
+                    location=None,
+                    quantity=remaining,
+                    is_shortage=True,
+                )
+            )
+            continue
+
+        confirmed_loc_map = confirmed_locs_map.get(line.pk, {})
+        stock_locs = stock_locs_map.get(product_id, [])
+        allocated = 0
+        for sl in stock_locs:
+            if allocated >= remaining:
+                break
+            available = sl.quantity - confirmed_loc_map.get(sl.location_id, 0)
+            if available <= 0:
+                continue
+            pick_qty = min(available, remaining - allocated)
+            lines_to_create.append(
+                PickListLine(
+                    pick_list=pick_list,
+                    sales_order_line=line,
+                    location=sl.location,
+                    quantity=pick_qty,
+                )
+            )
+            allocated += pick_qty
+
+        if allocated < remaining:
+            loc_total = loc_totals_map.get(product_id, 0)
+            unallocated_qty = max(inv.quantity - loc_total, 0)
+            confirmed_unallocated = confirmed_unallocated_map.get(line.pk, 0)
+            unallocated_qty = max(unallocated_qty - confirmed_unallocated, 0)
+            if unallocated_qty > 0:
+                pick_qty = min(unallocated_qty, remaining - allocated)
+                lines_to_create.append(
+                    PickListLine(
+                        pick_list=pick_list,
+                        sales_order_line=line,
+                        location=None,
+                        quantity=pick_qty,
+                    )
+                )
+                allocated += pick_qty
+
+        if allocated < remaining:
+            lines_to_create.append(
+                PickListLine(
+                    pick_list=pick_list,
+                    sales_order_line=line,
+                    location=None,
+                    quantity=remaining - allocated,
+                    is_shortage=True,
+                )
+            )
+
+    PickListLine.objects.bulk_create(lines_to_create)

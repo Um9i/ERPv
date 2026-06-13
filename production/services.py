@@ -134,7 +134,11 @@ def receive_production(job: Production, delta: int) -> set[int]:
 
 
 @transaction.atomic
-def receive_production_into_location(production_id, quantity_to_receive, location_id):
+def receive_production_into_location(
+    production_id: int,
+    quantity_to_receive: int,
+    location_id: int,
+) -> None:
     """Receive finished goods from a production job into a specific inventory location.
 
     This wraps Production.save() with the delta, then adjusts InventoryLocation.

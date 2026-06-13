@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable
+from decimal import Decimal
 from typing import Any
 
 from django.core.exceptions import ValidationError
@@ -11,7 +12,14 @@ from django.db.models import F, Sum
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 
-from inventory.models import Inventory, InventoryLedger, InventoryLocation, Location
+from inventory.models import (
+    Inventory,
+    InventoryAdjust,
+    InventoryLedger,
+    InventoryLocation,
+    Location,
+    Product,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +56,7 @@ def refresh_required_cache_for_products(product_ids: Iterable[int]) -> None:
 
 @transaction.atomic
 def apply_inventory_adjustment(
-    adjustment,
+    adjustment: InventoryAdjust,
     location: Location | None = None,
 ) -> None:
     """Apply an inventory adjustment and record it in the ledger.
@@ -267,3 +275,42 @@ def get_inventory_detail_context(
         "monthly_production": ctx["monthly_production"],
     }
     return ctx
+
+
+def notify_price_change(product: Product, sale_price: Decimal) -> list[str]:
+    """Notify paired instances of a catalogue price change.
+
+    Iterates over active paired instances that are linked to the product
+    via supplier or customer relationships and pushes the new price.
+
+    Returns a list of paired-instance names that failed to be notified.
+    """
+
+    from django.db.models import Q
+
+    from config.models import PairedInstance
+    from config.notifications import (
+        _notify_remote_customer_product,
+        _notify_remote_supplier_product_cost,
+    )
+
+    paired_instances = (
+        PairedInstance.objects.filter(api_key__gt="")
+        .filter(
+            Q(supplier__supplier_products__product=product) | Q(customer__isnull=False)
+        )
+        .distinct()
+    )
+
+    failed: list[str] = []
+    for pi in paired_instances:
+        if pi.customer:
+            ok = _notify_remote_supplier_product_cost(pi, product.name, sale_price)
+        elif pi.supplier:
+            ok = _notify_remote_customer_product(pi, product.name, sale_price)
+        else:
+            ok = True
+        if not ok:
+            failed.append(pi.name)
+
+    return failed

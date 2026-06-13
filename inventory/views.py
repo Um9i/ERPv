@@ -25,11 +25,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from config.models import PairedInstance
-from config.notifications import (
-    _notify_remote_customer_product,
-    _notify_remote_supplier_product_cost,
-)
 from main.mixins import HtmxPartialMixin
 
 from .forms import (
@@ -86,44 +81,32 @@ class ProductUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView)
             and product.sale_price is not None
             and product.sale_price != old_price
         ):
-            from django.db.models import Q
+            from .services import notify_price_change
 
-            paired_instances = (
-                PairedInstance.objects.filter(api_key__gt="")
-                .filter(
-                    Q(supplier__supplier_products__product=product)
-                    | Q(customer__isnull=False)
-                )
-                .distinct()
-            )
-
-            failed = []
-            for pi in paired_instances:
-                if pi.customer:
-                    # Remote is our customer – tell them their supplier cost changed
-                    ok = _notify_remote_supplier_product_cost(
-                        pi, product.name, product.sale_price
-                    )
-                elif pi.supplier:
-                    # Remote is our supplier – tell them their customer pricing changed
-                    ok = _notify_remote_customer_product(
-                        pi, product.name, product.sale_price
-                    )
-                else:
-                    ok = True
-                if not ok:
-                    failed.append(pi.name)
-
+            failed = notify_price_change(product, product.sale_price)
             if failed:
                 messages.warning(
                     self.request,
                     f"Price updated locally, but failed to notify: {', '.join(failed)}.",
                 )
-            elif paired_instances.exists():
-                messages.success(
-                    self.request,
-                    "Price updated and paired instances notified.",
+            else:
+                from django.db.models import Q
+
+                from config.models import PairedInstance
+
+                has_paired = (
+                    PairedInstance.objects.filter(api_key__gt="")
+                    .filter(
+                        Q(supplier__supplier_products__product=product)
+                        | Q(customer__isnull=False)
+                    )
+                    .exists()
                 )
+                if has_paired:
+                    messages.success(
+                        self.request,
+                        "Price updated and paired instances notified.",
+                    )
 
         return response
 

@@ -12,7 +12,6 @@ from django.utils.translation import gettext_lazy as _
 
 from inventory.models import (
     Inventory,
-    InventoryLocation,
     Location,
     Product,
 )
@@ -343,97 +342,9 @@ class PickList(models.Model):
 
     def refresh_unconfirmed(self):
         """Re-check stock for unconfirmed lines, preserving confirmed ones."""
-        self.lines.filter(confirmed=False).delete()
-        confirmed_by_sol = (
-            self.lines.filter(confirmed=True)
-            .values("sales_order_line_id")
-            .annotate(confirmed_qty=Sum("quantity"))
-        )
-        confirmed_map = {
-            row["sales_order_line_id"]: row["confirmed_qty"] for row in confirmed_by_sol
-        }
-        for line in self.sales_order.sales_order_lines.filter(complete=False):
-            already_confirmed = confirmed_map.get(line.pk, 0)
-            remaining = line.remaining - already_confirmed
-            if remaining <= 0:
-                continue
-            product = line.product.product
-            try:
-                inv = Inventory.objects.get(product=product)
-            except Inventory.DoesNotExist:
-                PickListLine.objects.create(
-                    pick_list=self,
-                    sales_order_line=line,
-                    location=None,
-                    quantity=remaining,
-                    is_shortage=True,
-                )
-                continue
+        from sales.services import refresh_unconfirmed_pick_lines
 
-            # figure out which locations are already claimed by confirmed lines
-            confirmed_locs = (
-                self.lines.filter(
-                    sales_order_line=line, confirmed=True, location__isnull=False
-                )
-                .values("location_id")
-                .annotate(used=Sum("quantity"))
-            )
-            confirmed_loc_map = {r["location_id"]: r["used"] for r in confirmed_locs}
-
-            stock_locs = list(
-                InventoryLocation.objects.filter(
-                    inventory=inv, quantity__gt=0
-                ).order_by("location__name")
-            )
-            allocated = 0
-            for sl in stock_locs:
-                if allocated >= remaining:
-                    break
-                available = sl.quantity - confirmed_loc_map.get(sl.location_id, 0)
-                if available <= 0:
-                    continue
-                pick_qty = min(available, remaining - allocated)
-                PickListLine.objects.create(
-                    pick_list=self,
-                    sales_order_line=line,
-                    location=sl.location,
-                    quantity=pick_qty,
-                )
-                allocated += pick_qty
-
-            if allocated < remaining:
-                loc_total = (
-                    InventoryLocation.objects.filter(inventory=inv).aggregate(
-                        total=Sum("quantity")
-                    )["total"]
-                    or 0
-                )
-                unallocated_qty = max(inv.quantity - loc_total, 0)
-                confirmed_unallocated = (
-                    self.lines.filter(
-                        sales_order_line=line, confirmed=True, location__isnull=True
-                    ).aggregate(used=Sum("quantity"))["used"]
-                    or 0
-                )
-                unallocated_qty = max(unallocated_qty - confirmed_unallocated, 0)
-                if unallocated_qty > 0:
-                    pick_qty = min(unallocated_qty, remaining - allocated)
-                    PickListLine.objects.create(
-                        pick_list=self,
-                        sales_order_line=line,
-                        location=None,
-                        quantity=pick_qty,
-                    )
-                    allocated += pick_qty
-
-            if allocated < remaining:
-                PickListLine.objects.create(
-                    pick_list=self,
-                    sales_order_line=line,
-                    location=None,
-                    quantity=remaining - allocated,
-                    is_shortage=True,
-                )
+        refresh_unconfirmed_pick_lines(self)
 
     @classmethod
     def generate_for_order(cls, sales_order):
@@ -443,70 +354,10 @@ class PickList(models.Model):
         return pick_list
 
     def _populate_lines(self):
-        """Create pick lines based on current stock levels."""
-        for line in self.sales_order.sales_order_lines.filter(complete=False):
-            remaining = line.remaining
-            if remaining <= 0:
-                continue
-            product = line.product.product
-            try:
-                inv = Inventory.objects.get(product=product)
-            except Inventory.DoesNotExist:
-                PickListLine.objects.create(
-                    pick_list=self,
-                    sales_order_line=line,
-                    location=None,
-                    quantity=remaining,
-                )
-                continue
+        """Delegate to ``sales.services.populate_pick_list_lines``."""
+        from sales.services import populate_pick_list_lines
 
-            # allocate from bin locations with stock
-            stock_locs = list(
-                InventoryLocation.objects.filter(
-                    inventory=inv, quantity__gt=0
-                ).order_by("location__name")
-            )
-            allocated = 0
-            for sl in stock_locs:
-                if allocated >= remaining:
-                    break
-                pick_qty = min(sl.quantity, remaining - allocated)
-                PickListLine.objects.create(
-                    pick_list=self,
-                    sales_order_line=line,
-                    location=sl.location,
-                    quantity=pick_qty,
-                )
-                allocated += pick_qty
-
-            # allocate from unallocated stock (exists but not in any bin)
-            if allocated < remaining:
-                loc_total = (
-                    InventoryLocation.objects.filter(inventory=inv).aggregate(
-                        total=Sum("quantity")
-                    )["total"]
-                    or 0
-                )
-                unallocated_qty = max(inv.quantity - loc_total, 0)
-                if unallocated_qty > 0:
-                    pick_qty = min(unallocated_qty, remaining - allocated)
-                    PickListLine.objects.create(
-                        pick_list=self,
-                        sales_order_line=line,
-                        location=None,
-                        quantity=pick_qty,
-                    )
-                    allocated += pick_qty
-
-            # true shortage — not enough stock anywhere
-            if allocated < remaining:
-                PickListLine.objects.create(
-                    pick_list=self,
-                    sales_order_line=line,
-                    location=None,
-                    quantity=remaining - allocated,
-                    is_shortage=True,
-                )
+        populate_pick_list_lines(self)
 
 
 class PickListLine(models.Model):
