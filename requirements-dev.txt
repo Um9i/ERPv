@@ -2,7 +2,7 @@
 -r requirements.txt
 
 # Code quality
-ruff==0.15.15
+ruff==0.15.17
 bandit==1.9.4
 pip-audit==2.10.0
 mypy==2.1.0
@@ -12,7 +12,7 @@ django-migration-linter==6.0.0
 # Testing
 coverage==7.14.0
 factory_boy==3.3.3
-Faker==40.19.1
+Faker==40.23.0
 pytest==9.0.3
 pytest-cov==7.1.0
 pytest-django==4.12.0
