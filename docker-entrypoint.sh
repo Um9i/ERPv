@@ -1,12 +1,18 @@
 #!/bin/sh
 set -e
 
-# Wait for DB to be available
+# Wait for DB to be available (safety net if started outside compose)
 DB_HOST=${DB_HOST:-db}
 DB_PORT=${DB_PORT:-5432}
+RETRIES=30
 
 echo "Waiting for database at $DB_HOST:$DB_PORT..."
-while ! python -c "import socket; socket.create_connection(('$DB_HOST', $DB_PORT), timeout=2)" 2>/dev/null; do
+until python -c "import socket; socket.create_connection(('$DB_HOST', $DB_PORT), timeout=2)" 2>/dev/null; do
+  RETRIES=$((RETRIES - 1))
+  if [ "$RETRIES" -le 0 ]; then
+    echo "ERROR: database not reachable after 30 attempts"
+    exit 1
+  fi
   sleep 1
 done
 

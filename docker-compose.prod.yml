@@ -1,12 +1,18 @@
 services:
   db:
-    image: postgres:latest
+    image: postgres:17
     restart: always
     env_file: .env
     volumes:
       - postgres_data:/var/lib/postgresql
     networks:
       - erpv_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-erp_user} -d ${POSTGRES_DB:-erpv}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     deploy:
       resources:
         limits:
@@ -29,10 +35,11 @@ services:
     ports:
       - "${PORT:-8000}:8000"
     volumes:
-      - /var/www/erpv/staticfiles:/app/staticfiles:z
-      - media:/app/media:z
+      - /var/www/erpv/staticfiles:/app/staticfiles
+      - media:/app/media
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - erpv_net
     deploy:

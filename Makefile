@@ -4,10 +4,10 @@ PYTEST = .venv/bin/pytest
 .PHONY: dev prod test test-coverage lint format check mypy audit migrate shell clean lint-migrations seed build tsc ngrok
 
 dev:
-	podman compose up --build
+	docker compose up --build
 
 prod:
-	podman compose -f docker-compose.prod.yml up --build -d
+	docker compose -f docker-compose.prod.yml up --build -d
 
 test:
 	DEBUG=True SECRETKEY=test-secret $(PYTEST) -o "addopts=" --tb=short -q -n auto
@@ -19,7 +19,7 @@ seed:
 	DEBUG=True SECRETKEY=test-secret $(PYTHON) manage.py seeddata
 
 build:
-	podman build --format docker -t erpv .
+	docker build -t erpv .
 
 lint:
 	$(PYTHON) -m ruff check .

@@ -7,18 +7,35 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # system dependencies for building some Python packages and for psycopg2
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential libpq-dev gcc weasyprint \
-    && rm -rf /var/lib/apt/lists/*
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update \
+    && apt-get install -y --no-install-recommends build-essential libpq-dev gcc weasyprint
 
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt requirements-dev.txt /app/
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
+
+# ── Development stage (includes dev dependencies) ──
+FROM base AS development
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements-dev.txt
+
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+EXPOSE 8000
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 
 # ── TypeScript build stage ──
 FROM node:22-slim AS ts-build
 WORKDIR /build
 COPY package.json package-lock.json tsconfig.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 COPY static/ts/ static/ts/
 RUN npx tsc
 
