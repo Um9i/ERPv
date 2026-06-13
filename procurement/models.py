@@ -332,9 +332,8 @@ class PurchaseOrderLine(models.Model):
 @receiver(post_save, sender=PurchaseOrderLine)
 @receiver(post_delete, sender=PurchaseOrderLine)
 def _update_po_cache(sender, instance, **kwargs):
-    try:
-        instance.purchase_order.update_cached_total()
-    except Exception:
-        logger.exception(
-            "Failed to update cached total for %s", instance.purchase_order_id
-        )
+    from main.utils import make_order_total_cache_receiver
+
+    make_order_total_cache_receiver("purchase_order", "purchase_order_id", logger)(
+        sender, instance, **kwargs
+    )

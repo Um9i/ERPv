@@ -277,13 +277,12 @@ def get_inventory_detail_context(
     return ctx
 
 
-def notify_price_change(product: Product, sale_price: Decimal) -> list[str]:
+def notify_price_change(product: Product, sale_price: Decimal) -> tuple[list[str], int]:
     """Notify paired instances of a catalogue price change.
 
-    Iterates over active paired instances that are linked to the product
-    via supplier or customer relationships and pushes the new price.
-
-    Returns a list of paired-instance names that failed to be notified.
+    Returns ``(failed_names, total_notified)`` — ``failed_names`` is the list
+    of paired-instance names that could not be reached; ``total_notified`` is
+    the total number of instances that were attempted.
     """
 
     from django.db.models import Q
@@ -294,7 +293,7 @@ def notify_price_change(product: Product, sale_price: Decimal) -> list[str]:
         _notify_remote_supplier_product_cost,
     )
 
-    paired_instances = (
+    paired_instances = list(
         PairedInstance.objects.filter(api_key__gt="")
         .filter(
             Q(supplier__supplier_products__product=product) | Q(customer__isnull=False)
@@ -313,4 +312,4 @@ def notify_price_change(product: Product, sale_price: Decimal) -> list[str]:
         if not ok:
             failed.append(pi.name)
 
-    return failed
+    return failed, len(paired_instances)

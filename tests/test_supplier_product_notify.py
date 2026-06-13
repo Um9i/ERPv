@@ -45,10 +45,11 @@ def test_price_change_notifies_supplier_linked_instance(
     client.force_login(staff_user)
     with (
         patch(
-            "inventory.views._notify_remote_customer_product", return_value=True
+            "config.notifications._notify_remote_customer_product", return_value=True
         ) as mock_cp,
         patch(
-            "inventory.views._notify_remote_supplier_product_cost", return_value=True
+            "config.notifications._notify_remote_supplier_product_cost",
+            return_value=True,
         ) as mock_sp,
     ):
         client.post(

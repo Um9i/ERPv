@@ -175,25 +175,22 @@ class ImportAsCustomerView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = "config.manage_pairing"
 
     def get(self, request, pk, *args, **kwargs):
+        from .services import fetch_remote_company_data
+
         instance = get_object_or_404(PairedInstance, pk=pk)
         if not instance.api_key:
             messages.error(
                 request, "Pairing is not complete \u2014 enter their API key first."
             )
             return redirect(_INTEGRATIONS_URL)
-        try:
-            resp = httpx.get(
-                f"{instance.url.rstrip('/')}/config/api/company/",
-                headers={"Authorization": f"Bearer {instance.api_key}"},
-                timeout=5.0,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-        except (httpx.HTTPStatusError, httpx.RequestError) as exc:
-            messages.error(request, f"Could not fetch data from {instance.name}: {exc}")
+
+        result = fetch_remote_company_data(instance)
+        if result is None:
+            messages.error(request, f"Could not fetch data from {instance.name}.")
             return redirect(_INTEGRATIONS_URL)
+        data, remote_name = result
+
         params = {f: data.get(f, "") for f in PARTNER_PREFILL_FIELDS}
-        remote_name = data.get("name", "").strip()
 
         if remote_name:
             from sales.models import Customer as _Customer
@@ -218,28 +215,23 @@ class ImportAsSupplierView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = "config.manage_pairing"
 
     def get(self, request, pk, *args, **kwargs):
+        from .services import fetch_remote_company_data
+
         instance = get_object_or_404(PairedInstance, pk=pk)
         if not instance.api_key:
             messages.error(
                 request, "Pairing is not complete \u2014 enter their API key first."
             )
             return redirect(_INTEGRATIONS_URL)
-        try:
-            resp = httpx.get(
-                f"{instance.url.rstrip('/')}/config/api/company/",
-                headers={"Authorization": f"Bearer {instance.api_key}"},
-                timeout=5.0,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-        except (httpx.HTTPStatusError, httpx.RequestError) as exc:
-            messages.error(request, f"Could not fetch data from {instance.name}: {exc}")
-            return redirect(_INTEGRATIONS_URL)
-        params = {f: data.get(f, "") for f in PARTNER_PREFILL_FIELDS}
-        remote_name = data.get("name", "").strip()
 
-        # If a supplier with this name already exists, link it directly without
-        # redirecting to the create form (avoids UniqueConstraint violation).
+        result = fetch_remote_company_data(instance)
+        if result is None:
+            messages.error(request, f"Could not fetch data from {instance.name}.")
+            return redirect(_INTEGRATIONS_URL)
+        data, remote_name = result
+
+        params = {f: data.get(f, "") for f in PARTNER_PREFILL_FIELDS}
+
         if remote_name:
             from procurement.models import Supplier as _Supplier
 
@@ -274,10 +266,7 @@ class ImportCatalogueProductView(LoginRequiredMixin, PermissionRequiredMixin, Vi
     permission_required = "config.manage_pairing"
 
     def post(self, request, pk, *args, **kwargs):
-        from decimal import Decimal, InvalidOperation
-
-        from inventory.models import Product
-        from procurement.models import Supplier, SupplierProduct
+        from .services import import_catalogue_product
 
         instance = get_object_or_404(PairedInstance, pk=pk)
         browse_url = reverse_lazy(
@@ -288,52 +277,23 @@ class ImportCatalogueProductView(LoginRequiredMixin, PermissionRequiredMixin, Vi
             messages.error(request, f'"{instance.name}" is not yet active.')
             return redirect(_INTEGRATIONS_URL)
 
+        success, msg = import_catalogue_product(
+            instance,
+            name=request.POST.get("name", "").strip(),
+            description=request.POST.get("description", "").strip(),
+            sale_price_raw=request.POST.get("sale_price", "").strip(),
+            supplier_id_raw=request.POST.get("supplier_id", "").strip(),
+        )
+        if not success:
+            messages.error(request, msg)
+            return redirect(browse_url)
+
+        messages.success(request, msg)
+        from decimal import Decimal
+
+        cost = Decimal(request.POST.get("sale_price", "0"))
         name = request.POST.get("name", "").strip()
-        description = request.POST.get("description", "").strip()
-        sale_price_raw = request.POST.get("sale_price", "").strip()
-        supplier_id = request.POST.get("supplier_id", "").strip()
-
-        if not name or not supplier_id:
-            messages.error(request, "Missing required fields (name or supplier_id).")
-            return redirect(browse_url)
-
-        try:
-            cost = Decimal(sale_price_raw)
-        except InvalidOperation:
-            messages.error(request, f"Invalid sale price: {sale_price_raw!r}")
-            return redirect(browse_url)
-
-        try:
-            supplier = Supplier.objects.get(pk=int(supplier_id))
-        except (Supplier.DoesNotExist, ValueError):
-            messages.error(request, f"Supplier with id {supplier_id!r} not found.")
-            return redirect(browse_url)
-
-        existing = Product.objects.filter(name__iexact=name).first()
-        if existing:
-            product = existing
-        else:
-            product = Product.objects.create(
-                name=name,
-                description=description,
-                sale_price=cost,
-                catalogue_item=False,
-            )
-
-        supplier_product, created = SupplierProduct.objects.get_or_create(
-            supplier=supplier,
-            product=product,
-            defaults={"cost": cost},
-        )
-        if not created:
-            supplier_product.cost = cost
-            supplier_product.save(update_fields=["cost"])
-
-        messages.success(
-            request,
-            f"Imported {product.name} as supplier product for {supplier.name}.",
-        )
-        if not _notify_remote_customer_product(instance, product.name, cost):
+        if not _notify_remote_customer_product(instance, name, cost):
             messages.warning(
                 request,
                 f"Could not notify {instance.name} of product link — check connectivity.",
@@ -356,7 +316,7 @@ class NotifyCustomerView(APIView):
         tags=["Pairing Notifications"],
     )
     def post(self, request, *args, **kwargs):
-        from sales.models import Customer
+        from .services import upsert_customer_from_remote
 
         paired_instance = request.auth
 
@@ -365,31 +325,10 @@ class NotifyCustomerView(APIView):
             return Response({"error": serializer.errors}, status=400)
 
         data = serializer.validated_data
-        name = data["name"].strip()
-        if not name:
+        if not data.get("name", "").strip():
             return Response({"error": "name is required"}, status=400)
 
-        existing = Customer.objects.filter(name__iexact=name).first()
-        if existing:
-            customer = existing
-            created = False
-        else:
-            customer = Customer.objects.create(
-                name=name,
-                address_line_1=data.get("address_line_1", ""),
-                address_line_2=data.get("address_line_2", ""),
-                city=data.get("city", ""),
-                state=data.get("state", ""),
-                postal_code=data.get("postal_code", ""),
-                country=data.get("country", ""),
-                phone=data.get("phone", ""),
-                email=data.get("email", ""),
-                website=data.get("website", ""),
-            )
-            created = True
-
-        paired_instance.customer = customer
-        paired_instance.save(update_fields=["customer"])
+        _customer, created = upsert_customer_from_remote(paired_instance, data)
         return Response({"status": "ok", "created": created})
 
 

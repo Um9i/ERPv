@@ -27,6 +27,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from main.constants import PARTNER_PREFILL_FIELDS
+from main.mixins import PartnerAnalyticsMixin
 from main.utils import safe_redirect
 
 from .forms import (
@@ -129,65 +130,47 @@ class SupplierListView(LoginRequiredMixin, ListView):
         return context
 
 
-class SupplierDetailView(LoginRequiredMixin, DetailView):
+class SupplierDetailView(PartnerAnalyticsMixin, LoginRequiredMixin, DetailView):
     model = Supplier
     template_name = "procurement/supplier_detail.html"
     context_object_name = "supplier"
 
-    def get_context_data(self, **kwargs):
-        # include related objects so the template can render tables without
-        # additional queries in the template itself; add pagination
-        from decimal import Decimal
+    analytics_object_attr = "supplier"
+    analytics_ledger_model = PurchaseLedger
+    analytics_ledger_fk = "supplier"
+    analytics_spend_label = "total_spend"
 
+    def get_context_data(self, **kwargs):
         from django.core.paginator import Paginator
-        from django.db.models import Sum
 
         context = super().get_context_data(**kwargs)
         supplier = self.object
         po_list = supplier.supplier_purchase_orders.all()
-        # enforce ordering to avoid paginator warnings
         pp_list = (
             supplier.supplier_products.select_related("product")
             .all()
             .order_by("product__name")
         )
-        # contacts
         contacts_list = supplier.supplier_contacts.all().order_by("name")
-
-        po_page_number = self.request.GET.get("po_page")
-        pp_page_number = self.request.GET.get("sp_page")
-        ct_page_number = self.request.GET.get("ct_page")
 
         po_paginator = Paginator(po_list, 5)
         pp_paginator = Paginator(pp_list, 5)
         ct_paginator = Paginator(contacts_list, 5)
 
-        context["purchase_orders"] = po_paginator.get_page(po_page_number)
-        context["supplier_products"] = pp_paginator.get_page(pp_page_number)
-        context["supplier_contacts"] = ct_paginator.get_page(ct_page_number)
-
-        # Analytics
+        context["purchase_orders"] = po_paginator.get_page(
+            self.request.GET.get("po_page")
+        )
+        context["supplier_products"] = pp_paginator.get_page(
+            self.request.GET.get("sp_page")
+        )
+        context["supplier_contacts"] = ct_paginator.get_page(
+            self.request.GET.get("ct_page")
+        )
         context["total_orders"] = po_list.count()
         context["open_orders"] = (
             po_list.filter(purchase_order_lines__complete=False).distinct().count()
         )
-        context["total_spend"] = PurchaseLedger.objects.filter(
-            supplier=supplier
-        ).aggregate(total=Sum("value"))["total"] or Decimal("0.00")
         context["recent_orders"] = po_list.order_by("-created_at")[:10]
-        context["top_products"] = (
-            PurchaseLedger.objects.filter(supplier=supplier)
-            .values(
-                "product__pk",
-                "product__name",
-                "product__product_inventory",
-            )
-            .annotate(
-                total_qty=Sum("quantity"),
-                total_value=Sum("value"),
-            )
-            .order_by("-total_value")[:5]
-        )
         return context
 
 

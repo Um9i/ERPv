@@ -147,3 +147,43 @@ class SoftDeleteMixin(models.Model):
     def restore(self):
         self.is_deleted = False
         self.save(update_fields=["is_deleted"])
+
+
+class PartnerAnalyticsMixin:
+    """View mixin that injects analytics context for a partner (Supplier or Customer).
+
+    Subclasses must define:
+      - ``analytics_object_attr``: name of the context variable holding the partner (e.g. ``"supplier"`` or ``"customer"``)
+      - ``analytics_ledger_model``: the ledger model class (``PurchaseLedger`` or ``SalesLedger``)
+      - ``analytics_ledger_fk``: FK field name on the ledger (``"supplier"`` or ``"customer"``)
+      - ``analytics_spend_label``: context key for total spend (e.g. ``"total_spend"`` or ``"total_revenue"``)
+    """
+
+    analytics_object_attr: str = ""
+    analytics_ledger_model: type[models.Model] | None = None
+    analytics_ledger_fk: str = ""
+    analytics_spend_label: str = "total_spend"
+
+    def get_context_data(self, **kwargs):
+        from decimal import Decimal
+
+        from django.db.models import Manager, Sum
+
+        context = super().get_context_data(**kwargs)  # type: ignore[misc]
+        partner = context.get(self.analytics_object_attr)
+        if partner is None or self.analytics_ledger_model is None:
+            return context
+
+        manager: Manager = self.analytics_ledger_model._default_manager  # type: ignore[assignment]
+        fk = {self.analytics_ledger_fk: partner}
+
+        context[self.analytics_spend_label] = manager.filter(**fk).aggregate(
+            total=Sum("value")
+        )["total"] or Decimal("0.00")
+        context["top_products"] = (
+            manager.filter(**fk)
+            .values("product__pk", "product__name", "product__product_inventory")
+            .annotate(total_qty=Sum("quantity"), total_value=Sum("value"))
+            .order_by("-total_value")[:5]
+        )
+        return context

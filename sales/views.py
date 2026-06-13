@@ -25,6 +25,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from main.constants import PARTNER_PREFILL_FIELDS
+from main.mixins import PartnerAnalyticsMixin
 from main.utils import safe_redirect
 
 from .forms import (
@@ -116,16 +117,18 @@ class CustomerListView(LoginRequiredMixin, ListView):
         return context
 
 
-class CustomerDetailView(LoginRequiredMixin, DetailView):
+class CustomerDetailView(PartnerAnalyticsMixin, LoginRequiredMixin, DetailView):
     model = Customer
     template_name = "sales/customer_detail.html"
     context_object_name = "customer"
 
-    def get_context_data(self, **kwargs):
-        from decimal import Decimal
+    analytics_object_attr = "customer"
+    analytics_ledger_model = SalesLedger
+    analytics_ledger_fk = "customer"
+    analytics_spend_label = "total_revenue"
 
+    def get_context_data(self, **kwargs):
         from django.core.paginator import Paginator
-        from django.db.models import Sum
 
         context = super().get_context_data(**kwargs)
         customer = self.object
@@ -137,40 +140,24 @@ class CustomerDetailView(LoginRequiredMixin, DetailView):
         )
         contacts_list = customer.customer_contacts.all().order_by("name")
 
-        order_page = self.request.GET.get("order_page")
-        prod_page = self.request.GET.get("cp_page")
-        ct_page = self.request.GET.get("ct_page")
-
         order_paginator = Paginator(order_list, 5)
         prod_paginator = Paginator(prod_list, 5)
         ct_paginator = Paginator(contacts_list, 5)
 
-        context["sales_orders"] = order_paginator.get_page(order_page)
-        context["customer_products"] = prod_paginator.get_page(prod_page)
-        context["customer_contacts"] = ct_paginator.get_page(ct_page)
-
-        # Analytics
+        context["sales_orders"] = order_paginator.get_page(
+            self.request.GET.get("order_page")
+        )
+        context["customer_products"] = prod_paginator.get_page(
+            self.request.GET.get("cp_page")
+        )
+        context["customer_contacts"] = ct_paginator.get_page(
+            self.request.GET.get("ct_page")
+        )
         context["total_orders"] = order_list.count()
         context["open_orders"] = (
             order_list.filter(sales_order_lines__complete=False).distinct().count()
         )
-        context["total_revenue"] = SalesLedger.objects.filter(
-            customer=customer
-        ).aggregate(total=Sum("value"))["total"] or Decimal("0.00")
         context["recent_orders"] = order_list.order_by("-created_at")[:10]
-        context["top_products"] = (
-            SalesLedger.objects.filter(customer=customer)
-            .values(
-                "product__pk",
-                "product__name",
-                "product__product_inventory",
-            )
-            .annotate(
-                total_qty=Sum("quantity"),
-                total_value=Sum("value"),
-            )
-            .order_by("-total_value")[:5]
-        )
         return context
 
 

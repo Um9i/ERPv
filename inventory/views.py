@@ -83,30 +83,17 @@ class ProductUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView)
         ):
             from .services import notify_price_change
 
-            failed = notify_price_change(product, product.sale_price)
+            failed, total = notify_price_change(product, product.sale_price)
             if failed:
                 messages.warning(
                     self.request,
                     f"Price updated locally, but failed to notify: {', '.join(failed)}.",
                 )
-            else:
-                from django.db.models import Q
-
-                from config.models import PairedInstance
-
-                has_paired = (
-                    PairedInstance.objects.filter(api_key__gt="")
-                    .filter(
-                        Q(supplier__supplier_products__product=product)
-                        | Q(customer__isnull=False)
-                    )
-                    .exists()
+            elif total:
+                messages.success(
+                    self.request,
+                    "Price updated and paired instances notified.",
                 )
-                if has_paired:
-                    messages.success(
-                        self.request,
-                        "Price updated and paired instances notified.",
-                    )
 
         return response
 

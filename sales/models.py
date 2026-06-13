@@ -307,12 +307,11 @@ class SalesOrderLine(models.Model):
 @receiver(post_save, sender=SalesOrderLine)
 @receiver(post_delete, sender=SalesOrderLine)
 def _update_so_cache(sender, instance, **kwargs):
-    try:
-        instance.sales_order.update_cached_total()
-    except Exception:
-        logger.exception(
-            "Failed to update cached total for %s", instance.sales_order_id
-        )
+    from main.utils import make_order_total_cache_receiver
+
+    make_order_total_cache_receiver("sales_order", "sales_order_id", logger)(
+        sender, instance, **kwargs
+    )
 
 
 class PickList(models.Model):

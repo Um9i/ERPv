@@ -44,10 +44,11 @@ def test_price_change_notifies_active_paired_instances(
     client.force_login(staff_user)
     with (
         patch(
-            "inventory.views._notify_remote_customer_product", return_value=True
+            "config.notifications._notify_remote_customer_product", return_value=True
         ) as mock_notify,
         patch(
-            "inventory.views._notify_remote_supplier_product_cost", return_value=True
+            "config.notifications._notify_remote_supplier_product_cost",
+            return_value=True,
         ),
     ):
         client.post(
@@ -70,7 +71,7 @@ def test_no_notification_when_price_unchanged(
 ):
     client.force_login(staff_user)
     with patch(
-        "inventory.views._notify_remote_customer_product", return_value=True
+        "config.notifications._notify_remote_customer_product", return_value=True
     ) as mock_notify:
         client.post(
             reverse("inventory:product-update", args=[product.pk]),
@@ -93,7 +94,7 @@ def test_no_notification_when_not_catalogue_item(
     product.sale_price = Decimal("10.00")
     product.save()
     with patch(
-        "inventory.views._notify_remote_customer_product", return_value=True
+        "config.notifications._notify_remote_customer_product", return_value=True
     ) as mock_notify:
         client.post(
             reverse("inventory:product-update", args=[product.pk]),
@@ -123,7 +124,7 @@ def test_no_notification_for_pending_paired_instance(client, staff_user, product
 
     client.force_login(staff_user)
     with patch(
-        "inventory.views._notify_remote_customer_product", return_value=True
+        "config.notifications._notify_remote_customer_product", return_value=True
     ) as mock_notify:
         client.post(
             reverse("inventory:product-update", args=[product.pk]),
@@ -143,9 +144,12 @@ def test_warning_message_on_notification_failure(
 ):
     client.force_login(staff_user)
     with (
-        patch("inventory.views._notify_remote_customer_product", return_value=False),
         patch(
-            "inventory.views._notify_remote_supplier_product_cost", return_value=False
+            "config.notifications._notify_remote_customer_product", return_value=False
+        ),
+        patch(
+            "config.notifications._notify_remote_supplier_product_cost",
+            return_value=False,
         ),
     ):
         response = client.post(
