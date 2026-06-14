@@ -4,7 +4,7 @@
 # Code quality
 ruff==0.15.17
 bandit==1.9.4
-pip-audit==2.10.0
+pip-audit==2.10.1
 mypy==2.1.0
 django-stubs==6.0.5
 django-migration-linter==6.0.0
