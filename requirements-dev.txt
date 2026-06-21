@@ -20,7 +20,7 @@ pytest-env
 pytest-xdist==3.8.0
 
 # Debug & profiling
-django-debug-toolbar==6.3.0
+django-debug-toolbar==7.0.0
 django-silk==5.5.0
 gprof2dot==2025.4.14
 
